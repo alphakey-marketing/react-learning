@@ -16,6 +16,16 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
   ],
   Swordsman: [
     {
+      id: "basic_attack",
+      name: "Basic Attack",
+      nameZh: "普通攻擊",
+      maxLevel: 1,
+      mpCost: () => 2,
+      description: "基本攻擊",
+      damageMultiplier: () => 1.0,
+      cooldown: 0,
+    },
+    {
       id: "bash",
       name: "Bash",
       nameZh: "強力攻擊",
@@ -49,6 +59,16 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
   ],
   Mage: [
     {
+      id: "basic_attack",
+      name: "Basic Attack",
+      nameZh: "普通攻擊",
+      maxLevel: 1,
+      mpCost: () => 2,
+      description: "基本攻擊",
+      damageMultiplier: () => 1.0,
+      cooldown: 0,
+    },
+    {
       id: "fire_bolt",
       name: "Fire Bolt",
       nameZh: "火焰彈",
@@ -80,6 +100,16 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
     },
   ],
   Archer: [
+    {
+      id: "basic_attack",
+      name: "Basic Attack",
+      nameZh: "普通攻擊",
+      maxLevel: 1,
+      mpCost: () => 2,
+      description: "基本攻擊",
+      damageMultiplier: () => 1.0,
+      cooldown: 0,
+    },
     {
       id: "double_strafe",
       name: "Double Strafe",
@@ -114,6 +144,16 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
   ],
   Knight: [
     {
+      id: "basic_attack",
+      name: "Basic Attack",
+      nameZh: "普通攻擊",
+      maxLevel: 1,
+      mpCost: () => 2,
+      description: "基本攻擊",
+      damageMultiplier: () => 1.0,
+      cooldown: 0,
+    },
+    {
       id: "bowling_bash",
       name: "Bowling Bash",
       nameZh: "怪物互擊",
@@ -137,6 +177,16 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
   ],
   Wizard: [
     {
+      id: "basic_attack",
+      name: "Basic Attack",
+      nameZh: "普通攻擊",
+      maxLevel: 1,
+      mpCost: () => 2,
+      description: "基本攻擊",
+      damageMultiplier: () => 1.0,
+      cooldown: 0,
+    },
+    {
       id: "storm_gust",
       name: "Storm Gust",
       nameZh: "暴風雪",
@@ -158,6 +208,16 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
     },
   ],
   Hunter: [
+    {
+      id: "basic_attack",
+      name: "Basic Attack",
+      nameZh: "普通攻擊",
+      maxLevel: 1,
+      mpCost: () => 2,
+      description: "基本攻擊",
+      damageMultiplier: () => 1.0,
+      cooldown: 0,
+    },
     {
       id: "blitz_beat",
       name: "Blitz Beat",
