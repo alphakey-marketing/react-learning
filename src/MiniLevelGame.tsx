@@ -292,9 +292,11 @@ export function MiniLevelGame() {
 
   // ✅ 技能系統 State
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
-  const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>(
-    {},
-  );
+  const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>({});
+
+  // ✅ NEW: Add this line
+  const [showBattleLog, setShowBattleLog] = useState<boolean>(true);
+
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const battleActionRef = useRef<(skillId?: string) => void>(() => {});
@@ -627,9 +629,13 @@ export function MiniLevelGame() {
     return () => clearInterval(id);
   }, []);
 
+  // ✅ MODIFIED: Only auto-scroll when log is visible
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
+    if (showBattleLog) {
+      logsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [logs, showBattleLog]);
+
 
   const expProgress = Math.floor((char.exp / char.expToNext) * 100);
   const hpPercent = Math.floor((char.hp / char.maxHp) * 100);
@@ -643,48 +649,59 @@ export function MiniLevelGame() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#1a1a2e",
+        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
         color: "white",
         display: "flex",
         justifyContent: "center",
-        alignItems: "center",
+        alignItems: "flex-start",  // Changed from "center"
         fontFamily: "system-ui, sans-serif",
         padding: "20px",
+        paddingTop: "40px",  // Added
       }}
     >
+
       <div
         style={{
           border: "2px solid gold",
           padding: "20px",
-          borderRadius: "8px",
+          borderRadius: "12px",
           width: "100%",
-          maxWidth: "900px",
-          background: "#222",
-          boxShadow: "0 0 15px rgba(255, 215, 0, 0.3)",
+          maxWidth: "1200px",  // Changed from 900px
+          background: "rgba(34, 34, 34, 0.95)",
+          boxShadow: "0 8px 32px rgba(255, 215, 0, 0.2)",
+          backdropFilter: "blur(10px)",  // Added
         }}
       >
+
         <h1
           style={{
             textAlign: "center",
-            margin: "0 0 15px 0",
-            fontSize: "24px",
+            margin: "0 0 20px 0",
+            fontSize: "28px",
+            background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            fontWeight: "bold",
           }}
         >
           ⚔️ Mini RPG - RO Style
         </h1>
 
-        <div style={{ display: "flex", gap: "20px", marginBottom: "15px" }}>
+
+        <div style={{ display: "flex", gap: "20px", marginBottom: "15px", flexWrap: "wrap" }}>
           {/* === 左欄 === */}
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
             {/* 玩家狀態 */}
             <div
               style={{
                 marginBottom: "15px",
-                background: "#333",
-                padding: "10px",
-                borderRadius: "6px",
+                background: "linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%)",
+                padding: "15px",
+                borderRadius: "8px",
+                border: "1px solid #444",
               }}
             >
+
               <div
                 style={{
                   display: "flex",
@@ -1008,7 +1025,7 @@ export function MiniLevelGame() {
           </div>
 
           {/* === 右欄 === */}
-          <div style={{ flex: 1 }}>
+            <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
             {/* 地圖系統 */}
             <div
               style={{
