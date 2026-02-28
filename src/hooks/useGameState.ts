@@ -75,6 +75,8 @@ export function useGameState(addLog: (text: string) => void) {
 
   const [hpPotions, setHpPotions] = useState<number>(1);
   const [mpPotions, setMpPotions] = useState<number>(1);
+  const [autoHpPercent, setAutoHpPercent] = useState<number>(0); // 0 means OFF
+  const [autoMpPercent, setAutoMpPercent] = useState<number>(0); // 0 means OFF
 
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
   const [showJobChangeNPC, setShowJobChangeNPC] = useState<boolean>(false);
@@ -85,6 +87,7 @@ export function useGameState(addLog: (text: string) => void) {
 
   const battleActionRef = useRef<(skillId?: string) => void>(() => {});
   const townHealingRef = useRef<() => void>(() => {});
+  const autoPotionRef = useRef<() => void>(() => {});
 
   function addStat(stat: keyof CharacterStats) {
     if (char.statPoints <= 0) {
@@ -243,6 +246,24 @@ export function useGameState(addLog: (text: string) => void) {
     addLog("❤️‍🩹 Respawned in Town! Resting will recover HP/MP.");
   }
 
+  function escapeToTown() {
+    if (currentZoneId === 0) {
+      addLog("ℹ️ You are already in town!");
+      return;
+    }
+    
+    // Reset combat states
+    setKillCount(0);
+    setIsBossFight(false);
+    setBossAvailable(false);
+    
+    // Teleport to town (Zone 0)
+    setCurrentZoneId(0);
+    setEnemy(getRandomEnemyForZone(0, char.level));
+    
+    addLog("🏛️ Escaped to Town safely!");
+  }
+
   // Town healing logic
   function processTownHealing() {
     if (currentZoneId === 0 && (char.hp < char.maxHp || char.mp < char.maxMp) && char.hp > 0) {
@@ -265,6 +286,29 @@ export function useGameState(addLog: (text: string) => void) {
   
   townHealingRef.current = processTownHealing;
 
+  // Auto-potion logic
+  function processAutoPotion() {
+    if (char.hp <= 0) return; // Don't use potions if dead
+    
+    // Auto HP Potion
+    if (autoHpPercent > 0 && hpPotions > 0) {
+      const hpPercentage = (char.hp / char.maxHp) * 100;
+      if (hpPercentage < autoHpPercent && hpPercentage < 100) {
+        useHpPotion();
+      }
+    }
+    
+    // Auto MP Potion
+    if (autoMpPercent > 0 && mpPotions > 0) {
+      const mpPercentage = (char.mp / char.maxMp) * 100;
+      if (mpPercentage < autoMpPercent && mpPercentage < 100) {
+        useMpPotion();
+      }
+    }
+  }
+  
+  autoPotionRef.current = processAutoPotion;
+
   function battleAction(skillId?: string) {
     // Don't allow actions if dead or in town
     if (char.hp <= 0) return;
@@ -273,6 +317,9 @@ export function useGameState(addLog: (text: string) => void) {
       townHealingRef.current();
       return;
     }
+
+    // Check auto-potions before battle
+    autoPotionRef.current();
 
     const weaponBonus = equipped.weapon?.stat || 0;
     const armorBonus = equipped.armor?.stat || 0;
@@ -300,7 +347,7 @@ export function useGameState(addLog: (text: string) => void) {
 
     if (timePassed < skill.cooldown) {
       const remaining = (skill.cooldown - timePassed).toFixed(1);
-      addLog(`⌛ ${skill.nameZh} on cooldown (${remaining}s)`);
+      addLog(`⏳ ${skill.nameZh} on cooldown (${remaining}s)`);
       return;
     }
 
@@ -517,23 +564,35 @@ export function useGameState(addLog: (text: string) => void) {
     addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
   }
 
-  function buyHpPotion() {
-    if (char.gold >= HP_POTION_COST) {
-      setChar((prev) => ({ ...prev, gold: prev.gold - HP_POTION_COST }));
-      setHpPotions((prev) => prev + 1);
-      addLog("🍖 +1 HP Pot");
+  function buyHpPotion(amount: number = 1) {
+    if (currentZoneId !== 0) {
+      addLog("❌ You can only buy potions in Town!");
+      return;
+    }
+    
+    const totalCost = HP_POTION_COST * amount;
+    if (char.gold >= totalCost) {
+      setChar((prev) => ({ ...prev, gold: prev.gold - totalCost }));
+      setHpPotions((prev) => prev + amount);
+      addLog(`🍖 +${amount} HP Pot${amount > 1 ? 's' : ''} (${totalCost}g)`);
     } else {
-      addLog(`❌ Need ${HP_POTION_COST}g!`);
+      addLog(`❌ Need ${totalCost}g!`);
     }
   }
 
-  function buyMpPotion() {
-    if (char.gold >= MP_POTION_COST) {
-      setChar((prev) => ({ ...prev, gold: prev.gold - MP_POTION_COST }));
-      setMpPotions((prev) => prev + 1);
-      addLog("🧪 +1 MP Pot");
+  function buyMpPotion(amount: number = 1) {
+    if (currentZoneId !== 0) {
+      addLog("❌ You can only buy potions in Town!");
+      return;
+    }
+    
+    const totalCost = MP_POTION_COST * amount;
+    if (char.gold >= totalCost) {
+      setChar((prev) => ({ ...prev, gold: prev.gold - totalCost }));
+      setMpPotions((prev) => prev + amount);
+      addLog(`🧪 +${amount} MP Pot${amount > 1 ? 's' : ''} (${totalCost}g)`);
     } else {
-      addLog(`❌ Need ${MP_POTION_COST}g!`);
+      addLog(`❌ Need ${totalCost}g!`);
     }
   }
 
@@ -590,12 +649,16 @@ export function useGameState(addLog: (text: string) => void) {
     isBossFight,
     hpPotions,
     mpPotions,
+    autoHpPercent,
+    autoMpPercent,
     showSkillWindow,
     showJobChangeNPC,
     showDeathModal,
     skillCooldowns,
     setShowSkillWindow,
     setShowJobChangeNPC,
+    setAutoHpPercent,
+    setAutoMpPercent,
     addStat,
     learnSkill,
     setAutoAttackSkill,
@@ -611,5 +674,6 @@ export function useGameState(addLog: (text: string) => void) {
     handleJobChange,
     openJobChangeNPC,
     handleRespawn,
+    escapeToTown,
   };
 }
