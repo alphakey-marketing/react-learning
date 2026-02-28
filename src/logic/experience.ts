@@ -20,12 +20,35 @@ export interface JobLevelUpResult {
   leveledUp: boolean;
 }
 
+// Base EXP scales with enemy level (for Base Level progression)
 export function calculateExpGain(enemy: Enemy): number {
   return 20 + enemy.level * 10;
 }
 
-export function calculateJobExpGain(enemy: Enemy): number {
-  return 15 + enemy.level * 8;
+// Job EXP scales with enemy level AND current Job Level
+// This is the Classic RO system: Job EXP is always easier to gain after job change!
+export function calculateJobExpGain(enemy: Enemy, jobLevel: number): number {
+  // Base job exp from enemy
+  const baseJobExp = 25 + enemy.level * 12;
+  
+  // Apply level difference penalty/bonus
+  // If enemy is lower level than your job level, you get less exp
+  // If enemy is higher level, you get more exp
+  const levelDifference = enemy.level - jobLevel;
+  
+  // Penalty for fighting lower level enemies (max -70% at 10+ levels below)
+  // Bonus for fighting higher level enemies (max +50% at 5+ levels above)
+  let multiplier = 1.0;
+  
+  if (levelDifference < 0) {
+    // Enemy is lower level - penalty
+    multiplier = Math.max(0.3, 1.0 + (levelDifference * 0.07));
+  } else if (levelDifference > 0) {
+    // Enemy is higher level - bonus
+    multiplier = Math.min(1.5, 1.0 + (levelDifference * 0.1));
+  }
+  
+  return Math.floor(baseJobExp * multiplier);
 }
 
 export function calculateGoldGain(enemy: Enemy): number {
@@ -47,8 +70,8 @@ export function processLevelUp(char: Character, expGained: number): LevelUpResul
     leveledUp = true;
   }
 
-  const newHp = calcMaxHp(newLevel, char.stats.vit);
-  const newMp = calcMaxMp(newLevel, char.stats.int);
+  const newHp = calcMaxHp(newLevel, char.stats.vit, char.jobClass);
+  const newMp = calcMaxMp(newLevel, char.stats.int, char.jobClass);
 
   return {
     newLevel,
