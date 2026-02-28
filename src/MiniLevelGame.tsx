@@ -172,6 +172,7 @@ export function MiniLevelGame() {
           <SkillWindow
             character={game.char}
             onLearnSkill={game.learnSkill}
+            onSetAutoAttack={game.setAutoAttackSkill}
             onClose={() => game.setShowSkillWindow(false)}
           />
         )}
