@@ -4,15 +4,20 @@ import { SKILLS_DB } from "../data/skills";
 interface SkillWindowProps {
   character: Character;
   onLearnSkill: (skillId: string) => void;
+  onSetAutoAttack: (skillId: string) => void;
   onClose: () => void;
 }
 
 export function SkillWindow({
   character,
   onLearnSkill,
+  onSetAutoAttack,
   onClose,
 }: SkillWindowProps) {
-  const availableSkills = SKILLS_DB[character.jobClass];
+  // Get all skills including Novice skills (for basic_attack)
+  const jobSkills = SKILLS_DB[character.jobClass];
+  const noviceSkills = character.jobClass !== "Novice" ? SKILLS_DB.Novice : [];
+  const availableSkills = [...jobSkills, ...noviceSkills];
 
   return (
     <div
@@ -57,18 +62,19 @@ export function SkillWindow({
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {availableSkills.map((skill) => {
           const currentLevel = character.learnedSkills[skill.id] || 0;
+          const isLearned = currentLevel > 0;
           const isMaxed = currentLevel >= skill.maxLevel;
-          const mpCost =
-            currentLevel > 0 ? skill.mpCost(currentLevel) : skill.mpCost(1);
+          const isAutoAttack = character.autoAttackSkillId === skill.id;
+          const mpCost = currentLevel > 0 ? skill.mpCost(currentLevel) : skill.mpCost(1);
 
           return (
             <div
               key={skill.id}
               style={{
-                background: "#2a2a2a",
+                background: isAutoAttack ? "#2a1a4a" : "#2a2a2a",
                 padding: "8px",
                 borderRadius: "4px",
-                border: "1px solid #444",
+                border: isAutoAttack ? "2px solid #7c3aed" : "1px solid #444",
               }}
             >
               <div
@@ -76,6 +82,7 @@ export function SkillWindow({
                   display: "flex",
                   justifyContent: "space-between",
                   marginBottom: "4px",
+                  alignItems: "center",
                 }}
               >
                 <div>
@@ -89,26 +96,59 @@ export function SkillWindow({
                   >
                     Lv.{currentLevel}/{skill.maxLevel}
                   </span>
+                  {isAutoAttack && (
+                    <span
+                      style={{
+                        color: "#fbbf24",
+                        fontSize: "10px",
+                        marginLeft: "6px",
+                        background: "#7c3aed",
+                        padding: "2px 6px",
+                        borderRadius: "3px",
+                      }}
+                    >
+                      ⭐ Auto
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => onLearnSkill(skill.id)}
-                  disabled={isMaxed || character.skillPoints <= 0}
-                  style={{
-                    padding: "4px 12px",
-                    fontSize: "10px",
-                    background:
-                      isMaxed || character.skillPoints <= 0 ? "#555" : "#22c55e",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "3px",
-                    cursor:
-                      isMaxed || character.skillPoints <= 0
-                        ? "not-allowed"
-                        : "pointer",
-                  }}
-                >
-                  {isMaxed ? "MAX" : "Learn"}
-                </button>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <button
+                    onClick={() => onLearnSkill(skill.id)}
+                    disabled={isMaxed || character.skillPoints <= 0}
+                    style={{
+                      padding: "4px 12px",
+                      fontSize: "10px",
+                      background:
+                        isMaxed || character.skillPoints <= 0 ? "#555" : "#22c55e",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "3px",
+                      cursor:
+                        isMaxed || character.skillPoints <= 0
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
+                  >
+                    {isMaxed ? "MAX" : "Learn"}
+                  </button>
+                  {isLearned && (
+                    <button
+                      onClick={() => onSetAutoAttack(skill.id)}
+                      disabled={isAutoAttack}
+                      style={{
+                        padding: "4px 12px",
+                        fontSize: "10px",
+                        background: isAutoAttack ? "#555" : "#3b82f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: isAutoAttack ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {isAutoAttack ? "✓ Auto" : "Set Auto"}
+                    </button>
+                  )}
+                </div>
               </div>
               <div
                 style={{
