@@ -75,12 +75,12 @@ export function MiniLevelGame() {
               onOpenSkills={() => game.setShowSkillWindow(true)}
             />
             
-            {/* Job Change Button */}
-            <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+            {/* Action Buttons */}
+            <div style={{ marginTop: "10px", marginBottom: "10px", display: "flex", gap: "8px" }}>
               <button
                 onClick={game.openJobChangeNPC}
                 style={{
-                  width: "100%",
+                  flex: 1,
                   padding: "10px",
                   background: canChangeJobNow
                     ? "linear-gradient(45deg, #f59e0b, #d97706)"
@@ -98,9 +98,31 @@ export function MiniLevelGame() {
                 }}
               >
                 {canChangeJobNow
-                  ? "🧙 Job Change Available!"
-                  : "🧙 Job Change Master"}
+                  ? "🧙 Job Change!"
+                  : "🧙 Job Master"}
               </button>
+              
+              {/* Escape to Town Button */}
+              {game.currentZoneId !== 0 && (
+                <button
+                  onClick={game.escapeToTown}
+                  disabled={game.char.hp <= 0}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    background: game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
+                    fontWeight: "bold",
+                    fontSize: "13px",
+                    boxShadow: game.char.hp > 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "none",
+                  }}
+                >
+                  🏛️ Escape to Town
+                </button>
+              )}
             </div>
 
             <EnemyDisplay enemy={game.enemy} />
@@ -131,11 +153,16 @@ export function MiniLevelGame() {
               character={game.char}
               hpPotions={game.hpPotions}
               mpPotions={game.mpPotions}
+              isInTown={game.currentZoneId === 0}
+              autoHpPercent={game.autoHpPercent}
+              autoMpPercent={game.autoMpPercent}
               onSellItem={game.sellItem}
               onBuyHpPotion={game.buyHpPotion}
               onBuyMpPotion={game.buyMpPotion}
               onUseHpPotion={game.useHpPotion}
               onUseMpPotion={game.useMpPotion}
+              onSetAutoHpPercent={game.setAutoHpPercent}
+              onSetAutoMpPercent={game.setAutoMpPercent}
             />
           </div>
         </div>
