@@ -293,7 +293,7 @@ export function MiniLevelGame() {
   // ✅ 技能系統 State
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
   const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>(
-    {}
+    {},
   );
 
   const logsEndRef = useRef<HTMLDivElement>(null);
@@ -427,7 +427,7 @@ export function MiniLevelGame() {
 
     // 判斷物理/魔法
     const isMagic = ["fire_bolt", "cold_bolt", "lightning_bolt"].includes(
-      actualSkillId
+      actualSkillId,
     );
     const baseAtk = isMagic
       ? calcPlayerMagicAtk(char)
@@ -452,7 +452,7 @@ export function MiniLevelGame() {
 
     const critText = isCrit ? " ❗CRIT!" : "";
     addLog(
-      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText} (MP-${mpCost})`
+      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText} (MP-${mpCost})`,
     );
 
     let nextJobLevel = char.jobLevel;
@@ -553,8 +553,7 @@ export function MiniLevelGame() {
             name: isWeapon ? `Sword +${statValue}` : `Armor +${statValue}`,
             type: isWeapon ? "weapon" : "armor",
             stat: statValue,
-            rarity:
-              statValue > 15 ? "epic" : statValue > 8 ? "rare" : "common",
+            rarity: statValue > 15 ? "epic" : statValue > 8 ? "rare" : "common",
           };
           setInventory((prev) => [...prev, newGear]);
           addLog(`🎁 Looted: ${newGear.name}!`);
@@ -576,8 +575,8 @@ export function MiniLevelGame() {
       if (nextCharHp <= 0) {
         nextCharHp = 0;
         addLog(`💀 You were defeated... Respawning.`);
-        nextCharHp = Math.floor(((char.level * 20 + 50) * 0.5));
-        nextCharMp = Math.floor(((char.level * 10 + 30) * 0.5));
+        nextCharHp = Math.floor((char.level * 20 + 50) * 0.5);
+        nextCharMp = Math.floor((char.level * 10 + 30) * 0.5);
         nextEnemy = {
           ...nextEnemy,
           hp: Math.min(nextEnemy.maxHp, nextEnemy.hp + 10),
@@ -874,14 +873,13 @@ export function MiniLevelGame() {
                         border: "none",
                         background: char.statPoints > 0 ? "#22c55e" : "#444",
                         color: "white",
-                        cursor:
-                          char.statPoints > 0 ? "pointer" : "not-allowed",
+                        cursor: char.statPoints > 0 ? "pointer" : "not-allowed",
                       }}
                     >
                       +
                     </button>
                   </div>
-                )
+                ),
               )}
             </div>
 
@@ -917,7 +915,11 @@ export function MiniLevelGame() {
               }}
             >
               <h2
-                style={{ margin: "0 0 5px 0", fontSize: "16px", color: "#fbbf24" }}
+                style={{
+                  margin: "0 0 5px 0",
+                  fontSize: "16px",
+                  color: "#fbbf24",
+                }}
               >
                 {enemy.name}{" "}
                 <span style={{ fontSize: "12px", color: "#aaa" }}>
@@ -955,7 +957,7 @@ export function MiniLevelGame() {
                     setIsBossFight(true);
                     const bossTemplate = getRandomEnemyForZone(
                       currentZoneId,
-                      char.level
+                      char.level,
                     );
                     const bossEnemy = {
                       ...bossTemplate,
@@ -1024,7 +1026,8 @@ export function MiniLevelGame() {
                   color: "#fbbf24",
                 }}
               >
-                📍 {ZONES.find((z) => z.id === currentZoneId)?.name || "Unknown"}
+                📍{" "}
+                {ZONES.find((z) => z.id === currentZoneId)?.name || "Unknown"}
               </h3>
               <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
                 {ZONES.map((zone) => {
@@ -1048,7 +1051,9 @@ export function MiniLevelGame() {
                         opacity: isUnlocked ? 1 : 0.5,
                       }}
                     >
-                      {isUnlocked ? `➡️ ${zone.name}` : `🔒 Lv.${zone.minLevel}`}
+                      {isUnlocked
+                        ? `➡️ ${zone.name}`
+                        : `🔒 Lv.${zone.minLevel}`}
                     </button>
                   );
                 })}
@@ -1131,7 +1136,9 @@ export function MiniLevelGame() {
                 }}
               >
                 {inventory.length === 0 ? (
-                  <div style={{ color: "#666", fontSize: "10px" }}>Empty...</div>
+                  <div style={{ color: "#666", fontSize: "10px" }}>
+                    Empty...
+                  </div>
                 ) : (
                   inventory.map((item) => (
                     <button
@@ -1147,8 +1154,8 @@ export function MiniLevelGame() {
                           item.rarity === "epic"
                             ? "#a855f7"
                             : item.rarity === "rare"
-                            ? "#3b82f6"
-                            : "#555",
+                              ? "#3b82f6"
+                              : "#555",
                         color: "white",
                         border: "none",
                         borderRadius: "3px",
@@ -1202,7 +1209,10 @@ export function MiniLevelGame() {
                     const item = inventory[0];
                     const sellPrice = item.stat * 2;
                     setInventory((prev) => prev.slice(1));
-                    setChar((prev) => ({ ...prev, gold: prev.gold + sellPrice }));
+                    setChar((prev) => ({
+                      ...prev,
+                      gold: prev.gold + sellPrice,
+                    }));
                     addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
                   }}
                   style={{
@@ -1369,16 +1379,22 @@ export function MiniLevelGame() {
               </button>
             </div>
 
-            <div style={{ fontSize: "11px", marginBottom: "8px", color: "#aaa" }}>
+            <div
+              style={{ fontSize: "11px", marginBottom: "8px", color: "#aaa" }}
+            >
               Skill Points: {char.skillPoints}
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               {availableSkills.map((skill) => {
                 const currentLevel = char.learnedSkills[skill.id] || 0;
                 const isMaxed = currentLevel >= skill.maxLevel;
                 const mpCost =
-                  currentLevel > 0 ? skill.mpCost(currentLevel) : skill.mpCost(1);
+                  currentLevel > 0
+                    ? skill.mpCost(currentLevel)
+                    : skill.mpCost(1);
 
                 return (
                   <div
@@ -1401,7 +1417,13 @@ export function MiniLevelGame() {
                         <strong style={{ color: "#fbbf24" }}>
                           {skill.nameZh}
                         </strong>
-                        <span style={{ color: "#aaa", fontSize: "10px", marginLeft: "6px" }}>
+                        <span
+                          style={{
+                            color: "#aaa",
+                            fontSize: "10px",
+                            marginLeft: "6px",
+                          }}
+                        >
                           Lv.{currentLevel}/{skill.maxLevel}
                         </span>
                       </div>
@@ -1412,7 +1434,9 @@ export function MiniLevelGame() {
                           padding: "4px 12px",
                           fontSize: "10px",
                           background:
-                            isMaxed || char.skillPoints <= 0 ? "#555" : "#22c55e",
+                            isMaxed || char.skillPoints <= 0
+                              ? "#555"
+                              : "#22c55e",
                           color: "white",
                           border: "none",
                           borderRadius: "3px",
@@ -1425,7 +1449,13 @@ export function MiniLevelGame() {
                         {isMaxed ? "MAX" : "Learn"}
                       </button>
                     </div>
-                    <div style={{ fontSize: "10px", color: "#bbb", marginBottom: "4px" }}>
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "#bbb",
+                        marginBottom: "4px",
+                      }}
+                    >
                       {skill.description}
                     </div>
                     <div style={{ fontSize: "9px", color: "#888" }}>
@@ -1440,7 +1470,9 @@ export function MiniLevelGame() {
 
         {/* === 戰鬥 Log === */}
         <div style={{ marginBottom: "15px" }}>
-          <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#fbbf24" }}>
+          <h3
+            style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#fbbf24" }}
+          >
             📜 Battle Log
           </h3>
           <div
@@ -1476,7 +1508,9 @@ export function MiniLevelGame() {
 
         {/* === 技能快捷鍵 === */}
         <div style={{ marginBottom: "10px" }}>
-          <h3 style={{ margin: "0 0 8px 0", fontSize: "12px", color: "#fbbf24" }}>
+          <h3
+            style={{ margin: "0 0 8px 0", fontSize: "12px", color: "#fbbf24" }}
+          >
             ⚡ Hotkeys
           </h3>
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
@@ -1500,8 +1534,8 @@ export function MiniLevelGame() {
                       background: isOnCooldown
                         ? "#555"
                         : skill.id.includes("bolt")
-                        ? "#7c3aed"
-                        : "#059669",
+                          ? "#7c3aed"
+                          : "#059669",
                       color: "white",
                       border: "none",
                       borderRadius: "4px",
