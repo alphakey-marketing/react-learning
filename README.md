@@ -707,6 +707,262 @@ export function MiniLevelGame() {
 
 ---
 
-## 📞 Contributing
+## 📞 Road Map
 
-Feel free to open issues or submit pull requests to improve the codebase structure!
+🎮 RO-Like Single Player Enhancement Roadmap
+**Phase 1: Core RO Mechanics (High Priority - Next 3-5 Commits)
+**Commit 1: Job Change System
+Goal: Implement authentic RO job progression (Novice → 1st Class → 2nd Class)
+
+Features to add:
+
+Job change NPC system (at Job Level 10)
+
+Choice between Swordsman, Mage, Archer paths
+
+Reset to level 1 after job change (like classic RO)
+
+Unlock new skill trees for each class
+
+Job-specific stat recommendations
+
+Files to modify:
+
+src/data/jobs.ts - Add job requirements and progression tree
+
+src/components/JobChangeNPC.tsx - New component for job change interface
+
+src/hooks/useCharacter.ts - Add job change logic
+
+**Commit 2: Manual Combat System (Remove Auto-Attack)
+**Goal: Make combat player-controlled like RO
+
+Features to add:
+
+Remove auto-attack timer
+
+Add manual attack button (spacebar or click)
+
+Attack delay/ASPD (Attack Speed) system based on AGI
+
+Animation states (idle, attacking, hit, dead)
+
+Combat feels more deliberate and strategic
+
+Files to modify:
+
+src/hooks/useCombat.ts - Remove auto-attack interval, add manual attack
+
+src/data/constants.ts - Add ASPD formulas
+
+src/components/CombatControls.tsx - New manual combat UI
+
+**Commit 3: Sitting/Resting System
+**Goal: Implement RO's sitting mechanic for HP/MP recovery
+
+Features to add:
+
+Sit button (can't attack while sitting)
+
+Faster HP/SP recovery when sitting (3x normal rate)
+
+Stand up automatically when attacked
+
+Visual indicator (character sprite change or icon)
+
+Files to modify:
+
+src/hooks/useCharacter.ts - Add sitting state
+
+src/components/CharacterStats.tsx - Add sit/stand button
+
+src/logic/recovery.ts - New file for recovery calculations
+
+**Commit 4: Weight System
+**Goal: Add RO's weight/carrying capacity mechanics
+
+Features to add:
+
+Max weight based on STR stat (Weight = STR × 30)
+
+Items have weight values
+
+Movement speed penalty at 50% weight
+
+Can't pick up items at 90% weight
+
+Weight display in inventory
+
+Files to modify:
+
+src/types/equipment.ts - Add weight property
+
+src/components/Inventory.tsx - Show weight meter
+
+src/hooks/useInventory.ts - Add weight calculations
+
+**Commit 5: Consumable Items System
+**Goal: Expand item system beyond just HP/MP potions
+
+Features to add:
+
+Food items (Apple, Meat, etc.) for gradual HP recovery
+
+Status recovery items (Green Potion = cure poison)
+
+Buff items (increase stats temporarily)
+
+Stackable items system
+
+Item cooldown system
+
+Files to modify:
+
+src/types/items.ts - New comprehensive item types
+
+src/data/items.ts - Item database
+
+src/components/ItemQuickbar.tsx - Hotkey bar for items
+
+**Phase 2: Enhanced RO Feel (Medium Priority - Next 5-7 Commits)
+**Commit 6: Quest System
+Goal: Add NPC quests like RO
+
+Features:
+
+Quest log interface
+
+NPC quest givers in each zone
+
+Quest types: kill X monsters, collect Y items, reach level Z
+
+Quest rewards (exp, items, gold)
+
+Tutorial quests for new players
+
+**Commit 7: Card System
+**Goal: Implement RO's famous card drop and slotting system
+
+Features:
+
+Rare card drops from monsters (0.01% - 1%)
+
+Card effects (bonus stats, elemental damage, etc.)
+
+Equipment slots for cards
+
+Card compounding system
+
+**Commit 8: Element System
+**Goal: Add elemental properties to skills and monsters
+
+Features:
+
+Elements: Fire, Water, Wind, Earth, Holy, Shadow, Ghost, Undead
+
+Elemental weaknesses/resistances
+
+Skills have elemental properties
+
+Monsters have element types
+
+Damage calculation based on element table
+
+**Commit 9: Status Effects
+**Goal: Implement status ailments and buffs
+
+Features:
+
+Negative: Poison, Stun, Freeze, Sleep, Blind, Curse
+
+Positive: AGI Up, Bless, Increase AGI, Blessing
+
+Duration timers
+
+Visual indicators
+
+Status immunity items
+
+**Commit 10: Party System (Solo AI)
+**Goal: Add NPC companions for single-player experience
+
+Features:
+
+Hire mercenary NPCs
+
+AI companions that follow and assist
+
+Companion equipment and skills
+
+Share exp system
+
+**Commit 11: Warp System
+**Goal: Implement RO's warp portals between maps
+
+Features:
+
+Warp portals in zones
+
+Warp fees based on distance
+
+Kafra NPC for teleport services
+
+Save point system
+
+**Commit 12: Refining System
+**Goal: Add equipment upgrade system like RO
+
+Features:
+
++1 to +10 refinement levels
+
+Refinement costs (gold + refine materials)
+
+Breaking chance at higher levels
+
+Safe refine to +4, risk after
+
+Success rates decrease with level
+
+**Phase 3: Advanced Features (Lower Priority - Future Commits)
+**Commit 13: Skill Point Reset System
+NPC that resets skill points for a fee
+
+Skill tree visualization
+
+**Commit 14: Monster AI Improvements
+**Aggressive vs passive monsters
+
+Monster aggro radius
+
+Monster respawn system
+
+MVP (boss) system with better rewards
+
+**Commit 15: Achievement System
+**Track player milestones
+
+Achievement rewards
+
+Title system
+
+**Commit 16: Daily Login Rewards
+**Consecutive login bonuses
+
+Daily quests
+
+Weekly challenges
+
+**Commit 17: Pet System
+**Capture monsters as pets
+
+Pet feeding and loyalty
+
+Pet skills and bonuses
+
+**Commit 18: Crafting System
+**Blacksmith weapon forging
+
+Alchemy potion creation
+
+Cooking system
