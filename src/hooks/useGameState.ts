@@ -45,8 +45,8 @@ export function useGameState(addLog: (text: string) => void) {
     mp: 50,
     maxMp: 50,
     gold: 0,
-    stats: { str: 5, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 },
-    statPoints: 5,
+    stats: { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 }, // Fixed: STR was 5, now 1
+    statPoints: 9, // Start with 9 points to distribute (6 base stats * 1 = 6, so 9 points to reach typical starting build)
     jobClass: "Novice",
     jobLevel: 1,
     jobExp: 0,
@@ -185,7 +185,7 @@ export function useGameState(addLog: (text: string) => void) {
       jobLevel: 1, // Only Job Level resets
       jobExp: 0,
       jobExpToNext: 50,
-      skillPoints: 0, // Reset skill points, will earn more by leveling Job Level
+      skillPoints: 3, // Give 3 skill points to start learning new job skills (Classic RO style)
       learnedSkills: initialSkills,
       autoAttackSkillId: firstJobSkill ? firstJobSkill.id : "basic_attack",
     });
@@ -201,6 +201,7 @@ export function useGameState(addLog: (text: string) => void) {
 
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
     addLog(`🏙️ Teleported to Town for safety!`);
+    addLog(`💫 You received 3 Skill Points to learn new skills!`);
     if (firstJobSkill) {
       addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your auto-attack skill.`);
     }
