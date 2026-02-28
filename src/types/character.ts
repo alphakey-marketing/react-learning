@@ -26,4 +26,5 @@ export interface Character {
   jobExpToNext: number;
   skillPoints: number;
   learnedSkills: Record<string, number>;
+  autoAttackSkillId: string; // Which skill to use for auto-attack
 }
