@@ -53,6 +53,7 @@ export function useGameState(addLog: (text: string) => void) {
     jobExpToNext: 50,
     skillPoints: 3,
     learnedSkills: { basic_attack: 1 },
+    autoAttackSkillId: "basic_attack",
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -83,7 +84,6 @@ export function useGameState(addLog: (text: string) => void) {
   );
 
   const battleActionRef = useRef<(skillId?: string) => void>(() => {});
-  // We don't need pendingRespawnData anymore as we will calculate it during handleRespawn
   const townHealingRef = useRef<() => void>(() => {});
 
   function addStat(stat: keyof CharacterStats) {
@@ -129,10 +129,31 @@ export function useGameState(addLog: (text: string) => void) {
     addLog(`📖 Learned ${skill.nameZh} Lv.${currentLevel + 1}!`);
   }
 
+  function setAutoAttackSkill(skillId: string) {
+    const skillLevel = char.learnedSkills[skillId] || 0;
+    if (skillLevel === 0) {
+      addLog("❌ You haven't learned this skill yet!");
+      return;
+    }
+    
+    const skill = SKILLS_DB[char.jobClass].find((s) => s.id === skillId);
+    if (!skill) {
+      addLog("❌ Skill not found!");
+      return;
+    }
+
+    setChar((prev) => ({
+      ...prev,
+      autoAttackSkillId: skillId,
+    }));
+
+    addLog(`⭐ Auto-attack set to: ${skill.nameZh}`);
+  }
+
   function handleJobChange(newJob: JobClass) {
     const jobBonuses = getJobBonuses(newJob);
     
-    // Calculate total stat points (current stats + remaining points)
+    // Calculate total stat points earned from previous levels
     const totalStatPoints =
       char.stats.str +
       char.stats.agi +
@@ -141,16 +162,21 @@ export function useGameState(addLog: (text: string) => void) {
       char.stats.dex +
       char.stats.luk +
       char.statPoints -
-      6; // Minus starting stats (6 total)
+      10; // Minus novice starting stats (5 STR + 1 each = 10)
 
-    // Reset to level 1 with stat points from previous base levels
+    // Reset to level 1 with 15 base stat points + earned points
     const newLevel = 1;
-    const baseStatPoints = 5 + totalStatPoints; // Starting 5 + earned points
+    const baseStatPoints = 15 + totalStatPoints;
 
     // Get first skill for new job
     const newJobSkills = SKILLS_DB[newJob];
     const firstSkill = newJobSkills.length > 0 ? newJobSkills[0] : null;
-    const initialSkills = firstSkill ? { [firstSkill.id]: 1 } : { basic_attack: 1 };
+    
+    // Always keep basic_attack + add first job skill
+    const initialSkills: Record<string, number> = { basic_attack: 1 };
+    if (firstSkill) {
+      initialSkills[firstSkill.id] = 1;
+    }
 
     // Calculate new HP/MP with job bonuses
     const baseHp = calcMaxHp(newLevel, 1);
@@ -175,11 +201,15 @@ export function useGameState(addLog: (text: string) => void) {
       jobExpToNext: 50,
       skillPoints: 3, // Starting skill points
       learnedSkills: initialSkills,
+      autoAttackSkillId: firstSkill ? firstSkill.id : "basic_attack",
     });
 
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
     addLog(`📊 Stats reset. You have ${baseStatPoints} stat points to distribute!`);
-    addLog(`📖 You learned your first ${newJob} skill!`);
+    if (firstSkill) {
+      addLog(`📖 You learned ${firstSkill.nameZh}! It's now your auto-attack skill.`);
+    }
+    addLog(`🛡️ Job Bonuses: HP ${Math.floor((jobBonuses.hpMultiplier - 1) * 100)}%, MP ${Math.floor((jobBonuses.mpMultiplier - 1) * 100)}%, +${jobBonuses.atkBonus} ATK, +${jobBonuses.defBonus} DEF`);
     setShowJobChangeNPC(false);
   }
 
@@ -233,17 +263,6 @@ export function useGameState(addLog: (text: string) => void) {
   
   townHealingRef.current = processTownHealing;
 
-  // Helper function to get the first available learned skill
-  function getAutoAttackSkill(): string {
-    // Get all learned skills that have level > 0
-    const learnedSkillIds = Object.keys(char.learnedSkills).filter(
-      (skillId) => char.learnedSkills[skillId] > 0
-    );
-    
-    // Return the first learned skill, or fallback to basic_attack
-    return learnedSkillIds.length > 0 ? learnedSkillIds[0] : "basic_attack";
-  }
-
   function battleAction(skillId?: string) {
     // Don't allow actions if dead or in town
     if (char.hp <= 0) return;
@@ -256,8 +275,8 @@ export function useGameState(addLog: (text: string) => void) {
     const weaponBonus = equipped.weapon?.stat || 0;
     const armorBonus = equipped.armor?.stat || 0;
 
-    // If no skill specified, use auto-attack skill (first learned skill)
-    const actualSkillId = skillId || getAutoAttackSkill();
+    // Use specified skill, or auto-attack skill if none specified
+    const actualSkillId = skillId || char.autoAttackSkillId;
     const skillLevel = char.learnedSkills[actualSkillId] || 0;
 
     if (skillLevel === 0) {
@@ -265,7 +284,10 @@ export function useGameState(addLog: (text: string) => void) {
       return;
     }
 
-    const allSkills = SKILLS_DB[char.jobClass];
+    const allSkills = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId) ? 
+      SKILLS_DB[char.jobClass] : 
+      [...SKILLS_DB[char.jobClass], ...SKILLS_DB.Novice]; // Fallback to include Novice skills
+    
     const skill = allSkills.find((s) => s.id === actualSkillId);
 
     if (!skill) {
@@ -444,6 +466,7 @@ export function useGameState(addLog: (text: string) => void) {
       jobExpToNext: nextJobExpToNext,
       skillPoints: nextSkillPoints,
       learnedSkills: char.learnedSkills,
+      autoAttackSkillId: char.autoAttackSkillId,
     });
 
     setEnemy(nextEnemy);
@@ -549,7 +572,7 @@ export function useGameState(addLog: (text: string) => void) {
 
   useEffect(() => {
     const id = setInterval(() => {
-      // Auto-attack uses no skill parameter, which triggers getAutoAttackSkill()
+      // Auto-attack uses no skill parameter, which uses char.autoAttackSkillId
       battleActionRef.current();
     }, AUTO_ATTACK_INTERVAL);
     return () => clearInterval(id);
@@ -576,6 +599,7 @@ export function useGameState(addLog: (text: string) => void) {
     setShowJobChangeNPC,
     addStat,
     learnSkill,
+    setAutoAttackSkill,
     battleAction,
     travelToZone,
     challengeBoss,
