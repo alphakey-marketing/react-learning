@@ -67,7 +67,7 @@ export function useGameState(addLog: (text: string) => void) {
   });
 
   const [currentZoneId, setCurrentZoneId] = useState<number>(1);
-  const [unlockedZoneIds, setUnlockedZoneIds] = useState<number[]>([0, 1]); // 0 is town, 1 is zone1
+  const [unlockedZoneIds, setUnlockedZoneIds] = useState<number[]>([0, 1]);
   const [killCount, setKillCount] = useState<number>(0);
   const [bossAvailable, setBossAvailable] = useState<boolean>(false);
   const [bossDefeated, setBossDefeated] = useState<boolean>(false);
@@ -75,8 +75,8 @@ export function useGameState(addLog: (text: string) => void) {
 
   const [hpPotions, setHpPotions] = useState<number>(1);
   const [mpPotions, setMpPotions] = useState<number>(1);
-  const [autoHpPercent, setAutoHpPercent] = useState<number>(0); // 0 means OFF
-  const [autoMpPercent, setAutoMpPercent] = useState<number>(0); // 0 means OFF
+  const [autoHpPercent, setAutoHpPercent] = useState<number>(0);
+  const [autoMpPercent, setAutoMpPercent] = useState<number>(0);
 
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
   const [showJobChangeNPC, setShowJobChangeNPC] = useState<boolean>(false);
@@ -89,6 +89,81 @@ export function useGameState(addLog: (text: string) => void) {
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
 
+  // ========== DEV TOOLS FUNCTIONS ==========
+  function devAddBaseLevel() {
+    const currentExp = char.expToNext;
+    const levelUpResult = processLevelUp(char, currentExp);
+    
+    setChar(prev => ({
+      ...prev,
+      level: levelUpResult.newLevel,
+      exp: levelUpResult.newExp,
+      expToNext: levelUpResult.newExpToNext,
+      statPoints: levelUpResult.newStatPoints,
+      hp: levelUpResult.newHp,
+      maxHp: calcMaxHp(levelUpResult.newLevel, prev.stats.vit, prev.jobClass),
+      mp: levelUpResult.newMp,
+      maxMp: calcMaxMp(levelUpResult.newLevel, prev.stats.int, prev.jobClass),
+    }));
+    
+    addLog(`🔧 [DEV] Base Level +1! Now Lv.${levelUpResult.newLevel}`);
+  }
+
+  function devAddJobLevel() {
+    const currentJobExp = char.jobExpToNext;
+    const jobLevelUpResult = processJobLevelUp(char, currentJobExp);
+    
+    setChar(prev => ({
+      ...prev,
+      jobLevel: jobLevelUpResult.newJobLevel,
+      jobExp: jobLevelUpResult.newJobExp,
+      jobExpToNext: jobLevelUpResult.newJobExpToNext,
+      skillPoints: jobLevelUpResult.newSkillPoints,
+    }));
+    
+    addLog(`🔧 [DEV] Job Level +1! Now Job Lv.${jobLevelUpResult.newJobLevel}`);
+    
+    if (canChangeJob(char.jobClass, jobLevelUpResult.newJobLevel) && jobLevelUpResult.newJobLevel === 10) {
+      addLog(`🎊 You can now change your job!`);
+    }
+  }
+
+  function devAddGold(amount: number) {
+    setChar(prev => ({
+      ...prev,
+      gold: prev.gold + amount,
+    }));
+    addLog(`🔧 [DEV] Added ${amount} gold!`);
+  }
+
+  function devAddPotions(hp: number, mp: number) {
+    setHpPotions(prev => prev + hp);
+    setMpPotions(prev => prev + mp);
+    addLog(`🔧 [DEV] Added ${hp} HP potions and ${mp} MP potions!`);
+  }
+
+  function devFullHeal() {
+    setChar(prev => ({
+      ...prev,
+      hp: prev.maxHp,
+      mp: prev.maxMp,
+    }));
+    addLog(`🔧 [DEV] Full heal!`);
+  }
+
+  function devAddGear() {
+    const randomGear = generateLoot(char.level + 10);
+    setInventory(prev => [...prev, randomGear]);
+    addLog(`🔧 [DEV] Added ${randomGear.name}!`);
+  }
+
+  function devUnlockAllZones() {
+    const allZoneIds = ZONES.map(z => z.id);
+    setUnlockedZoneIds(allZoneIds);
+    addLog(`🔧 [DEV] Unlocked all zones!`);
+  }
+  // ========== END DEV TOOLS ==========
+
   function addStat(stat: keyof CharacterStats) {
     if (char.statPoints <= 0) {
       addLog("❌ No stat points!");
@@ -98,7 +173,6 @@ export function useGameState(addLog: (text: string) => void) {
       ...prev,
       stats: { ...prev.stats, [stat]: prev.stats[stat] + 1 },
       statPoints: prev.statPoints - 1,
-      // Update max HP/MP dynamically when vit/int increases
       maxHp: stat === 'vit' ? calcMaxHp(prev.level, prev.stats.vit + 1, prev.jobClass) : prev.maxHp,
       maxMp: stat === 'int' ? calcMaxMp(prev.level, prev.stats.int + 1, prev.jobClass) : prev.maxMp,
     }));
@@ -159,48 +233,39 @@ export function useGameState(addLog: (text: string) => void) {
   function handleJobChange(newJob: JobClass) {
     const jobBonuses = getJobBonuses(newJob);
     
-    // Get skills for new job (basic_attack is already in SKILLS_DB for all jobs)
     const newJobSkills = SKILLS_DB[newJob];
-    
-    // Always keep basic_attack + add first job skill if it exists
     const initialSkills: Record<string, number> = { basic_attack: 1 };
-    
-    // Find the first actual skill (not basic_attack) for the new job
     const firstJobSkill = newJobSkills.find(s => s.id !== "basic_attack");
     if (firstJobSkill) {
       initialSkills[firstJobSkill.id] = 1;
     }
 
-    // Calculate new Max HP/MP with the NEW job multipliers but SAME base level and stats
     const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
     const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
 
     setChar({
-      ...char, // Keep level, exp, expToNext, gold, stats, and statPoints exactly as they are!
+      ...char,
       hp: newMaxHp,
       maxHp: newMaxHp,
       mp: newMaxMp,
       maxMp: newMaxMp,
       jobClass: newJob,
-      jobLevel: 1, // Only Job Level resets
+      jobLevel: 1,
       jobExp: 0,
       jobExpToNext: 50,
-      skillPoints: 3, // Give 3 skill points to start learning new job skills (Classic RO style)
+      skillPoints: 3,
       learnedSkills: initialSkills,
       autoAttackSkillId: firstJobSkill ? firstJobSkill.id : "basic_attack",
     });
 
-    // Teleport to town after job change
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
-    
-    // Reset combat states
     setKillCount(0);
     setIsBossFight(false);
     setBossAvailable(false);
 
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
-    addLog(`🏙️ Teleported to Town for safety!`);
+    addLog(`🏛️ Teleported to Town for safety!`);
     addLog(`💫 You received 3 Skill Points to learn new skills!`);
     if (firstJobSkill) {
       addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your auto-attack skill.`);
@@ -214,7 +279,6 @@ export function useGameState(addLog: (text: string) => void) {
   }
 
   function handleRespawn() {
-    // Restore 50% HP and MP
     const respawnHp = Math.floor(char.maxHp * 0.5);
     const respawnMp = Math.floor(char.maxMp * 0.5);
     
@@ -224,13 +288,10 @@ export function useGameState(addLog: (text: string) => void) {
       mp: respawnMp,
     }));
     
-    // Reset combat states
     setKillCount(0);
     setIsBossFight(false);
     setBossAvailable(false);
     setShowDeathModal(false);
-    
-    // Teleport to town (Zone 0)
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
     
@@ -243,29 +304,24 @@ export function useGameState(addLog: (text: string) => void) {
       return;
     }
     
-    // Reset combat states
     setKillCount(0);
     setIsBossFight(false);
     setBossAvailable(false);
-    
-    // Teleport to town (Zone 0)
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
     
-    addLog("🏙️ Escaped to Town safely!");
+    addLog("🏛️ Escaped to Town safely!");
   }
 
-  // Town healing logic
   function processTownHealing() {
     if (currentZoneId === 0 && (char.hp < char.maxHp || char.mp < char.maxMp) && char.hp > 0) {
-      const healHp = Math.floor(char.maxHp * 0.1); // 10% per tick
-      const healMp = Math.floor(char.maxMp * 0.1); // 10% per tick
+      const healHp = Math.floor(char.maxHp * 0.1);
+      const healMp = Math.floor(char.maxMp * 0.1);
       
       setChar(prev => {
         const newHp = Math.min(prev.maxHp, prev.hp + healHp);
         const newMp = Math.min(prev.maxMp, prev.mp + healMp);
         
-        // Only log if we actually healed
         if (newHp > prev.hp || newMp > prev.mp) {
           addLog(`✨ Town Healing: +${newHp - prev.hp} HP, +${newMp - prev.mp} MP`);
         }
@@ -277,11 +333,9 @@ export function useGameState(addLog: (text: string) => void) {
   
   townHealingRef.current = processTownHealing;
 
-  // Auto-potion logic
   function processAutoPotion() {
-    if (char.hp <= 0) return; // Don't use potions if dead
+    if (char.hp <= 0) return;
     
-    // Auto HP Potion
     if (autoHpPercent > 0 && hpPotions > 0) {
       const hpPercentage = (char.hp / char.maxHp) * 100;
       if (hpPercentage < autoHpPercent && hpPercentage < 100) {
@@ -289,7 +343,6 @@ export function useGameState(addLog: (text: string) => void) {
       }
     }
     
-    // Auto MP Potion
     if (autoMpPercent > 0 && mpPotions > 0) {
       const mpPercentage = (char.mp / char.maxMp) * 100;
       if (mpPercentage < autoMpPercent && mpPercentage < 100) {
@@ -301,21 +354,17 @@ export function useGameState(addLog: (text: string) => void) {
   autoPotionRef.current = processAutoPotion;
 
   function battleAction(skillId?: string) {
-    // Don't allow actions if dead or in town
     if (char.hp <= 0) return;
     if (currentZoneId === 0) {
-      // In town, we just heal
       townHealingRef.current();
       return;
     }
 
-    // Check auto-potions before battle
     autoPotionRef.current();
 
     const weaponBonus = equipped.weapon?.stat || 0;
     const armorBonus = equipped.armor?.stat || 0;
 
-    // Use specified skill, or auto-attack skill if none specified
     const actualSkillId = skillId || char.autoAttackSkillId;
     const skillLevel = char.learnedSkills[actualSkillId] || 0;
 
@@ -324,7 +373,6 @@ export function useGameState(addLog: (text: string) => void) {
       return;
     }
 
-    // Get skill from current job skills
     const skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
 
     if (!skill) {
@@ -338,7 +386,7 @@ export function useGameState(addLog: (text: string) => void) {
 
     if (timePassed < skill.cooldown) {
       const remaining = (skill.cooldown - timePassed).toFixed(1);
-      addLog(`⌛ ${skill.nameZh} on cooldown (${remaining}s)`);
+      addLog(`⏳ ${skill.nameZh} on cooldown (${remaining}s)`);
       return;
     }
 
@@ -406,7 +454,6 @@ export function useGameState(addLog: (text: string) => void) {
         addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +3)`);
       }
 
-      // NEW: Pass current Job Level to calculateJobExpGain for proper scaling
       const jobExpGain = calculateJobExpGain(enemy, char.jobLevel);
       const jobLevelUpResult = processJobLevelUp(char, jobExpGain);
       nextJobExp = jobLevelUpResult.newJobExp;
@@ -421,7 +468,6 @@ export function useGameState(addLog: (text: string) => void) {
           `📘 JOB LEVEL UP! Job Lv.${nextJobLevel} (Skill Points +1)`
         );
         
-        // Check if can change job now
         if (canChangeJob(char.jobClass, nextJobLevel) && nextJobLevel === 10) {
           addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);
         }
@@ -622,7 +668,6 @@ export function useGameState(addLog: (text: string) => void) {
 
   useEffect(() => {
     const id = setInterval(() => {
-      // Auto-attack uses no skill parameter, which uses char.autoAttackSkillId
       battleActionRef.current();
     }, AUTO_ATTACK_INTERVAL);
     return () => clearInterval(id);
@@ -667,5 +712,13 @@ export function useGameState(addLog: (text: string) => void) {
     openJobChangeNPC,
     handleRespawn,
     escapeToTown,
+    // Dev tools
+    devAddBaseLevel,
+    devAddJobLevel,
+    devAddGold,
+    devAddPotions,
+    devFullHeal,
+    devAddGear,
+    devUnlockAllZones,
   };
 }
