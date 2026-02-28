@@ -61,14 +61,14 @@ export function MiniLevelGame() {
 
         <div
           style={{
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
             gap: "20px",
             marginBottom: "15px",
-            flexWrap: "wrap",
           }}
         >
           {/* Left Column */}
-          <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
+          <div style={{ minWidth: 0 }}>
             <CharacterStats
               character={game.char}
               onAddStat={game.addStat}
@@ -113,7 +113,7 @@ export function MiniLevelGame() {
           </div>
 
           {/* Right Column */}
-          <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
+          <div style={{ minWidth: 0 }}>
             {/* Battle Log moved to top of right column */}
             <BattleLog logs={logs} />
             
@@ -159,6 +159,98 @@ export function MiniLevelGame() {
           />
         )}
 
+        {/* Death Modal */}
+        {game.showDeathModal && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.9)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 1000,
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
+                border: "3px solid #dc2626",
+                borderRadius: "16px",
+                padding: "40px",
+                maxWidth: "500px",
+                width: "90%",
+                color: "white",
+                textAlign: "center",
+                boxShadow: "0 0 50px rgba(220, 38, 38, 0.5)",
+              }}
+            >
+              <div style={{ fontSize: "72px", marginBottom: "20px" }}>
+                💀
+              </div>
+              <h2
+                style={{
+                  margin: "0 0 20px 0",
+                  fontSize: "32px",
+                  color: "#dc2626",
+                  fontWeight: "bold",
+                }}
+              >
+                You Were Defeated!
+              </h2>
+              <p
+                style={{
+                  fontSize: "16px",
+                  marginBottom: "10px",
+                  color: "#bbb",
+                }}
+              >
+                Your adventure has ended...
+              </p>
+              <p
+                style={{
+                  fontSize: "14px",
+                  marginBottom: "30px",
+                  color: "#888",
+                }}
+              >
+                You will respawn at town with 50% HP and MP.
+              </p>
+              <button
+                onClick={game.handleRespawn}
+                style={{
+                  width: "100%",
+                  padding: "15px",
+                  background: "linear-gradient(45deg, #dc2626, #991b1b)",
+                  color: "white",
+                  border: "2px solid #ef4444",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  boxShadow: "0 4px 15px rgba(220, 38, 38, 0.4)",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.05)";
+                  e.currentTarget.style.boxShadow =
+                    "0 6px 20px rgba(220, 38, 38, 0.6)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 15px rgba(220, 38, 38, 0.4)";
+                }}
+              >
+                ❤️‍🩹 Respawn
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Skill Hotkeys */}
         <SkillHotkeys
           character={game.char}
@@ -166,19 +258,6 @@ export function MiniLevelGame() {
           onUseSkill={game.battleAction}
           disabled={game.char.hp <= 0}
         />
-
-        {game.char.hp <= 0 && (
-          <div
-            style={{
-              marginTop: "10px",
-              textAlign: "center",
-              color: "#ef4444",
-              fontWeight: "bold",
-            }}
-          >
-            💀 You are defeated! Wait for respawn...
-          </div>
-        )}
       </div>
 
       {/* Add pulse animation for job change button */}
