@@ -294,11 +294,8 @@ export function MiniLevelGame() {
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
   const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>({});
 
-  // ✅ NEW: Add this line
-  const [showBattleLog, setShowBattleLog] = useState<boolean>(true);
-
-
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const logContainerRef = useRef<HTMLDivElement>(null);
   const battleActionRef = useRef<(skillId?: string) => void>(() => {});
 
   // === Stats 相關 Helper ===
@@ -629,13 +626,17 @@ export function MiniLevelGame() {
     return () => clearInterval(id);
   }, []);
 
-  // ✅ MODIFIED: Only auto-scroll when log is visible
+  // ✅ FIXED: Only auto-scroll if user is already at the bottom
   useEffect(() => {
-    if (showBattleLog) {
-      logsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [logs, showBattleLog]);
+    const container = logContainerRef.current;
+    if (!container) return;
 
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+    
+    if (isNearBottom) {
+      logsEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    }
+  }, [logs]);
 
   const expProgress = Math.floor((char.exp / char.expToNext) * 100);
   const hpPercent = Math.floor((char.hp / char.maxHp) * 100);
@@ -653,10 +654,10 @@ export function MiniLevelGame() {
         color: "white",
         display: "flex",
         justifyContent: "center",
-        alignItems: "flex-start",  // Changed from "center"
+        alignItems: "flex-start",
         fontFamily: "system-ui, sans-serif",
         padding: "20px",
-        paddingTop: "40px",  // Added
+        paddingTop: "40px",
       }}
     >
 
@@ -666,10 +667,10 @@ export function MiniLevelGame() {
           padding: "20px",
           borderRadius: "12px",
           width: "100%",
-          maxWidth: "1200px",  // Changed from 900px
+          maxWidth: "1200px",
           background: "rgba(34, 34, 34, 0.95)",
           boxShadow: "0 8px 32px rgba(255, 215, 0, 0.2)",
-          backdropFilter: "blur(10px)",  // Added
+          backdropFilter: "blur(10px)",
         }}
       >
 
@@ -1493,6 +1494,7 @@ export function MiniLevelGame() {
             📜 Battle Log
           </h3>
           <div
+            ref={logContainerRef}
             style={{
               height: "150px",
               overflowY: "auto",
