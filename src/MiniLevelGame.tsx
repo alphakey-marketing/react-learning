@@ -8,6 +8,7 @@ import { Shop } from "./components/Shop";
 import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
+import { DevTools } from "./components/DevTools";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { canChangeJob } from "./data/jobs";
@@ -33,6 +34,18 @@ export function MiniLevelGame() {
         paddingTop: "40px",
       }}
     >
+      {/* Dev Tools Panel - Fixed position */}
+      <DevTools
+        character={game.char}
+        onAddBaseLevel={game.devAddBaseLevel}
+        onAddJobLevel={game.devAddJobLevel}
+        onAddGold={game.devAddGold}
+        onAddPotions={game.devAddPotions}
+        onFullHeal={game.devFullHeal}
+        onAddGear={game.devAddGear}
+        onUnlockAllZones={game.devUnlockAllZones}
+      />
+
       <div
         style={{
           border: "2px solid gold",
