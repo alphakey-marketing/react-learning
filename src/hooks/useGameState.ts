@@ -156,22 +156,15 @@ export function useGameState(addLog: (text: string) => void) {
   function handleJobChange(newJob: JobClass) {
     const jobBonuses = getJobBonuses(newJob);
     
-    // Calculate total stat points earned from previous levels
-    const totalStatPoints =
-      char.stats.str +
-      char.stats.agi +
-      char.stats.vit +
-      char.stats.int +
-      char.stats.dex +
-      char.stats.luk +
-      char.statPoints -
-      10; // Minus novice starting stats (5 STR + 1 each = 10)
+    // Calculate ONLY the stat points earned from base leveling (not distributed stats)
+    // Each level up gives 3 stat points
+    // Level 1 starts with 5 points, so total earned = (current_level - 1) * 3
+    const earnedStatPointsFromLeveling = (char.level - 1) * 3;
+    
+    // Give 15 base points + points earned from leveling
+    const baseStatPoints = 15 + earnedStatPointsFromLeveling;
 
-    // Reset to level 1 with 15 base stat points + earned points from leveling
-    const newLevel = 1;
-    const baseStatPoints = 15 + totalStatPoints; // Start with 15 points as per Option 2
-
-    // Get skills for new job (always include basic_attack)
+    // Get skills for new job (basic_attack is already in SKILLS_DB for all jobs)
     const newJobSkills = SKILLS_DB[newJob];
     
     // Always keep basic_attack + add first job skill if it exists
@@ -184,6 +177,7 @@ export function useGameState(addLog: (text: string) => void) {
     }
 
     // Calculate new HP/MP with job bonuses
+    const newLevel = 1;
     const baseHp = calcMaxHp(newLevel, 1);
     const baseMp = calcMaxMp(newLevel, 1);
     const newMaxHp = Math.floor(baseHp * jobBonuses.hpMultiplier);
@@ -209,7 +203,17 @@ export function useGameState(addLog: (text: string) => void) {
       autoAttackSkillId: firstJobSkill ? firstJobSkill.id : "basic_attack",
     });
 
+    // Teleport to town after job change
+    setCurrentZoneId(0);
+    setEnemy(getRandomEnemyForZone(0, newLevel));
+    
+    // Reset combat states
+    setKillCount(0);
+    setIsBossFight(false);
+    setBossAvailable(false);
+
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
+    addLog(`🏙️ Teleported to Town for safety!`);
     addLog(`📋 Stats reset. You have ${baseStatPoints} stat points to distribute!`);
     if (firstJobSkill) {
       addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your auto-attack skill.`);
@@ -261,7 +265,7 @@ export function useGameState(addLog: (text: string) => void) {
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
     
-    addLog("🏛️ Escaped to Town safely!");
+    addLog("🏙️ Escaped to Town safely!");
   }
 
   // Town healing logic
@@ -347,7 +351,7 @@ export function useGameState(addLog: (text: string) => void) {
 
     if (timePassed < skill.cooldown) {
       const remaining = (skill.cooldown - timePassed).toFixed(1);
-      addLog(`⏳ ${skill.nameZh} on cooldown (${remaining}s)`);
+      addLog(`⌛ ${skill.nameZh} on cooldown (${remaining}s)`);
       return;
     }
 

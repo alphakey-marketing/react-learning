@@ -14,10 +14,8 @@ export function SkillWindow({
   onSetAutoAttack,
   onClose,
 }: SkillWindowProps) {
-  // Get all skills including Novice skills (for basic_attack)
-  const jobSkills = SKILLS_DB[character.jobClass];
-  const noviceSkills = character.jobClass !== "Novice" ? SKILLS_DB.Novice : [];
-  const availableSkills = [...jobSkills, ...noviceSkills];
+  // Only get skills for current job (basic_attack is already included in each job's SKILLS_DB)
+  const availableSkills = SKILLS_DB[character.jobClass];
 
   return (
     <div
