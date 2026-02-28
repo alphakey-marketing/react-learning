@@ -7,12 +7,17 @@ import { Inventory } from "./components/Inventory";
 import { Shop } from "./components/Shop";
 import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
+import { JobChangeNPC } from "./components/JobChangeNPC";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
+import { canChangeJob } from "./data/jobs";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const game = useGameState(addLog);
+
+  // Check if player can change job
+  const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
   return (
     <div
@@ -69,6 +74,35 @@ export function MiniLevelGame() {
               onAddStat={game.addStat}
               onOpenSkills={() => game.setShowSkillWindow(true)}
             />
+            
+            {/* Job Change Button */}
+            <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+              <button
+                onClick={game.openJobChangeNPC}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  background: canChangeJobNow
+                    ? "linear-gradient(45deg, #f59e0b, #d97706)"
+                    : "#555",
+                  color: "white",
+                  border: canChangeJobNow ? "2px solid #fbbf24" : "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "13px",
+                  boxShadow: canChangeJobNow
+                    ? "0 0 15px rgba(251, 191, 36, 0.5)"
+                    : "none",
+                  animation: canChangeJobNow ? "pulse 2s infinite" : "none",
+                }}
+              >
+                {canChangeJobNow
+                  ? "🧙 Job Change Available!"
+                  : "🧙 Job Change Master"}
+              </button>
+            </div>
+
             <EnemyDisplay enemy={game.enemy} />
             <BossChallenge
               bossAvailable={game.bossAvailable}
@@ -112,6 +146,16 @@ export function MiniLevelGame() {
           />
         )}
 
+        {/* Job Change NPC (Full Screen Modal) */}
+        {game.showJobChangeNPC && (
+          <JobChangeNPC
+            currentJob={game.char.jobClass}
+            currentJobLevel={game.char.jobLevel}
+            onJobChange={game.handleJobChange}
+            onClose={() => game.setShowJobChangeNPC(false)}
+          />
+        )}
+
         {/* Battle Log */}
         <BattleLog logs={logs} />
 
@@ -136,6 +180,18 @@ export function MiniLevelGame() {
           </div>
         )}
       </div>
+
+      {/* Add pulse animation for job change button */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.8;
+          }
+        }
+      `}</style>
     </div>
   );
 }
