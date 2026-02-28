@@ -164,18 +164,20 @@ export function useGameState(addLog: (text: string) => void) {
       char.statPoints -
       10; // Minus novice starting stats (5 STR + 1 each = 10)
 
-    // Reset to level 1 with 15 base stat points + earned points
+    // Reset to level 1 with 15 base stat points + earned points from leveling
     const newLevel = 1;
-    const baseStatPoints = 15 + totalStatPoints;
+    const baseStatPoints = 15 + totalStatPoints; // Start with 15 points as per Option 2
 
-    // Get first skill for new job
+    // Get skills for new job (always include basic_attack)
     const newJobSkills = SKILLS_DB[newJob];
-    const firstSkill = newJobSkills.length > 0 ? newJobSkills[0] : null;
     
-    // Always keep basic_attack + add first job skill
+    // Always keep basic_attack + add first job skill if it exists
     const initialSkills: Record<string, number> = { basic_attack: 1 };
-    if (firstSkill) {
-      initialSkills[firstSkill.id] = 1;
+    
+    // Find the first actual skill (not basic_attack) for the new job
+    const firstJobSkill = newJobSkills.find(s => s.id !== "basic_attack");
+    if (firstJobSkill) {
+      initialSkills[firstJobSkill.id] = 1;
     }
 
     // Calculate new HP/MP with job bonuses
@@ -201,13 +203,13 @@ export function useGameState(addLog: (text: string) => void) {
       jobExpToNext: 50,
       skillPoints: 3, // Starting skill points
       learnedSkills: initialSkills,
-      autoAttackSkillId: firstSkill ? firstSkill.id : "basic_attack",
+      autoAttackSkillId: firstJobSkill ? firstJobSkill.id : "basic_attack",
     });
 
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
-    addLog(`📊 Stats reset. You have ${baseStatPoints} stat points to distribute!`);
-    if (firstSkill) {
-      addLog(`📖 You learned ${firstSkill.nameZh}! It's now your auto-attack skill.`);
+    addLog(`📋 Stats reset. You have ${baseStatPoints} stat points to distribute!`);
+    if (firstJobSkill) {
+      addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your auto-attack skill.`);
     }
     addLog(`🛡️ Job Bonuses: HP ${Math.floor((jobBonuses.hpMultiplier - 1) * 100)}%, MP ${Math.floor((jobBonuses.mpMultiplier - 1) * 100)}%, +${jobBonuses.atkBonus} ATK, +${jobBonuses.defBonus} DEF`);
     setShowJobChangeNPC(false);
@@ -284,11 +286,8 @@ export function useGameState(addLog: (text: string) => void) {
       return;
     }
 
-    const allSkills = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId) ? 
-      SKILLS_DB[char.jobClass] : 
-      [...SKILLS_DB[char.jobClass], ...SKILLS_DB.Novice]; // Fallback to include Novice skills
-    
-    const skill = allSkills.find((s) => s.id === actualSkillId);
+    // Get skill from current job skills
+    const skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
 
     if (!skill) {
       addLog("❌ Skill not found!");
@@ -301,7 +300,7 @@ export function useGameState(addLog: (text: string) => void) {
 
     if (timePassed < skill.cooldown) {
       const remaining = (skill.cooldown - timePassed).toFixed(1);
-      addLog(`⏳ ${skill.nameZh} on cooldown (${remaining}s)`);
+      addLog(`⌛ ${skill.nameZh} on cooldown (${remaining}s)`);
       return;
     }
 
