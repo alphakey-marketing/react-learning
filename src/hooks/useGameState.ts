@@ -4,6 +4,7 @@ import { Enemy } from "../types/enemy";
 import { Equipment, EquippedItems } from "../types/equipment";
 import { getRandomEnemyForZone, ZONES } from "../data/zones";
 import { SKILLS_DB } from "../data/skills";
+import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
 import {
   calculateDamage,
   calculateEnemyDamage,
@@ -75,6 +76,7 @@ export function useGameState(addLog: (text: string) => void) {
   const [mpPotions, setMpPotions] = useState<number>(1);
 
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
+  const [showJobChangeNPC, setShowJobChangeNPC] = useState<boolean>(false);
   const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>(
     {}
   );
@@ -122,6 +124,64 @@ export function useGameState(addLog: (text: string) => void) {
     }));
 
     addLog(`📖 Learned ${skill.nameZh} Lv.${currentLevel + 1}!`);
+  }
+
+  function handleJobChange(newJob: JobClass) {
+    const jobBonuses = getJobBonuses(newJob);
+    
+    // Calculate total stat points (current stats + remaining points)
+    const totalStatPoints =
+      char.stats.str +
+      char.stats.agi +
+      char.stats.vit +
+      char.stats.int +
+      char.stats.dex +
+      char.stats.luk +
+      char.statPoints -
+      6; // Minus starting stats (6 total)
+
+    // Reset to level 1 with stat points from previous base levels
+    const newLevel = 1;
+    const baseStatPoints = 5 + totalStatPoints; // Starting 5 + earned points
+
+    // Get first skill for new job
+    const newJobSkills = SKILLS_DB[newJob];
+    const firstSkill = newJobSkills.length > 0 ? newJobSkills[0] : null;
+    const initialSkills = firstSkill ? { [firstSkill.id]: 1 } : { basic_attack: 1 };
+
+    // Calculate new HP/MP with job bonuses
+    const baseHp = calcMaxHp(newLevel, 1);
+    const baseMp = calcMaxMp(newLevel, 1);
+    const newMaxHp = Math.floor(baseHp * jobBonuses.hpMultiplier);
+    const newMaxMp = Math.floor(baseMp * jobBonuses.mpMultiplier);
+
+    setChar({
+      level: newLevel,
+      exp: 0,
+      expToNext: 100,
+      hp: newMaxHp,
+      maxHp: newMaxHp,
+      mp: newMaxMp,
+      maxMp: newMaxMp,
+      gold: char.gold, // Keep gold
+      stats: { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 },
+      statPoints: baseStatPoints,
+      jobClass: newJob,
+      jobLevel: 1,
+      jobExp: 0,
+      jobExpToNext: 50,
+      skillPoints: 3, // Starting skill points
+      learnedSkills: initialSkills,
+    });
+
+    addLog(`🎉 Congratulations! You are now a ${newJob}!`);
+    addLog(`📊 Stats reset. You have ${baseStatPoints} stat points to distribute!`);
+    addLog(`📖 You learned your first ${newJob} skill!`);
+    setShowJobChangeNPC(false);
+  }
+
+  function openJobChangeNPC() {
+    setShowJobChangeNPC(true);
   }
 
   function battleAction(skillId?: string) {
@@ -231,6 +291,11 @@ export function useGameState(addLog: (text: string) => void) {
         addLog(
           `📘 JOB LEVEL UP! Job Lv.${nextJobLevel} (Skill Points +1)`
         );
+        
+        // Check if can change job now
+        if (canChangeJob(char.jobClass, nextJobLevel) && nextJobLevel === 10) {
+          addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);
+        }
       }
 
       if (isBossFight) {
@@ -439,8 +504,10 @@ export function useGameState(addLog: (text: string) => void) {
     hpPotions,
     mpPotions,
     showSkillWindow,
+    showJobChangeNPC,
     skillCooldowns,
     setShowSkillWindow,
+    setShowJobChangeNPC,
     addStat,
     learnSkill,
     battleAction,
@@ -452,5 +519,7 @@ export function useGameState(addLog: (text: string) => void) {
     buyMpPotion,
     useHpPotion,
     useMpPotion,
+    handleJobChange,
+    openJobChangeNPC,
   };
 }
