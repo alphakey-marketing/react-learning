@@ -77,11 +77,17 @@ export function useGameState(addLog: (text: string) => void) {
 
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
   const [showJobChangeNPC, setShowJobChangeNPC] = useState<boolean>(false);
+  const [showDeathModal, setShowDeathModal] = useState<boolean>(false);
   const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>(
     {}
   );
 
   const battleActionRef = useRef<(skillId?: string) => void>(() => {});
+  const pendingRespawnData = useRef<{
+    hp: number;
+    mp: number;
+    enemy: Enemy;
+  } | null>(null);
 
   function addStat(stat: keyof CharacterStats) {
     if (char.statPoints <= 0) {
@@ -184,6 +190,20 @@ export function useGameState(addLog: (text: string) => void) {
     setShowJobChangeNPC(true);
   }
 
+  function handleRespawn() {
+    if (pendingRespawnData.current) {
+      setChar((prev) => ({
+        ...prev,
+        hp: pendingRespawnData.current!.hp,
+        mp: pendingRespawnData.current!.mp,
+      }));
+      setEnemy(pendingRespawnData.current.enemy);
+      pendingRespawnData.current = null;
+    }
+    setShowDeathModal(false);
+    addLog("❤️‍🩹 Respawned at town!");
+  }
+
   // Helper function to get the first available learned skill
   function getAutoAttackSkill(): string {
     // Get all learned skills that have level > 0
@@ -196,6 +216,9 @@ export function useGameState(addLog: (text: string) => void) {
   }
 
   function battleAction(skillId?: string) {
+    // Don't allow actions if dead
+    if (char.hp <= 0) return;
+
     const weaponBonus = equipped.weapon?.stat || 0;
     const armorBonus = equipped.armor?.stat || 0;
 
@@ -365,13 +388,23 @@ export function useGameState(addLog: (text: string) => void) {
 
       if (nextCharHp <= 0) {
         nextCharHp = 0;
-        addLog(`💀 You were defeated... Respawning.`);
-        nextCharHp = Math.floor(calcMaxHp(char.level, char.stats.vit) * 0.5);
-        nextCharMp = Math.floor(calcMaxMp(char.level, char.stats.int) * 0.5);
-        nextEnemy = {
+        addLog(`💀 You were defeated by ${enemy.name}!`);
+        
+        // Store respawn data and show modal
+        const respawnHp = Math.floor(calcMaxHp(char.level, char.stats.vit) * 0.5);
+        const respawnMp = Math.floor(calcMaxMp(char.level, char.stats.int) * 0.5);
+        const respawnEnemy = {
           ...nextEnemy,
           hp: Math.min(nextEnemy.maxHp, nextEnemy.hp + 10),
         };
+        
+        pendingRespawnData.current = {
+          hp: respawnHp,
+          mp: respawnMp,
+          enemy: respawnEnemy,
+        };
+        
+        setShowDeathModal(true);
       }
     }
 
@@ -518,6 +551,7 @@ export function useGameState(addLog: (text: string) => void) {
     mpPotions,
     showSkillWindow,
     showJobChangeNPC,
+    showDeathModal,
     skillCooldowns,
     setShowSkillWindow,
     setShowJobChangeNPC,
@@ -534,5 +568,6 @@ export function useGameState(addLog: (text: string) => void) {
     useMpPotion,
     handleJobChange,
     openJobChangeNPC,
+    handleRespawn,
   };
 }
