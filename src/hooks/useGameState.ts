@@ -98,6 +98,9 @@ export function useGameState(addLog: (text: string) => void) {
       ...prev,
       stats: { ...prev.stats, [stat]: prev.stats[stat] + 1 },
       statPoints: prev.statPoints - 1,
+      // Update max HP/MP dynamically when vit/int increases
+      maxHp: stat === 'vit' ? calcMaxHp(prev.level, prev.stats.vit + 1, prev.jobClass) : prev.maxHp,
+      maxMp: stat === 'int' ? calcMaxMp(prev.level, prev.stats.int + 1, prev.jobClass) : prev.maxMp,
     }));
   }
 
@@ -156,14 +159,6 @@ export function useGameState(addLog: (text: string) => void) {
   function handleJobChange(newJob: JobClass) {
     const jobBonuses = getJobBonuses(newJob);
     
-    // Calculate ONLY the stat points earned from base leveling (not distributed stats)
-    // Each level up gives 3 stat points
-    // Level 1 starts with 5 points, so total earned = (current_level - 1) * 3
-    const earnedStatPointsFromLeveling = (char.level - 1) * 3;
-    
-    // Give 15 base points + points earned from leveling
-    const baseStatPoints = 15 + earnedStatPointsFromLeveling;
-
     // Get skills for new job (basic_attack is already in SKILLS_DB for all jobs)
     const newJobSkills = SKILLS_DB[newJob];
     
@@ -176,36 +171,28 @@ export function useGameState(addLog: (text: string) => void) {
       initialSkills[firstJobSkill.id] = 1;
     }
 
-    // Calculate new HP/MP with job bonuses
-    const newLevel = 1;
-    const baseHp = calcMaxHp(newLevel, 1);
-    const baseMp = calcMaxMp(newLevel, 1);
-    const newMaxHp = Math.floor(baseHp * jobBonuses.hpMultiplier);
-    const newMaxMp = Math.floor(baseMp * jobBonuses.mpMultiplier);
+    // Calculate new Max HP/MP with the NEW job multipliers but SAME base level and stats
+    const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
+    const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
 
     setChar({
-      level: newLevel,
-      exp: 0,
-      expToNext: 100,
+      ...char, // Keep level, exp, expToNext, gold, stats, and statPoints exactly as they are!
       hp: newMaxHp,
       maxHp: newMaxHp,
       mp: newMaxMp,
       maxMp: newMaxMp,
-      gold: char.gold, // Keep gold
-      stats: { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 },
-      statPoints: baseStatPoints,
       jobClass: newJob,
-      jobLevel: 1,
+      jobLevel: 1, // Only Job Level resets
       jobExp: 0,
       jobExpToNext: 50,
-      skillPoints: 3, // Starting skill points
+      skillPoints: 0, // Reset skill points, will earn more by leveling Job Level
       learnedSkills: initialSkills,
       autoAttackSkillId: firstJobSkill ? firstJobSkill.id : "basic_attack",
     });
 
     // Teleport to town after job change
     setCurrentZoneId(0);
-    setEnemy(getRandomEnemyForZone(0, newLevel));
+    setEnemy(getRandomEnemyForZone(0, char.level));
     
     // Reset combat states
     setKillCount(0);
@@ -214,7 +201,6 @@ export function useGameState(addLog: (text: string) => void) {
 
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
     addLog(`🏙️ Teleported to Town for safety!`);
-    addLog(`📋 Stats reset. You have ${baseStatPoints} stat points to distribute!`);
     if (firstJobSkill) {
       addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your auto-attack skill.`);
     }
@@ -501,9 +487,9 @@ export function useGameState(addLog: (text: string) => void) {
 
     setChar({
       hp: nextCharHp,
-      maxHp: calcMaxHp(nextCharLevel, nextCharStats.vit),
+      maxHp: calcMaxHp(nextCharLevel, nextCharStats.vit, char.jobClass),
       mp: nextCharMp,
-      maxMp: calcMaxMp(nextCharLevel, nextCharStats.int),
+      maxMp: calcMaxMp(nextCharLevel, nextCharStats.int, char.jobClass),
       level: nextCharLevel,
       exp: nextCharExp,
       expToNext: nextCharExpToNext,
