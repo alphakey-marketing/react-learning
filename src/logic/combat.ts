@@ -10,7 +10,7 @@ export interface DamageResult {
   isMagic: boolean;
 }
 
-const MAGIC_SKILLS = ["fire_bolt", "cold_bolt", "lightning_bolt"];
+const MAGIC_SKILLS = ["fire_bolt", "cold_bolt", "lightning_bolt", "storm_gust", "meteor_storm"];
 
 export function isMagicSkill(skillId: string): boolean {
   return MAGIC_SKILLS.includes(skillId);
