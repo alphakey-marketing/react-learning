@@ -114,6 +114,9 @@ export function MiniLevelGame() {
 
           {/* Right Column */}
           <div style={{ flex: "1 1 400px", minWidth: "300px" }}>
+            {/* Battle Log moved to top of right column */}
+            <BattleLog logs={logs} />
+            
             <MapSystem
               currentZoneId={game.currentZoneId}
               unlockedZoneIds={game.unlockedZoneIds}
@@ -155,9 +158,6 @@ export function MiniLevelGame() {
             onClose={() => game.setShowJobChangeNPC(false)}
           />
         )}
-
-        {/* Battle Log */}
-        <BattleLog logs={logs} />
 
         {/* Skill Hotkeys */}
         <SkillHotkeys
