@@ -66,7 +66,7 @@ export function useGameState(addLog: (text: string) => void) {
   });
 
   const [currentZoneId, setCurrentZoneId] = useState<number>(1);
-  const [unlockedZoneIds, setUnlockedZoneIds] = useState<number[]>([1]);
+  const [unlockedZoneIds, setUnlockedZoneIds] = useState<number[]>([0, 1]); // 0 is town, 1 is zone1
   const [killCount, setKillCount] = useState<number>(0);
   const [bossAvailable, setBossAvailable] = useState<boolean>(false);
   const [bossDefeated, setBossDefeated] = useState<boolean>(false);
@@ -83,11 +83,8 @@ export function useGameState(addLog: (text: string) => void) {
   );
 
   const battleActionRef = useRef<(skillId?: string) => void>(() => {});
-  const pendingRespawnData = useRef<{
-    hp: number;
-    mp: number;
-    enemy: Enemy;
-  } | null>(null);
+  // We don't need pendingRespawnData anymore as we will calculate it during handleRespawn
+  const townHealingRef = useRef<() => void>(() => {});
 
   function addStat(stat: keyof CharacterStats) {
     if (char.statPoints <= 0) {
@@ -191,18 +188,50 @@ export function useGameState(addLog: (text: string) => void) {
   }
 
   function handleRespawn() {
-    if (pendingRespawnData.current) {
-      setChar((prev) => ({
-        ...prev,
-        hp: pendingRespawnData.current!.hp,
-        mp: pendingRespawnData.current!.mp,
-      }));
-      setEnemy(pendingRespawnData.current.enemy);
-      pendingRespawnData.current = null;
-    }
+    // Restore 50% HP and MP
+    const respawnHp = Math.floor(char.maxHp * 0.5);
+    const respawnMp = Math.floor(char.maxMp * 0.5);
+    
+    setChar((prev) => ({
+      ...prev,
+      hp: respawnHp,
+      mp: respawnMp,
+    }));
+    
+    // Reset combat states
+    setKillCount(0);
+    setIsBossFight(false);
+    setBossAvailable(false);
     setShowDeathModal(false);
-    addLog("❤️‍🩹 Respawned at town!");
+    
+    // Teleport to town (Zone 0)
+    setCurrentZoneId(0);
+    setEnemy(getRandomEnemyForZone(0, char.level));
+    
+    addLog("❤️‍🩹 Respawned in Town! Resting will recover HP/MP.");
   }
+
+  // Town healing logic
+  function processTownHealing() {
+    if (currentZoneId === 0 && (char.hp < char.maxHp || char.mp < char.maxMp) && char.hp > 0) {
+      const healHp = Math.floor(char.maxHp * 0.1); // 10% per tick
+      const healMp = Math.floor(char.maxMp * 0.1); // 10% per tick
+      
+      setChar(prev => {
+        const newHp = Math.min(prev.maxHp, prev.hp + healHp);
+        const newMp = Math.min(prev.maxMp, prev.mp + healMp);
+        
+        // Only log if we actually healed
+        if (newHp > prev.hp || newMp > prev.mp) {
+          addLog(`✨ Town Healing: +${newHp - prev.hp} HP, +${newMp - prev.mp} MP`);
+        }
+        
+        return { ...prev, hp: newHp, mp: newMp };
+      });
+    }
+  }
+  
+  townHealingRef.current = processTownHealing;
 
   // Helper function to get the first available learned skill
   function getAutoAttackSkill(): string {
@@ -216,8 +245,13 @@ export function useGameState(addLog: (text: string) => void) {
   }
 
   function battleAction(skillId?: string) {
-    // Don't allow actions if dead
+    // Don't allow actions if dead or in town
     if (char.hp <= 0) return;
+    if (currentZoneId === 0) {
+      // In town, we just heal
+      townHealingRef.current();
+      return;
+    }
 
     const weaponBonus = equipped.weapon?.stat || 0;
     const armorBonus = equipped.armor?.stat || 0;
@@ -389,21 +423,6 @@ export function useGameState(addLog: (text: string) => void) {
       if (nextCharHp <= 0) {
         nextCharHp = 0;
         addLog(`💀 You were defeated by ${enemy.name}!`);
-        
-        // Store respawn data and show modal
-        const respawnHp = Math.floor(calcMaxHp(char.level, char.stats.vit) * 0.5);
-        const respawnMp = Math.floor(calcMaxMp(char.level, char.stats.int) * 0.5);
-        const respawnEnemy = {
-          ...nextEnemy,
-          hp: Math.min(nextEnemy.maxHp, nextEnemy.hp + 10),
-        };
-        
-        pendingRespawnData.current = {
-          hp: respawnHp,
-          mp: respawnMp,
-          enemy: respawnEnemy,
-        };
-        
         setShowDeathModal(true);
       }
     }
