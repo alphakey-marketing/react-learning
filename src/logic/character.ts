@@ -1,4 +1,5 @@
 import { Character } from "../types/character";
+import { JobClass, JOB_DATA } from "../data/jobs";
 
 export function calcPlayerAtk(char: Character, weaponBonus: number): number {
   const { str, dex, luk } = char.stats;
@@ -22,10 +23,14 @@ export function calcCritChance(char: Character): number {
   return Math.min(50, Math.floor(luk / 3));
 }
 
-export function calcMaxHp(level: number, vit: number): number {
-  return level * 20 + 50 + vit * 5;
+export function calcMaxHp(level: number, vit: number, jobClass: JobClass = "Novice"): number {
+  const baseHp = level * 20 + 50 + vit * 5;
+  const multiplier = JOB_DATA[jobClass]?.bonuses.hpMultiplier || 1;
+  return Math.floor(baseHp * multiplier);
 }
 
-export function calcMaxMp(level: number, int: number): number {
-  return level * 10 + 30 + int * 3;
+export function calcMaxMp(level: number, int: number, jobClass: JobClass = "Novice"): number {
+  const baseMp = level * 10 + 30 + int * 3;
+  const multiplier = JOB_DATA[jobClass]?.bonuses.mpMultiplier || 1;
+  return Math.floor(baseMp * multiplier);
 }
