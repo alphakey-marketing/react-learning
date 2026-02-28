@@ -2,6 +2,14 @@ import { Zone } from "../types/enemy";
 
 export const ZONES: Zone[] = [
   {
+    id: 0,
+    name: "🏰 普隆德拉 (城鎮)",
+    minLevel: 1,
+    enemies: [
+      { name: "Target Dummy", level: 1, hp: 9999, maxHp: 9999, atk: 0, def: 0 },
+    ],
+  },
+  {
     id: 1,
     name: "🌱 新手草原",
     minLevel: 1,
@@ -34,12 +42,12 @@ export const ZONES: Zone[] = [
 
 export function getEnemyPool(zoneId: number) {
   const zone = ZONES.find((z) => z.id === zoneId);
-  return zone ? zone.enemies : ZONES[0].enemies;
+  return zone ? zone.enemies : ZONES[1].enemies; // Default to zone 1 if not found
 }
 
 export function getRandomEnemyForZone(zoneId: number, playerLevel: number) {
   const pool = getEnemyPool(zoneId);
-  if (pool.length === 0) return { ...ZONES[0].enemies[0] };
+  if (pool.length === 0) return { ...ZONES[1].enemies[0] };
   const random = pool[Math.floor(Math.random() * pool.length)];
   return { ...random };
 }
