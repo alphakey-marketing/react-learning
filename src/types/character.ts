@@ -1,4 +1,4 @@
-export type JobClass = "Novice" | "Swordsman" | "Mage" | "Archer";
+export type JobClass = "Novice" | "Swordsman" | "Mage" | "Archer" | "Knight" | "Wizard" | "Hunter";
 
 export interface CharacterStats {
   str: number;
