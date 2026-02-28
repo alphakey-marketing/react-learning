@@ -184,11 +184,23 @@ export function useGameState(addLog: (text: string) => void) {
     setShowJobChangeNPC(true);
   }
 
+  // Helper function to get the first available learned skill
+  function getAutoAttackSkill(): string {
+    // Get all learned skills that have level > 0
+    const learnedSkillIds = Object.keys(char.learnedSkills).filter(
+      (skillId) => char.learnedSkills[skillId] > 0
+    );
+    
+    // Return the first learned skill, or fallback to basic_attack
+    return learnedSkillIds.length > 0 ? learnedSkillIds[0] : "basic_attack";
+  }
+
   function battleAction(skillId?: string) {
     const weaponBonus = equipped.weapon?.stat || 0;
     const armorBonus = equipped.armor?.stat || 0;
 
-    const actualSkillId = skillId || "basic_attack";
+    // If no skill specified, use auto-attack skill (first learned skill)
+    const actualSkillId = skillId || getAutoAttackSkill();
     const skillLevel = char.learnedSkills[actualSkillId] || 0;
 
     if (skillLevel === 0) {
@@ -485,7 +497,8 @@ export function useGameState(addLog: (text: string) => void) {
 
   useEffect(() => {
     const id = setInterval(() => {
-      battleActionRef.current("basic_attack");
+      // Auto-attack uses no skill parameter, which triggers getAutoAttackSkill()
+      battleActionRef.current();
     }, AUTO_ATTACK_INTERVAL);
     return () => clearInterval(id);
   }, []);
