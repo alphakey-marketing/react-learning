@@ -611,6 +611,9 @@ export function useGameState(addLog: (text: string) => void) {
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
       }
+    } else {
+      // Enemy is damaged but not dead - update enemy HP
+      nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
 
     setChar({
