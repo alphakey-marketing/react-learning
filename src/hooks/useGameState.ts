@@ -86,13 +86,13 @@ export function useGameState(addLog: (text: string) => void) {
   const [canAttack, setCanAttack] = useState<boolean>(true);
   const [attackCooldownPercent, setAttackCooldownPercent] = useState<number>(100);
   
-  // Auto-Attack Toggle
+  // Auto-Attack Toggle - Using number for browser compatibility
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
-  const autoAttackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoAttackTimerRef = useRef<number | null>(null);
 
-  // Enemy Independent Attack System States
+  // Enemy Independent Attack System States - Using number for browser compatibility
   const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
-  const enemyAttackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const enemyAttackTimerRef = useRef<number | null>(null);
 
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
@@ -584,7 +584,7 @@ export function useGameState(addLog: (text: string) => void) {
   // Auto-Attack Timer - Separate, clean implementation
   useEffect(() => {
     // Clear any existing timer
-    if (autoAttackTimerRef.current) {
+    if (autoAttackTimerRef.current !== null) {
       clearInterval(autoAttackTimerRef.current);
       autoAttackTimerRef.current = null;
     }
@@ -599,16 +599,16 @@ export function useGameState(addLog: (text: string) => void) {
     const attackDelayMs = 1000 / attacksPerSecond;
 
     // Start auto-attack loop
-    autoAttackTimerRef.current = setInterval(() => {
+    autoAttackTimerRef.current = window.setInterval(() => {
       // Double-check conditions before attacking
       if (currentZoneId === 0 || char.hp <= 0) return;
       
       // Call battleAction - it has its own canAttack check
       battleAction();
-    }, attackDelayMs);
+    }, attackDelayMs) as unknown as number;
 
     return () => {
-      if (autoAttackTimerRef.current) {
+      if (autoAttackTimerRef.current !== null) {
         clearInterval(autoAttackTimerRef.current);
       }
     };
@@ -617,7 +617,7 @@ export function useGameState(addLog: (text: string) => void) {
   // Enemy Independent Attack Timer (Classic RO style)
   useEffect(() => {
     // Clear previous timer when changing zones or enemies
-    if (enemyAttackTimerRef.current) {
+    if (enemyAttackTimerRef.current !== null) {
       clearInterval(enemyAttackTimerRef.current);
       enemyAttackTimerRef.current = null;
     }
@@ -630,7 +630,7 @@ export function useGameState(addLog: (text: string) => void) {
     // Enemy attacks on their own independent timer
     const enemyAttackDelayMs = 1000 / enemy.attackSpeed;
     
-    enemyAttackTimerRef.current = setInterval(() => {
+    enemyAttackTimerRef.current = window.setInterval(() => {
       if (char.hp <= 0 || currentZoneId === 0) return;
 
       const armorBonus = equipped.armor?.stat || 0;
@@ -651,10 +651,10 @@ export function useGameState(addLog: (text: string) => void) {
         
         return { ...prev, hp: newHp };
       });
-    }, enemyAttackDelayMs);
+    }, enemyAttackDelayMs) as unknown as number;
 
     return () => {
-      if (enemyAttackTimerRef.current) {
+      if (enemyAttackTimerRef.current !== null) {
         clearInterval(enemyAttackTimerRef.current);
       }
     };
