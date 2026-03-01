@@ -35,6 +35,7 @@ import {
 
 interface GameCallbacks {
   onDamageDealt?: (damage: number, isCrit: boolean) => void;
+  onEnemyDamageDealt?: (damage: number) => void;
   onLevelUp?: (newLevel: number) => void;
   onItemDrop?: (item: Equipment) => void;
 }
@@ -624,6 +625,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const playerDef = calcPlayerDef(char, armorBonus);
       const enemyDmg = calculateEnemyDamage(enemy, playerDef);
 
+      // Trigger enemy damage visual effect
+      callbacks?.onEnemyDamageDealt?.(enemyDmg);
+
       setChar((prev) => {
         if (prev.hp <= 0) return prev;
         
@@ -645,7 +649,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy, currentZoneId, char.hp, equipped.armor]);
+  }, [enemy, currentZoneId, char.hp, equipped.armor, callbacks]);
 
   useEffect(() => {
     const id = setInterval(() => {

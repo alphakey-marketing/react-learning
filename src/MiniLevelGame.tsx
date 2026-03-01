@@ -12,47 +12,57 @@ import { JobChangeNPC } from "./components/JobChangeNPC";
 import { DevTools } from "./components/DevTools";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
-import { RareDropBanner } from "./components/RareDropBanner";
+// import { RareDropBanner } from "./components/RareDropBanner"; // Hidden for now
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { canChangeJob } from "./data/jobs";
-import { useEffect, useState } from "react";
-import { Equipment } from "./types/equipment";
+import { useEffect } from "react";
+// import { Equipment } from "./types/equipment";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
-  const [rareDropItem, setRareDropItem] = useState<Equipment | null>(null);
+  // const [rareDropItem, setRareDropItem] = useState<Equipment | null>(null);
   
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
-      // Floating text hook handles positioning near enemy automatically now
+      // Player damage to enemy - appears left side near enemy
       addFloatingText(`-${damage}`, {
-        color: isCrit ? '#ff3333' : '#ffaa00', // Brighter red for crit, orange for normal
+        color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
+      });
+    },
+    onEnemyDamageDealt: (damage: number) => {
+      // Enemy damage to player - appears right side, bright red
+      const windowCenterX = window.innerWidth / 2;
+      const randomOffset = Math.random() * 30 - 15;
+      addFloatingText(`-${damage}`, {
+        color: '#ff6b6b', // Bright red to distinguish from player attacks
+        x: (windowCenterX + 200) + randomOffset, // Right side
+        y: (window.innerHeight * 0.4) + randomOffset,
       });
     },
     onLevelUp: (newLevel: number) => {
       addFloatingText(`🌟 LEVEL ${newLevel}! 🌟`, {
         color: '#ffd700',
-        fontSize: 42, // Bigger
+        fontSize: 42,
         isLevelUp: true,
       });
     },
-    onItemDrop: (item: Equipment) => {
+    onItemDrop: (item) => {
       addDroppingItem(item);
-      if (item.rarity === 'rare' || item.rarity === 'epic') {
-        // Clear previous banner if it exists before showing new one
-        if (rareDropItem) {
-          setRareDropItem(null);
-          setTimeout(() => setRareDropItem(item), 50);
-        } else {
-          setRareDropItem(item);
-        }
-      }
+      // Hide rare drop banner for now
+      // if (item.rarity === 'rare' || item.rarity === 'epic') {
+      //   if (rareDropItem) {
+      //     setRareDropItem(null);
+      //     setTimeout(() => setRareDropItem(item), 50);
+      //   } else {
+      //     setRareDropItem(item);
+      //   }
+      // }
     },
   });
 
@@ -93,7 +103,7 @@ export function MiniLevelGame() {
       {/* Visual Effects Overlays */}
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
-      <RareDropBanner item={rareDropItem} onDismiss={() => setRareDropItem(null)} />
+      {/* <RareDropBanner item={rareDropItem} onDismiss={() => setRareDropItem(null)} /> */}
 
       <DevTools
         character={game.char}
@@ -166,7 +176,7 @@ export function MiniLevelGame() {
                   boxShadow: canChangeJobNow
                     ? "0 0 15px rgba(251, 191, 36, 0.5)"
                     : "none",
-                  animation: canChangeJobNow ? "pulse 2s infinite" : "none",
+                  animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
                 }}
               >
                 {canChangeJobNow
@@ -367,14 +377,12 @@ export function MiniLevelGame() {
       </div>
 
       <style>{`
-        @keyframes pulse {
+        @keyframes pulseButton {
           0%, 100% {
             opacity: 1;
-            transform: scale(1) translateX(-50%);
           }
           50% {
-            opacity: 0.9;
-            transform: scale(1.02) translateX(-50%);
+            opacity: 0.8;
           }
         }
       `}</style>
