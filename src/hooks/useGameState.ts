@@ -102,6 +102,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
 
   const enemyAttackTimerRef = useRef<number | null>(null);
+  const autoPotionTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef<boolean>(true);
   const lastPotionCheckRef = useRef<number>(0);
 
@@ -467,12 +468,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     
     if (!canAttack) return;
 
-    // Debounced auto-potion check (max once per second)
-    const now = Date.now();
-    if (now - lastPotionCheckRef.current > 1000) {
-      autoPotionRef.current();
-      lastPotionCheckRef.current = now;
-    }
+    const weaponBonus = equipped.weapon?.stat || 0;
 
     const actualSkillId = skillId || char.autoAttackSkillId;
     const skillLevel = char.learnedSkills[actualSkillId] || 0;
@@ -481,6 +477,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     const skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
     if (!skill) return;
+    
+    const now = Date.now();
     
     if (skill.cooldown > 0) {
       const lastUsed = skillCooldowns[actualSkillId] || 0;
@@ -702,6 +700,31 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return () => clearTimeout(timer);
     }
   }, [autoAttackEnabled, canAttack, currentZoneId]);
+
+  // CONTINUOUS AUTO-POTION CHECK - Independent of attacks
+  useEffect(() => {
+    // Clear previous timer
+    if (autoPotionTimerRef.current !== null) {
+      clearInterval(autoPotionTimerRef.current);
+      autoPotionTimerRef.current = null;
+    }
+
+    // Only run auto-potion checks when NOT in town
+    if (currentZoneId === 0) {
+      return;
+    }
+
+    // Check auto-potion every second, independent of attack actions
+    autoPotionTimerRef.current = window.setInterval(() => {
+      autoPotionRef.current();
+    }, 1000) as unknown as number;
+
+    return () => {
+      if (autoPotionTimerRef.current !== null) {
+        clearInterval(autoPotionTimerRef.current);
+      }
+    };
+  }, [currentZoneId]);
 
   // ENEMY ATTACK SYSTEM - Uses refs to avoid restarting interval
   useEffect(() => {
