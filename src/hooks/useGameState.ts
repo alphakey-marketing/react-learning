@@ -283,6 +283,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
 
+    if (skill.effect === "buff") {
+      addLog("❌ Cannot set passive/buff skill as default attack!");
+      return;
+    }
+
     setChar((prev) => ({
       ...prev,
       autoAttackSkillId: skillId,
@@ -305,10 +310,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     
     const newJobSkills = SKILLS_DB[newJob];
     const initialSkills: Record<string, number> = { basic_attack: 1 };
+    
+    // Learn the first job skill
     const firstJobSkill = newJobSkills.find(s => s.id !== "basic_attack");
     if (firstJobSkill) {
       initialSkills[firstJobSkill.id] = 1;
     }
+
+    // ONLY set default attack to a non-buff skill
+    const firstAttackSkill = newJobSkills.find(s => s.id !== "basic_attack" && s.effect !== "buff");
 
     const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
     const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
@@ -325,7 +335,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       jobExpToNext: 50,
       skillPoints: 3,
       learnedSkills: initialSkills,
-      autoAttackSkillId: firstJobSkill ? firstJobSkill.id : "basic_attack",
+      autoAttackSkillId: firstAttackSkill ? firstAttackSkill.id : "basic_attack",
     });
 
     setCurrentZoneId(0);
@@ -338,7 +348,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     addLog(`🏛️ Teleported to Town for safety!`);
     addLog(`💫 You received 3 Skill Points to learn new skills!`);
     if (firstJobSkill) {
-      addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your default skill.`);
+      addLog(`📖 You learned ${firstJobSkill.nameZh}!`);
+    }
+    if (firstAttackSkill && firstAttackSkill.id === firstJobSkill?.id) {
+      addLog(`⭐ ${firstAttackSkill.nameZh} is now your default skill.`);
     }
     addLog(`🛡️ Job Bonuses: HP ${Math.floor((jobBonuses.hpMultiplier - 1) * 100)}%, MP ${Math.floor((jobBonuses.mpMultiplier - 1) * 100)}%, +${jobBonuses.atkBonus} ATK, +${jobBonuses.defBonus} DEF`);
     setShowJobChangeNPC(false);
@@ -441,32 +454,60 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     const weaponBonus = equipped.weapon?.atk || equipped.weapon?.stat || 0;
 
-    const actualSkillId = skillId || char.autoAttackSkillId;
-    const skillLevel = char.learnedSkills[actualSkillId] || 0;
+    let actualSkillId = skillId || char.autoAttackSkillId;
+    let skillLevel = char.learnedSkills[actualSkillId] || 0;
+    let skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
 
-    if (skillLevel === 0) return;
-
-    const skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
-    if (!skill) return;
+    // If skill is invalid, not learned, or is a buff, fallback to basic attack
+    if (!skill || skillLevel === 0 || skill.effect === "buff") {
+      actualSkillId = "basic_attack";
+      skillLevel = char.learnedSkills["basic_attack"] || 1;
+      skill = SKILLS_DB[char.jobClass].find((s) => s.id === "basic_attack")!;
+    }
     
     const now = Date.now();
+    let isSkillOnCooldown = false;
     
+    // Check Cooldown
     if (skill.cooldown > 0) {
       const lastUsed = skillCooldowns[actualSkillId] || 0;
       const timePassed = (now - lastUsed) / 1000;
-
       if (timePassed < skill.cooldown) {
-        return;
+        isSkillOnCooldown = true;
       }
-      setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
     }
 
-    const mpCost = skill.mpCost(skillLevel);
-    if (char.mp < mpCost) {
-      // MP insufficient - just skip this attack, don't trigger cooldown
-      // Let auto-attack naturally retry on next cycle
-      // MP will recover passively in background
+    let mpCost = skill.mpCost(skillLevel);
+    let isMpInsufficient = char.mp < mpCost;
+
+    // Intelligent Fallback: If primary skill is on cooldown OR MP is insufficient, use Basic Attack instead
+    if ((isSkillOnCooldown || isMpInsufficient) && actualSkillId !== "basic_attack") {
+      actualSkillId = "basic_attack";
+      skillLevel = char.learnedSkills["basic_attack"] || 1;
+      skill = SKILLS_DB[char.jobClass].find((s) => s.id === "basic_attack")!;
+      mpCost = skill.mpCost(skillLevel);
+      isMpInsufficient = char.mp < mpCost;
+    }
+
+    // If even basic attack cannot be afforded (MP < 2)
+    if (isMpInsufficient) {
+      // We MUST trigger the attack cooldown so the ASPD loop continues
+      setLastAttackTime(now);
+      setCanAttack(false);
+      setAttackCooldownPercent(0);
+      
+      // Give a tiny passive MP regen while "resting" in combat
+      const mpRegen = Math.floor(char.maxMp * 0.05) + 1;
+      const newMp = Math.min(char.maxMp, char.mp + mpRegen);
+      if (newMp > char.mp) {
+        setChar((prev) => ({ ...prev, mp: newMp }));
+      }
       return;
+    }
+
+    // Now execute the confirmed skill
+    if (skill.cooldown > 0 && actualSkillId !== "basic_attack") {
+      setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
     }
 
     setLastAttackTime(now);
