@@ -22,15 +22,38 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
   const atkDiff = getStatDiff(item.atk || item.stat || 0, currentItem?.atk || currentItem?.stat || 0);
   const defDiff = getStatDiff(item.def || 0, currentItem?.def || 0);
   
+  // Smart positioning - prevent tooltip from going off screen
+  const tooltipWidth = 220;
+  const tooltipHeight = 300; // approximate
+  const offset = 15;
+  
+  let left = position.x + offset;
+  let top = position.y + 10;
+  
+  // Flip to left if would overflow right side
+  if (left + tooltipWidth > window.innerWidth) {
+    left = position.x - tooltipWidth - offset;
+  }
+  
+  // Flip to top if would overflow bottom
+  if (top + tooltipHeight > window.innerHeight) {
+    top = position.y - tooltipHeight - 10;
+  }
+  
+  // Keep minimum distance from edges
+  left = Math.max(10, Math.min(left, window.innerWidth - tooltipWidth - 10));
+  top = Math.max(10, top);
+  
   const tooltipStyle: CSSProperties = {
     position: "fixed",
-    left: `${position.x + 10}px`,
-    top: `${position.y + 10}px`,
+    left: `${left}px`,
+    top: `${top}px`,
     background: "#1a1a1a",
     border: `2px solid ${rarityColor}`,
     borderRadius: "6px",
     padding: "12px",
     minWidth: "220px",
+    maxWidth: "220px",
     fontSize: "11px",
     color: "#fff",
     zIndex: 9999,
@@ -168,7 +191,7 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
         color: "#fbbf24",
         textAlign: "center",
       }}>
-        Click to equip
+        Tap to equip
       </div>
     </div>
   );
