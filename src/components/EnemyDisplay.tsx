@@ -6,9 +6,19 @@ interface EnemyDisplayProps {
   canAttack: boolean;
   inTown: boolean;
   attackCooldownPercent: number;
+  autoAttackEnabled: boolean;
+  onToggleAutoAttack: () => void;
 }
 
-export function EnemyDisplay({ enemy, onAttack, canAttack, inTown, attackCooldownPercent }: EnemyDisplayProps) {
+export function EnemyDisplay({ 
+  enemy, 
+  onAttack, 
+  canAttack, 
+  inTown, 
+  attackCooldownPercent,
+  autoAttackEnabled,
+  onToggleAutoAttack,
+}: EnemyDisplayProps) {
   const hpPercent = (enemy.hp / enemy.maxHp) * 100;
 
   if (inTown) {
@@ -88,6 +98,29 @@ export function EnemyDisplay({ enemy, onAttack, canAttack, inTown, attackCooldow
         />
       </div>
 
+      {/* Auto-Attack Toggle */}
+      <div style={{ marginBottom: "10px" }}>
+        <button
+          onClick={onToggleAutoAttack}
+          style={{
+            width: "100%",
+            padding: "8px",
+            background: autoAttackEnabled 
+              ? "linear-gradient(to bottom, #10b981, #059669)" 
+              : "linear-gradient(to bottom, #6b7280, #4b5563)",
+            color: "white",
+            border: autoAttackEnabled ? "2px solid #34d399" : "2px solid #6b7280",
+            borderRadius: "6px",
+            fontSize: "13px",
+            fontWeight: "bold",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          {autoAttackEnabled ? "🤖 Auto-Attack: ON" : "✋ Auto-Attack: OFF"}
+        </button>
+      </div>
+
       {/* Manual Attack Button */}
       <div style={{ position: "relative", height: "50px" }}>
         <button
@@ -152,7 +185,7 @@ export function EnemyDisplay({ enemy, onAttack, canAttack, inTown, attackCooldow
       </div>
       
       <div style={{ fontSize: "10px", color: "#888", marginTop: "8px" }}>
-        Press 'A' key to attack | Higher AGI = Faster Attacks
+        Press 'A' key to attack | Toggle Auto-Attack for casual play
       </div>
     </div>
   );

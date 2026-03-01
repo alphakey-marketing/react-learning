@@ -49,6 +49,7 @@ export function MiniLevelGame() {
         fontFamily: "system-ui, sans-serif",
         padding: "20px",
         paddingTop: "40px",
+        paddingBottom: "120px", // Space for fixed skill bar
       }}
     >
       <DevTools
@@ -158,6 +159,8 @@ export function MiniLevelGame() {
               canAttack={game.canAttack}
               inTown={game.currentZoneId === 0}
               attackCooldownPercent={game.attackCooldownPercent}
+              autoAttackEnabled={game.autoAttackEnabled}
+              onToggleAutoAttack={game.toggleAutoAttack}
             />
             
             <BossChallenge

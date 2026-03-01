@@ -85,6 +85,10 @@ export function useGameState(addLog: (text: string) => void) {
   const [lastAttackTime, setLastAttackTime] = useState<number>(0);
   const [canAttack, setCanAttack] = useState<boolean>(true);
   const [attackCooldownPercent, setAttackCooldownPercent] = useState<number>(100);
+  
+  // Auto-Attack Toggle
+  const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
+  const autoAttackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Enemy Independent Attack System States
   const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
@@ -234,6 +238,15 @@ export function useGameState(addLog: (text: string) => void) {
     addLog(`⭐ Default skill set to: ${skill.nameZh}`);
   }
 
+  function toggleAutoAttack() {
+    setAutoAttackEnabled(prev => !prev);
+    if (!autoAttackEnabled) {
+      addLog("🤖 Auto-Attack enabled!");
+    } else {
+      addLog("✋ Auto-Attack disabled!");
+    }
+  }
+
   function handleJobChange(newJob: JobClass) {
     const jobBonuses = getJobBonuses(newJob);
     
@@ -378,6 +391,34 @@ export function useGameState(addLog: (text: string) => void) {
 
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, char, currentZoneId]);
+
+  // Auto-Attack Timer
+  useEffect(() => {
+    if (autoAttackTimerRef.current) {
+      clearInterval(autoAttackTimerRef.current);
+      autoAttackTimerRef.current = null;
+    }
+
+    if (!autoAttackEnabled || currentZoneId === 0 || char.hp <= 0) {
+      return;
+    }
+
+    const attacksPerSecond = calcASPD(char);
+    const attackDelayMs = 1000 / attacksPerSecond;
+
+    autoAttackTimerRef.current = setInterval(() => {
+      if (char.hp <= 0 || currentZoneId === 0) return;
+      if (canAttack) {
+        battleAction();
+      }
+    }, attackDelayMs);
+
+    return () => {
+      if (autoAttackTimerRef.current) {
+        clearInterval(autoAttackTimerRef.current);
+      }
+    };
+  }, [autoAttackEnabled, currentZoneId, char.hp, canAttack]);
 
   // Enemy Independent Attack Timer (Classic RO style)
   useEffect(() => {
@@ -769,6 +810,7 @@ export function useGameState(addLog: (text: string) => void) {
     skillCooldowns,
     canAttack,
     attackCooldownPercent,
+    autoAttackEnabled,
     setShowSkillWindow,
     setShowJobChangeNPC,
     setAutoHpPercent,
@@ -776,6 +818,7 @@ export function useGameState(addLog: (text: string) => void) {
     addStat,
     learnSkill,
     setAutoAttackSkill,
+    toggleAutoAttack,
     battleAction,
     travelToZone,
     challengeBoss,
