@@ -3,7 +3,7 @@ import { EnemyDisplay } from "./components/EnemyDisplay";
 import { BattleLog } from "./components/BattleLog";
 import { SkillWindow } from "./components/SkillWindow";
 import { SkillHotkeys } from "./components/SkillHotkeys";
-import { Inventory } from "./components/Inventory";
+import { EnhancedInventory } from "./components/EnhancedInventory";
 import { Shop } from "./components/Shop";
 import { PotionBar } from "./components/PotionBar";
 import { MapSystem } from "./components/MapSystem";
@@ -12,36 +12,31 @@ import { JobChangeNPC } from "./components/JobChangeNPC";
 import { DevTools } from "./components/DevTools";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
-// import { RareDropBanner } from "./components/RareDropBanner"; // Hidden for now
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { canChangeJob } from "./data/jobs";
 import { useEffect } from "react";
-// import { Equipment } from "./types/equipment";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
-  // const [rareDropItem, setRareDropItem] = useState<Equipment | null>(null);
   
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
-      // Player damage to enemy - appears left side near enemy
       addFloatingText(`-${damage}`, {
         color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
       });
     },
     onEnemyDamageDealt: (damage: number) => {
-      // Enemy damage to player - appears right side, bright red
       const windowCenterX = window.innerWidth / 2;
       const randomOffset = Math.random() * 30 - 15;
       addFloatingText(`-${damage}`, {
-        color: '#ff6b6b', // Bright red to distinguish from player attacks
-        x: (windowCenterX + 200) + randomOffset, // Right side
+        color: '#ff6b6b',
+        x: (windowCenterX + 200) + randomOffset,
         y: (window.innerHeight * 0.4) + randomOffset,
       });
     },
@@ -54,21 +49,11 @@ export function MiniLevelGame() {
     },
     onItemDrop: (item) => {
       addDroppingItem(item);
-      // Hide rare drop banner for now
-      // if (item.rarity === 'rare' || item.rarity === 'epic') {
-      //   if (rareDropItem) {
-      //     setRareDropItem(null);
-      //     setTimeout(() => setRareDropItem(item), 50);
-      //   } else {
-      //     setRareDropItem(item);
-      //   }
-      // }
     },
   });
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // Keyboard shortcut for attacking ('A' key)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -100,10 +85,8 @@ export function MiniLevelGame() {
         paddingBottom: "120px",
       }}
     >
-      {/* Visual Effects Overlays */}
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
-      {/* <RareDropBanner item={rareDropItem} onDismiss={() => setRareDropItem(null)} /> */}
 
       <DevTools
         character={game.char}
@@ -244,11 +227,13 @@ export function MiniLevelGame() {
               unlockedZoneIds={game.unlockedZoneIds}
               onTravel={game.travelToZone}
             />
-            <Inventory
+            
+            <EnhancedInventory
               inventory={game.inventory}
               equipped={game.equipped}
               onEquip={game.equipItem}
             />
+            
             <Shop
               character={game.char}
               isInTown={game.currentZoneId === 0}
