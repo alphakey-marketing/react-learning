@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Character, CharacterStats } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Equipment, EquippedItems } from "../types/equipment";
@@ -33,7 +33,13 @@ import {
   MP_POTION_RECOVER_PERCENT,
 } from "../data/constants";
 
-export function useGameState(addLog: (text: string) => void) {
+interface GameCallbacks {
+  onDamageDealt?: (damage: number, isCrit: boolean) => void;
+  onLevelUp?: (newLevel: number) => void;
+  onItemDrop?: (item: Equipment) => void;
+}
+
+export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
   const [char, setChar] = useState<Character>({
     level: 1,
     exp: 0,
@@ -55,7 +61,7 @@ export function useGameState(addLog: (text: string) => void) {
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
-    getRandomEnemyForZone(0, 1) // Start in town (zone 0)
+    getRandomEnemyForZone(0, 1)
   );
 
   const [inventory, setInventory] = useState<Equipment[]>([]);
@@ -64,7 +70,7 @@ export function useGameState(addLog: (text: string) => void) {
     armor: null,
   });
 
-  const [currentZoneId, setCurrentZoneId] = useState<number>(0); // START IN TOWN
+  const [currentZoneId, setCurrentZoneId] = useState<number>(0);
   const [unlockedZoneIds, setUnlockedZoneIds] = useState<number[]>([0, 1]);
   const [killCount, setKillCount] = useState<number>(0);
   const [bossAvailable, setBossAvailable] = useState<boolean>(false);
@@ -81,15 +87,12 @@ export function useGameState(addLog: (text: string) => void) {
   const [showDeathModal, setShowDeathModal] = useState<boolean>(false);
   const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>({});
 
-  // Player ASPD & Manual Attack System States
   const [lastAttackTime, setLastAttackTime] = useState<number>(0);
   const [canAttack, setCanAttack] = useState<boolean>(true);
   const [attackCooldownPercent, setAttackCooldownPercent] = useState<number>(100);
   
-  // Auto-Attack Toggle
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
 
-  // Enemy Independent Attack System States
   const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
   const enemyAttackTimerRef = useRef<number | null>(null);
 
@@ -113,6 +116,7 @@ export function useGameState(addLog: (text: string) => void) {
       maxMp: calcMaxMp(levelUpResult.newLevel, prev.stats.int, prev.jobClass),
     }));
     
+    callbacks?.onLevelUp?.(levelUpResult.newLevel);
     addLog(`🔧 [DEV] Base Level +1! Now Lv.${levelUpResult.newLevel}`);
   }
 
@@ -390,13 +394,12 @@ export function useGameState(addLog: (text: string) => void) {
 
     const now = Date.now();
     
-    // Check specific skill cooldown
     if (skill.cooldown > 0) {
       const lastUsed = skillCooldowns[actualSkillId] || 0;
       const timePassed = (now - lastUsed) / 1000;
 
       if (timePassed < skill.cooldown) {
-        return; // Silent return for auto-attack
+        return;
       }
       setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
     }
@@ -410,7 +413,6 @@ export function useGameState(addLog: (text: string) => void) {
       return;
     }
 
-    // Set player ASPD cooldown
     setLastAttackTime(now);
     setCanAttack(false);
     setAttackCooldownPercent(0);
@@ -435,6 +437,9 @@ export function useGameState(addLog: (text: string) => void) {
       weaponBonus
     );
     nextEnemyHp = enemy.hp - damage;
+
+    // Trigger damage visual effect
+    callbacks?.onDamageDealt?.(damage, isCrit);
 
     const critText = isCrit ? " ❗CRIT!" : "";
     addLog(
@@ -466,6 +471,8 @@ export function useGameState(addLog: (text: string) => void) {
         nextCharHp = levelUpResult.newHp;
         nextCharMp = levelUpResult.newMp;
         addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +3)`);
+        // Trigger level-up visual effect
+        callbacks?.onLevelUp?.(nextCharLevel);
       }
 
       const jobExpGain = calculateJobExpGain(enemy, char.jobLevel);
@@ -510,6 +517,8 @@ export function useGameState(addLog: (text: string) => void) {
         const bossGear = generateBossLoot(nextCharLevel);
         setInventory((prev) => [...prev, bossGear]);
         addLog(`🎁 Boss Drop: ${bossGear.name}!`);
+        // Trigger item drop animation
+        callbacks?.onItemDrop?.(bossGear);
 
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
@@ -526,13 +535,14 @@ export function useGameState(addLog: (text: string) => void) {
           const newGear = generateLoot(nextCharLevel);
           setInventory((prev) => [...prev, newGear]);
           addLog(`🎁 Looted: ${newGear.name}!`);
+          // Trigger item drop animation
+          callbacks?.onItemDrop?.(newGear);
         }
 
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
       }
     } else {
-      // Enemy is damaged but not dead - update enemy HP
       nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
 
@@ -559,13 +569,11 @@ export function useGameState(addLog: (text: string) => void) {
     setEnemy(nextEnemy);
   }
 
-  // Keep battleAction reference fresh for auto-attack
   const battleActionRef = useRef(battleAction);
   useEffect(() => {
     battleActionRef.current = battleAction;
   });
 
-  // Player ASPD cooldown UI loop
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
 
@@ -587,10 +595,8 @@ export function useGameState(addLog: (text: string) => void) {
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, char, currentZoneId]);
 
-  // ⭐ AUTO-ATTACK TRIGGER - Fires when canAttack becomes true
   useEffect(() => {
     if (autoAttackEnabled && canAttack && currentZoneId !== 0 && char.hp > 0) {
-      // Small delay to ensure React finishes rendering before triggering next state change
       const timer = setTimeout(() => {
         battleActionRef.current();
       }, 10);
@@ -599,20 +605,16 @@ export function useGameState(addLog: (text: string) => void) {
     }
   }, [autoAttackEnabled, canAttack, currentZoneId, char.hp]);
 
-  // Enemy Independent Attack Timer (Classic RO style)
   useEffect(() => {
-    // Clear previous timer when changing zones or enemies
     if (enemyAttackTimerRef.current !== null) {
       clearInterval(enemyAttackTimerRef.current);
       enemyAttackTimerRef.current = null;
     }
 
-    // Don't attack in town or when player is dead
     if (currentZoneId === 0 || char.hp <= 0 || enemy.attackSpeed === 0) {
       return;
     }
 
-    // Enemy attacks on their own independent timer
     const enemyAttackDelayMs = 1000 / enemy.attackSpeed;
     
     enemyAttackTimerRef.current = window.setInterval(() => {
@@ -645,7 +647,6 @@ export function useGameState(addLog: (text: string) => void) {
     };
   }, [enemy, currentZoneId, char.hp, equipped.armor]);
 
-  // Periodic town healing
   useEffect(() => {
     const id = setInterval(() => {
       if (currentZoneId === 0) {
@@ -658,12 +659,12 @@ export function useGameState(addLog: (text: string) => void) {
   function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);
     if (!targetZone || !unlockedZoneIds.includes(zoneId)) {
-      addLog("❌ 地圖未解鎖！");
+      addLog("❌ 地圖未解鎖!");
       return;
     }
     setCurrentZoneId(zoneId);
     setEnemy(getRandomEnemyForZone(zoneId, char.level));
-    addLog(`🚀 旅行到：${targetZone.name}！`);
+    addLog(`🚀 旅行到:${targetZone.name}!`);
   }
 
   function challengeBoss() {
@@ -807,7 +808,6 @@ export function useGameState(addLog: (text: string) => void) {
     openJobChangeNPC,
     handleRespawn,
     escapeToTown,
-    // Dev tools
     devAddBaseLevel,
     devAddJobLevel,
     devAddGold,

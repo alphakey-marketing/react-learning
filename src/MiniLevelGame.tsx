@@ -10,14 +10,44 @@ import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
 import { DevTools } from "./components/DevTools";
+import { FloatingText } from "./components/FloatingText";
+import { ItemDropAnimation } from "./components/ItemDropAnimation";
+import { RareDropBanner } from "./components/RareDropBanner";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
+import { useFloatingText } from "./hooks/useFloatingText";
+import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { canChangeJob } from "./data/jobs";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Equipment } from "./types/equipment";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
-  const game = useGameState(addLog);
+  const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
+  const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
+  const [rareDropItem, setRareDropItem] = useState<Equipment | null>(null);
+  
+  const game = useGameState(addLog, {
+    onDamageDealt: (damage: number, isCrit: boolean) => {
+      addFloatingText(`${damage}`, {
+        color: isCrit ? '#ff0000' : '#ffaa00',
+        isCrit,
+      });
+    },
+    onLevelUp: (newLevel: number) => {
+      addFloatingText(`🌟 LEVEL ${newLevel}! 🌟`, {
+        color: '#ffd700',
+        fontSize: 36,
+        isLevelUp: true,
+      });
+    },
+    onItemDrop: (item: Equipment) => {
+      addDroppingItem(item);
+      if (item.rarity === 'rare' || item.rarity === 'epic') {
+        setRareDropItem(item);
+      }
+    },
+  });
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
@@ -53,6 +83,11 @@ export function MiniLevelGame() {
         paddingBottom: "120px",
       }}
     >
+      {/* Visual Effects Overlays */}
+      <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
+      <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
+      <RareDropBanner item={rareDropItem} onDismiss={() => setRareDropItem(null)} />
+
       <DevTools
         character={game.char}
         onAddBaseLevel={game.devAddBaseLevel}
