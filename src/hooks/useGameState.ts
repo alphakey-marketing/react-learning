@@ -88,11 +88,11 @@ export function useGameState(addLog: (text: string) => void) {
   
   // Auto-Attack Toggle
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
-  const autoAttackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAttackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Enemy Independent Attack System States
   const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
-  const enemyAttackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enemyAttackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
