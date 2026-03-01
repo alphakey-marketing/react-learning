@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Equipment, EquippedItems, getEquipmentIcon, getRarityColor } from "../types/equipment";
-import { EquipmentTooltip } from "./EquipmentTooltip";
+import { EquipmentComparisonModal } from "./EquipmentComparisonModal";
 
 interface EnhancedInventoryProps {
   inventory: Equipment[];
@@ -12,9 +12,7 @@ type SortOption = "type" | "rarity" | "stat" | "name";
 
 export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInventoryProps) {
   const [sortBy, setSortBy] = useState<SortOption>("type");
-  const [hoveredItem, setHoveredItem] = useState<{ item: Equipment; x: number; y: number } | null>(null);
-  const touchTimeoutRef = useRef<number | null>(null);
-  const lastTouchedItemRef = useRef<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
   
   // Sort inventory
   const sortedInventory = [...inventory].sort((a, b) => {
@@ -44,41 +42,18 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
     { key: "accessory2" as keyof EquippedItems, label: "Accessory", icon: "💍" },
   ];
   
-  const handleTouchStart = (e: React.TouchEvent, item: Equipment) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    
-    // If same item touched twice within timeout, equip it
-    if (lastTouchedItemRef.current === item.id && hoveredItem) {
-      onEquip(item);
-      setHoveredItem(null);
-      if (touchTimeoutRef.current) {
-        clearTimeout(touchTimeoutRef.current);
-        touchTimeoutRef.current = null;
-      }
-      lastTouchedItemRef.current = null;
-      return;
+  const handleEquipClick = () => {
+    if (selectedItem) {
+      onEquip(selectedItem);
+      setSelectedItem(null);
     }
-    
-    // Show tooltip
-    setHoveredItem({
-      item,
-      x: touch.clientX,
-      y: touch.clientY,
-    });
-    
-    lastTouchedItemRef.current = item.id;
-    
-    // Clear previous timeout
-    if (touchTimeoutRef.current) {
-      clearTimeout(touchTimeoutRef.current);
+  };
+  
+  const getCurrentlyEquipped = (item: Equipment): Equipment | null => {
+    if (item.type === "accessory") {
+      return equipped.accessory1 || equipped.accessory2 || null;
     }
-    
-    // Auto-hide tooltip after 2 seconds
-    touchTimeoutRef.current = window.setTimeout(() => {
-      setHoveredItem(null);
-      lastTouchedItemRef.current = null;
-    }, 2000);
+    return equipped[item.type as keyof EquippedItems];
   };
   
   return (
@@ -205,33 +180,11 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
           sortedInventory.map((item) => {
             const icon = getEquipmentIcon(item.type);
             const rarityColor = getRarityColor(item.rarity);
-            const isHovered = hoveredItem && hoveredItem.item.id === item.id;
             
             return (
               <button
                 key={item.id}
-                onClick={() => onEquip(item)}
-                onMouseEnter={(e) => {
-                  setHoveredItem({
-                    item,
-                    x: e.clientX,
-                    y: e.clientY,
-                  });
-                }}
-                onMouseMove={(e) => {
-                  if (hoveredItem && hoveredItem.item.id === item.id) {
-                    setHoveredItem({
-                      item,
-                      x: e.clientX,
-                      y: e.clientY,
-                    });
-                  }
-                }}
-                onMouseLeave={() => {
-                  setHoveredItem(null);
-                  lastTouchedItemRef.current = null;
-                }}
-                onTouchStart={(e) => handleTouchStart(e, item)}
+                onClick={() => setSelectedItem(item)}
                 style={{
                   fontSize: "20px",
                   padding: "8px",
@@ -244,8 +197,14 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                   justifyContent: "center",
                   position: "relative",
                   transition: "transform 0.2s, box-shadow 0.2s",
-                  transform: isHovered ? "scale(1.05)" : "scale(1)",
-                  boxShadow: isHovered ? `0 0 10px ${rarityColor}` : "none",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.05)";
+                  e.currentTarget.style.boxShadow = `0 0 10px ${rarityColor}`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 {icon}
@@ -267,16 +226,13 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
         )}
       </div>
       
-      {/* Tooltip */}
-      {hoveredItem && (
-        <EquipmentTooltip
-          item={hoveredItem.item}
-          currentItem={
-            hoveredItem.item.type === "accessory"
-              ? (equipped.accessory1 || equipped.accessory2)
-              : equipped[hoveredItem.item.type as keyof EquippedItems]
-          }
-          position={{ x: hoveredItem.x, y: hoveredItem.y }}
+      {/* Comparison Modal */}
+      {selectedItem && (
+        <EquipmentComparisonModal
+          newItem={selectedItem}
+          currentItem={getCurrentlyEquipped(selectedItem)}
+          onEquip={handleEquipClick}
+          onCancel={() => setSelectedItem(null)}
         />
       )}
     </div>

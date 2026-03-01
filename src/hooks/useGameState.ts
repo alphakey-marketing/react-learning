@@ -463,14 +463,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     const mpCost = skill.mpCost(skillLevel);
     if (char.mp < mpCost) {
-      const mpRegen = Math.floor(char.maxMp * 0.1) + 5;
-      const newMp = Math.min(char.maxMp, char.mp + mpRegen);
-      setChar((prev) => ({ ...prev, mp: newMp }));
-      addLog(`💤 Too low MP! Resting... Recovered ${mpRegen} MP.`);
-      // Don't set canAttack here - let it continue on next cycle after MP recovery
-      setLastAttackTime(now);
-      setCanAttack(false);
-      setAttackCooldownPercent(0);
+      // MP insufficient - just skip this attack, don't trigger cooldown
+      // Let auto-attack naturally retry on next cycle
+      // MP will recover passively in background
       return;
     }
 
