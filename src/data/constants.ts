@@ -1,0 +1,12 @@
+export const CRIT_MULTIPLIER = 1.5;
+export const HP_POTION_COST = 50;
+export const MP_POTION_COST = 50;
+export const HP_POTION_HEAL_PERCENT = 0.5;
+export const MP_POTION_RECOVER_PERCENT = 0.5;
+export const KILLS_FOR_BOSS = 10;
+export const BOSS_HP_MULTIPLIER = 5;
+export const BOSS_ATK_MULTIPLIER = 2;
+export const BOSS_DEF_MULTIPLIER = 2;
+export const DROP_CHANCE = 0.2;
+export const MAX_LOGS = 50;
+// export const AUTO_ATTACK_INTERVAL = 1500; // Removed: Manual combat implemented
