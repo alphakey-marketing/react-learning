@@ -5,6 +5,7 @@ export interface Enemy {
   maxHp: number;
   atk: number;
   def: number;
+  attackSpeed: number; // Attacks per second (independent from player)
 }
 
 export interface Zone {

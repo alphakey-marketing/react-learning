@@ -5,7 +5,7 @@ interface EnemyDisplayProps {
   onAttack: () => void;
   canAttack: boolean;
   inTown: boolean;
-  attackCooldownPercent: number; // 0 to 100
+  attackCooldownPercent: number;
 }
 
 export function EnemyDisplay({ enemy, onAttack, canAttack, inTown, attackCooldownPercent }: EnemyDisplayProps) {
@@ -152,7 +152,7 @@ export function EnemyDisplay({ enemy, onAttack, canAttack, inTown, attackCooldow
       </div>
       
       <div style={{ fontSize: "10px", color: "#888", marginTop: "8px" }}>
-        Tip: Higher AGI = Faster Attacks
+        Press 'A' key to attack | Higher AGI = Faster Attacks
       </div>
     </div>
   );

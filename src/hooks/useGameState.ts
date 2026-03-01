@@ -81,10 +81,14 @@ export function useGameState(addLog: (text: string) => void) {
   const [showDeathModal, setShowDeathModal] = useState<boolean>(false);
   const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>({});
 
-  // ASPD & Manual Attack System States
+  // Player ASPD & Manual Attack System States
   const [lastAttackTime, setLastAttackTime] = useState<number>(0);
   const [canAttack, setCanAttack] = useState<boolean>(true);
   const [attackCooldownPercent, setAttackCooldownPercent] = useState<number>(100);
+
+  // Enemy Independent Attack System States
+  const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
+  const enemyAttackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
@@ -353,13 +357,11 @@ export function useGameState(addLog: (text: string) => void) {
   
   autoPotionRef.current = processAutoPotion;
 
-  // ASPD loop for cooldown UI
+  // Player ASPD cooldown UI loop
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
 
-    // Attacks per second (e.g., 2.0 = 2 attacks per second)
     const attacksPerSecond = calcASPD(char);
-    // Time needed between attacks in milliseconds (e.g., 500ms for 2.0 ASPD)
     const attackDelayMs = 1000 / attacksPerSecond;
 
     const interval = setInterval(() => {
@@ -372,18 +374,64 @@ export function useGameState(addLog: (text: string) => void) {
       } else {
         setAttackCooldownPercent(Math.floor((timePassed / attackDelayMs) * 100));
       }
-    }, 50); // Update UI frequently
+    }, 50);
 
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, char, currentZoneId]);
 
-  // Periodic effects (Town healing)
+  // Enemy Independent Attack Timer (Classic RO style)
+  useEffect(() => {
+    // Clear previous timer when changing zones or enemies
+    if (enemyAttackTimerRef.current) {
+      clearInterval(enemyAttackTimerRef.current);
+      enemyAttackTimerRef.current = null;
+    }
+
+    // Don't attack in town or when player is dead
+    if (currentZoneId === 0 || char.hp <= 0 || enemy.attackSpeed === 0) {
+      return;
+    }
+
+    // Enemy attacks on their own independent timer
+    const enemyAttackDelayMs = 1000 / enemy.attackSpeed;
+    
+    enemyAttackTimerRef.current = setInterval(() => {
+      if (char.hp <= 0 || currentZoneId === 0) return;
+
+      const armorBonus = equipped.armor?.stat || 0;
+      const playerDef = calcPlayerDef(char, armorBonus);
+      const enemyDmg = calculateEnemyDamage(enemy, playerDef);
+
+      setChar((prev) => {
+        if (prev.hp <= 0) return prev;
+        
+        const newHp = Math.max(0, prev.hp - enemyDmg);
+        
+        if (newHp > 0) {
+          addLog(`💥 ${enemy.name} attacks! You take ${enemyDmg} dmg.`);
+        } else {
+          addLog(`💀 You were defeated by ${enemy.name}!`);
+          setShowDeathModal(true);
+        }
+        
+        return { ...prev, hp: newHp };
+      });
+    }, enemyAttackDelayMs);
+
+    return () => {
+      if (enemyAttackTimerRef.current) {
+        clearInterval(enemyAttackTimerRef.current);
+      }
+    };
+  }, [enemy, currentZoneId, char.hp, equipped.armor]);
+
+  // Periodic town healing
   useEffect(() => {
     const id = setInterval(() => {
       if (currentZoneId === 0) {
         townHealingRef.current();
       }
-    }, 3000); // Check healing every 3 seconds
+    }, 3000);
     return () => clearInterval(id);
   }, [currentZoneId]);
 
@@ -395,7 +443,6 @@ export function useGameState(addLog: (text: string) => void) {
     }
     
     if (!canAttack) {
-      // Trying to attack too fast based on ASPD
       return; 
     }
 
@@ -443,7 +490,7 @@ export function useGameState(addLog: (text: string) => void) {
       return;
     }
 
-    // Set ASPD cooldown
+    // Set player ASPD cooldown
     setLastAttackTime(now);
     setCanAttack(false);
     setAttackCooldownPercent(0);
@@ -564,21 +611,6 @@ export function useGameState(addLog: (text: string) => void) {
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
       }
-    } else {
-      // Enemy counter-attacks immediately after player attacks
-      const playerDef = calcPlayerDef(char, armorBonus);
-      const enemyDmg = calculateEnemyDamage(enemy, playerDef);
-
-      nextCharHp -= enemyDmg;
-      addLog(`💥 ${enemy.name} counter-attacks! You take ${enemyDmg} dmg.`);
-
-      nextEnemy = { ...enemy, hp: nextEnemyHp };
-
-      if (nextCharHp <= 0) {
-        nextCharHp = 0;
-        addLog(`💀 You were defeated by ${enemy.name}!`);
-        setShowDeathModal(true);
-      }
     }
 
     setChar({
@@ -625,6 +657,7 @@ export function useGameState(addLog: (text: string) => void) {
       maxHp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
       def: bossTemplate.def * BOSS_DEF_MULTIPLIER,
+      attackSpeed: bossTemplate.attackSpeed * 1.5, // Bosses attack faster
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);

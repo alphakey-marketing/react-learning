@@ -18,19 +18,17 @@ export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const game = useGameState(addLog);
 
-  // Check if player can change job
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // Keyboard shortcut for attacking (Spacebar)
+  // Keyboard shortcut for attacking ('A' key)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
       
-      if (e.code === 'Space' && game.currentZoneId !== 0 && game.canAttack) {
-        e.preventDefault(); // Prevent scrolling down
+      if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
+        e.preventDefault();
         game.battleAction();
       }
     };
@@ -53,7 +51,6 @@ export function MiniLevelGame() {
         paddingTop: "40px",
       }}
     >
-      {/* Dev Tools Panel - Fixed position */}
       <DevTools
         character={game.char}
         onAddBaseLevel={game.devAddBaseLevel}
@@ -99,7 +96,6 @@ export function MiniLevelGame() {
             marginBottom: "15px",
           }}
         >
-          {/* Left Column */}
           <div style={{ minWidth: 0 }}>
             <CharacterStats
               character={game.char}
@@ -108,7 +104,6 @@ export function MiniLevelGame() {
               onOpenSkills={() => game.setShowSkillWindow(true)}
             />
             
-            {/* Action Buttons */}
             <div style={{ marginTop: "10px", marginBottom: "10px", display: "flex", gap: "8px" }}>
               <button
                 onClick={game.openJobChangeNPC}
@@ -135,7 +130,6 @@ export function MiniLevelGame() {
                   : "🧙 Job Master"}
               </button>
               
-              {/* Escape to Town Button */}
               {game.currentZoneId !== 0 && (
                 <button
                   onClick={game.escapeToTown}
@@ -174,7 +168,6 @@ export function MiniLevelGame() {
             />
           </div>
 
-          {/* Right Column */}
           <div style={{ minWidth: 0 }}>
             <BattleLog logs={logs} />
             
@@ -206,7 +199,6 @@ export function MiniLevelGame() {
           </div>
         </div>
 
-        {/* Skill Window (Full Width) */}
         {game.showSkillWindow && (
           <SkillWindow
             character={game.char}
@@ -216,7 +208,6 @@ export function MiniLevelGame() {
           />
         )}
 
-        {/* Job Change NPC (Full Screen Modal) */}
         {game.showJobChangeNPC && (
           <JobChangeNPC
             currentJob={game.char.jobClass}
@@ -226,7 +217,6 @@ export function MiniLevelGame() {
           />
         )}
 
-        {/* Death Modal */}
         {game.showDeathModal && (
           <div
             style={{
@@ -318,7 +308,6 @@ export function MiniLevelGame() {
           </div>
         )}
 
-        {/* Skill Hotkeys */}
         <SkillHotkeys
           character={game.char}
           skillCooldowns={game.skillCooldowns}
@@ -327,7 +316,6 @@ export function MiniLevelGame() {
         />
       </div>
 
-      {/* Add pulse animation for job change button */}
       <style>{`
         @keyframes pulse {
           0%, 100% {
