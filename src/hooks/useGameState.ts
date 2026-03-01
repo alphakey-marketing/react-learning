@@ -86,11 +86,10 @@ export function useGameState(addLog: (text: string) => void) {
   const [canAttack, setCanAttack] = useState<boolean>(true);
   const [attackCooldownPercent, setAttackCooldownPercent] = useState<number>(100);
   
-  // Auto-Attack Toggle - Using number for browser compatibility
+  // Auto-Attack Toggle
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
-  const autoAttackTimerRef = useRef<number | null>(null);
 
-  // Enemy Independent Attack System States - Using number for browser compatibility
+  // Enemy Independent Attack System States
   const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
   const enemyAttackTimerRef = useRef<number | null>(null);
 
@@ -500,7 +499,7 @@ export function useGameState(addLog: (text: string) => void) {
           setUnlockedZoneIds((prev) => {
             if (!prev.includes(nextZone.id)) {
               addLog(`🔓 UNLOCKED: ${nextZone.name}!`);
-              return [...prev, nextZone.id]; // Fixed: actually add the new zone ID
+              return [...prev, nextZone.id];
             }
             return prev;
           });
@@ -560,6 +559,12 @@ export function useGameState(addLog: (text: string) => void) {
     setEnemy(nextEnemy);
   }
 
+  // Keep battleAction reference fresh for auto-attack
+  const battleActionRef = useRef(battleAction);
+  useEffect(() => {
+    battleActionRef.current = battleAction;
+  });
+
   // Player ASPD cooldown UI loop
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
@@ -582,38 +587,17 @@ export function useGameState(addLog: (text: string) => void) {
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, char, currentZoneId]);
 
-  // Auto-Attack Timer - Separate, clean implementation
+  // ⭐ AUTO-ATTACK TRIGGER - Fires when canAttack becomes true
   useEffect(() => {
-    // Clear any existing timer
-    if (autoAttackTimerRef.current !== null) {
-      clearInterval(autoAttackTimerRef.current);
-      autoAttackTimerRef.current = null;
-    }
-
-    // Don't start auto-attack if disabled, in town, or dead
-    if (!autoAttackEnabled || currentZoneId === 0 || char.hp <= 0) {
-      return;
-    }
-
-    // Calculate attack speed
-    const attacksPerSecond = calcASPD(char);
-    const attackDelayMs = 1000 / attacksPerSecond;
-
-    // Start auto-attack loop
-    autoAttackTimerRef.current = window.setInterval(() => {
-      // Double-check conditions before attacking
-      if (currentZoneId === 0 || char.hp <= 0) return;
+    if (autoAttackEnabled && canAttack && currentZoneId !== 0 && char.hp > 0) {
+      // Small delay to ensure React finishes rendering before triggering next state change
+      const timer = setTimeout(() => {
+        battleActionRef.current();
+      }, 10);
       
-      // Call battleAction - it has its own canAttack check
-      battleAction();
-    }, attackDelayMs) as unknown as number;
-
-    return () => {
-      if (autoAttackTimerRef.current !== null) {
-        clearInterval(autoAttackTimerRef.current);
-      }
-    };
-  }, [autoAttackEnabled, currentZoneId, char.hp, char.stats.agi, char.stats.dex, char.level]);
+      return () => clearTimeout(timer);
+    }
+  }, [autoAttackEnabled, canAttack, currentZoneId, char.hp]);
 
   // Enemy Independent Attack Timer (Classic RO style)
   useEffect(() => {
@@ -692,7 +676,7 @@ export function useGameState(addLog: (text: string) => void) {
       maxHp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
       def: bossTemplate.def * BOSS_DEF_MULTIPLIER,
-      attackSpeed: bossTemplate.attackSpeed * 1.5, // Bosses attack faster
+      attackSpeed: bossTemplate.attackSpeed * 1.5,
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);
