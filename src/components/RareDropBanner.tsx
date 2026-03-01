@@ -8,28 +8,43 @@ interface RareDropBannerProps {
 
 export function RareDropBanner({ item, onDismiss }: RareDropBannerProps) {
   const [visible, setVisible] = useState(false);
+  const [displayItem, setDisplayItem] = useState<Equipment | null>(null);
 
+  // We need local state so the banner doesn't instantly snap out when 'item' becomes null
+  // We want to animate it out smoothly.
   useEffect(() => {
     if (item) {
-      setVisible(true);
-      const timer = setTimeout(() => {
+      setDisplayItem(item);
+      // Small delay to ensure displayItem is set before animating in
+      setTimeout(() => setVisible(true), 50);
+
+      // Auto dismiss sequence:
+      // 1. Start slide-out animation after 2.5s
+      const slideOutTimer = setTimeout(() => {
         setVisible(false);
-        setTimeout(onDismiss, 300);
+        // 2. Trigger parent cleanup after animation finishes (0.5s)
+        setTimeout(() => {
+          onDismiss();
+        }, 500); 
       }, 2500);
-      return () => clearTimeout(timer);
+
+      return () => clearTimeout(slideOutTimer);
     }
   }, [item, onDismiss]);
 
-  if (!item) return null;
+  // Use the cached display item so we can still render it while animating out
+  const targetItem = item || displayItem;
 
-  const rarityColor = item.rarity === 'epic' ? '#a335ee' : '#4a9eff';
-  const rarityText = item.rarity === 'epic' ? 'EPIC DROP!' : 'RARE DROP!';
+  if (!targetItem) return null;
+
+  const rarityColor = targetItem.rarity === 'epic' ? '#a335ee' : '#4a9eff';
+  const rarityText = targetItem.rarity === 'epic' ? 'EPIC DROP!' : 'RARE DROP!';
 
   return (
     <div
       style={{
         position: 'fixed',
-        top: visible ? '20%' : '-100px',
+        top: visible ? '20%' : '-150px',
         left: '50%',
         transform: 'translateX(-50%)',
         background: `linear-gradient(135deg, ${rarityColor}22, ${rarityColor}44)`,
@@ -37,10 +52,11 @@ export function RareDropBanner({ item, onDismiss }: RareDropBannerProps) {
         borderRadius: '15px',
         padding: '20px 40px',
         zIndex: 10000,
-        transition: 'top 0.3s ease-out',
+        transition: 'top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)', // Bouncy slide in
         boxShadow: `0 0 30px ${rarityColor}aa, inset 0 0 20px ${rarityColor}33`,
-        animation: 'pulse 0.5s ease-in-out infinite',
+        animation: visible ? 'pulse 1s ease-in-out infinite' : 'none',
         textAlign: 'center',
+        pointerEvents: 'none', // Allow clicking through
       }}
     >
       <div style={{
@@ -59,14 +75,15 @@ export function RareDropBanner({ item, onDismiss }: RareDropBannerProps) {
         fontWeight: 700,
         textShadow: '2px 2px 4px #000',
       }}>
-        {item.name}
+        {targetItem.name}
       </div>
       <div style={{
         fontSize: '16px',
         color: '#ffd700',
         marginTop: '5px',
+        fontWeight: 'bold',
       }}>
-        +{item.stat} {item.type === 'weapon' ? 'ATK' : 'DEF'}
+        +{targetItem.stat} {targetItem.type === 'weapon' ? 'ATK' : 'DEF'}
       </div>
     </div>
   );

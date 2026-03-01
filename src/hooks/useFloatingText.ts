@@ -14,9 +14,25 @@ export function useFloatingText() {
   }) => {
     const id = `${Date.now()}-${Math.random()}`;
     
-    // Default position (center of screen for level up, slightly right of center for damage)
-    const defaultX = options?.isLevelUp ? window.innerWidth / 2 : (window.innerWidth / 2) + 100;
-    const defaultY = options?.isLevelUp ? window.innerHeight / 3 : (window.innerHeight / 2) - 50;
+    // Level up appears center-top of the game window
+    // Damage numbers appear near the enemy container
+    // We adjust X/Y to be relative to typical desktop layout:
+    // Screen center X = middle of game window
+    // Enemy is roughly center-left in the UI layout
+    
+    const windowCenterX = window.innerWidth / 2;
+    
+    // Level up: Center screen, high up
+    const levelUpX = windowCenterX;
+    const levelUpY = window.innerHeight * 0.3;
+    
+    // Damage: Left side near enemy portrait, slightly randomized to avoid stacking perfectly
+    const randomOffset = Math.random() * 40 - 20; // -20 to +20 px
+    const damageX = (windowCenterX - 200) + randomOffset; 
+    const damageY = (window.innerHeight * 0.4) + randomOffset;
+    
+    const defaultX = options?.isLevelUp ? levelUpX : damageX;
+    const defaultY = options?.isLevelUp ? levelUpY : damageY;
     
     const newText: FloatingTextData = {
       id,

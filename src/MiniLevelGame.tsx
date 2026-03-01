@@ -29,22 +29,29 @@ export function MiniLevelGame() {
   
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
-      addFloatingText(`${damage}`, {
-        color: isCrit ? '#ff0000' : '#ffaa00',
+      // Floating text hook handles positioning near enemy automatically now
+      addFloatingText(`-${damage}`, {
+        color: isCrit ? '#ff3333' : '#ffaa00', // Brighter red for crit, orange for normal
         isCrit,
       });
     },
     onLevelUp: (newLevel: number) => {
       addFloatingText(`🌟 LEVEL ${newLevel}! 🌟`, {
         color: '#ffd700',
-        fontSize: 36,
+        fontSize: 42, // Bigger
         isLevelUp: true,
       });
     },
     onItemDrop: (item: Equipment) => {
       addDroppingItem(item);
       if (item.rarity === 'rare' || item.rarity === 'epic') {
-        setRareDropItem(item);
+        // Clear previous banner if it exists before showing new one
+        if (rareDropItem) {
+          setRareDropItem(null);
+          setTimeout(() => setRareDropItem(item), 50);
+        } else {
+          setRareDropItem(item);
+        }
       }
     },
   });
@@ -363,9 +370,11 @@ export function MiniLevelGame() {
         @keyframes pulse {
           0%, 100% {
             opacity: 1;
+            transform: scale(1) translateX(-50%);
           }
           50% {
-            opacity: 0.8;
+            opacity: 0.9;
+            transform: scale(1.02) translateX(-50%);
           }
         }
       `}</style>

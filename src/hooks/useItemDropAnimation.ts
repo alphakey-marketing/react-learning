@@ -8,9 +8,9 @@ export function useItemDropAnimation() {
   const addDroppingItem = useCallback((item: Equipment) => {
     const id = `${Date.now()}-${Math.random()}`;
     
-    // Drop from enemy position (center-right of screen)
-    const startX = (window.innerWidth / 2) + 150;
-    const startY = (window.innerHeight / 2) - 30;
+    // Drop next to enemy portrait (left side of game UI)
+    const startX = (window.innerWidth / 2) - 150;
+    const startY = (window.innerHeight / 2) - 50;
     
     const droppingItem: DroppingItem = {
       id,
