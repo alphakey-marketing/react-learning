@@ -55,7 +55,7 @@ export function useGameState(addLog: (text: string) => void) {
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
-    getRandomEnemyForZone(1, 1)
+    getRandomEnemyForZone(0, 1) // Start in town (zone 0)
   );
 
   const [inventory, setInventory] = useState<Equipment[]>([]);
@@ -64,7 +64,7 @@ export function useGameState(addLog: (text: string) => void) {
     armor: null,
   });
 
-  const [currentZoneId, setCurrentZoneId] = useState<number>(1);
+  const [currentZoneId, setCurrentZoneId] = useState<number>(0); // START IN TOWN
   const [unlockedZoneIds, setUnlockedZoneIds] = useState<number[]>([0, 1]);
   const [killCount, setKillCount] = useState<number>(0);
   const [bossAvailable, setBossAvailable] = useState<boolean>(false);
@@ -88,7 +88,6 @@ export function useGameState(addLog: (text: string) => void) {
   
   // Auto-Attack Toggle
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
-  const autoAttackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Enemy Independent Attack System States
   const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
@@ -96,6 +95,7 @@ export function useGameState(addLog: (text: string) => void) {
 
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
+  const battleActionRef = useRef<(skillId?: string) => void>(() => {});
 
   // ========== DEV TOOLS FUNCTIONS ==========
   function devAddBaseLevel() {
@@ -398,9 +398,7 @@ export function useGameState(addLog: (text: string) => void) {
       const timePassed = (now - lastUsed) / 1000;
 
       if (timePassed < skill.cooldown) {
-        const remaining = (skill.cooldown - timePassed).toFixed(1);
-        addLog(`⏳ ${skill.nameZh} on cooldown (${remaining}s)`);
-        return;
+        return; // Silent return for auto-attack
       }
       setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
     }
@@ -563,7 +561,10 @@ export function useGameState(addLog: (text: string) => void) {
     setEnemy(nextEnemy);
   }, [char, enemy, currentZoneId, canAttack, equipped, skillCooldowns, killCount, isBossFight]);
 
-  // Player ASPD cooldown UI loop
+  // Store battleAction in ref so it can be called from effects
+  battleActionRef.current = battleAction;
+
+  // Player ASPD cooldown UI loop - THIS NOW TRIGGERS AUTO-ATTACK
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
 
@@ -577,38 +578,18 @@ export function useGameState(addLog: (text: string) => void) {
       if (timePassed >= attackDelayMs) {
         setCanAttack(true);
         setAttackCooldownPercent(100);
+        
+        // Trigger auto-attack when cooldown finishes
+        if (autoAttackEnabled && currentZoneId !== 0 && char.hp > 0) {
+          battleActionRef.current();
+        }
       } else {
         setAttackCooldownPercent(Math.floor((timePassed / attackDelayMs) * 100));
       }
     }, 50);
 
     return () => clearInterval(interval);
-  }, [canAttack, lastAttackTime, char, currentZoneId]);
-
-  // Auto-Attack Timer
-  useEffect(() => {
-    if (autoAttackTimerRef.current) {
-      clearInterval(autoAttackTimerRef.current);
-      autoAttackTimerRef.current = null;
-    }
-
-    if (!autoAttackEnabled || currentZoneId === 0 || char.hp <= 0) {
-      return;
-    }
-
-    const attacksPerSecond = calcASPD(char);
-    const attackDelayMs = 1000 / attacksPerSecond;
-
-    autoAttackTimerRef.current = setInterval(() => {
-      battleAction();
-    }, attackDelayMs);
-
-    return () => {
-      if (autoAttackTimerRef.current) {
-        clearInterval(autoAttackTimerRef.current);
-      }
-    };
-  }, [autoAttackEnabled, currentZoneId, char.hp, char.stats.agi, char.stats.dex, battleAction]);
+  }, [canAttack, lastAttackTime, char, currentZoneId, autoAttackEnabled]);
 
   // Enemy Independent Attack Timer (Classic RO style)
   useEffect(() => {
