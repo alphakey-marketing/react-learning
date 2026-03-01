@@ -99,6 +99,34 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
+  
+  // Store callbacks and char state in refs to avoid dependency issues
+  const callbacksRef = useRef<GameCallbacks | undefined>(callbacks);
+  const charRef = useRef<Character>(char);
+  const equippedRef = useRef<EquippedItems>(equipped);
+  const enemyRef = useRef<Enemy>(enemy);
+  const currentZoneIdRef = useRef<number>(currentZoneId);
+  
+  // Update refs whenever values change
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
+  
+  useEffect(() => {
+    charRef.current = char;
+  }, [char]);
+  
+  useEffect(() => {
+    equippedRef.current = equipped;
+  }, [equipped]);
+  
+  useEffect(() => {
+    enemyRef.current = enemy;
+  }, [enemy]);
+  
+  useEffect(() => {
+    currentZoneIdRef.current = currentZoneId;
+  }, [currentZoneId]);
 
   // ========== DEV TOOLS FUNCTIONS ==========
   function devAddBaseLevel() {
@@ -613,29 +641,39 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }
   }, [autoAttackEnabled, canAttack, currentZoneId, char.hp]);
 
-  // ENEMY ATTACK SYSTEM
+  // ENEMY ATTACK SYSTEM - Uses refs to avoid restarting interval
   useEffect(() => {
+    // Clear existing interval when enemy or zone changes
     if (enemyAttackTimerRef.current !== null) {
       clearInterval(enemyAttackTimerRef.current);
       enemyAttackTimerRef.current = null;
     }
 
-    // Don't attack if in town, player is dead, or enemy has 0 attack speed (Practice Dummy)
-    if (currentZoneId === 0 || char.hp <= 0 || enemy.attackSpeed <= 0) {
+    // Don't start interval if in town or enemy has 0 attack speed
+    if (currentZoneId === 0 || enemy.attackSpeed <= 0) {
       return;
     }
 
     const enemyAttackDelayMs = 1000 / enemy.attackSpeed;
     
+    // Start the attack interval
     enemyAttackTimerRef.current = window.setInterval(() => {
-      if (char.hp <= 0 || currentZoneId === 0) return;
+      // Use refs to get latest values without triggering useEffect restart
+      const currentChar = charRef.current;
+      const currentEnemy = enemyRef.current;
+      const currentEquipped = equippedRef.current;
+      const currentZone = currentZoneIdRef.current;
+      const currentCallbacks = callbacksRef.current;
+      
+      // Don't attack if player is dead or back in town
+      if (currentChar.hp <= 0 || currentZone === 0) return;
 
-      const armorBonus = equipped.armor?.stat || 0;
-      const playerDef = calcPlayerDef(char, armorBonus);
-      const enemyDmg = calculateEnemyDamage(enemy, playerDef);
+      const armorBonus = currentEquipped.armor?.stat || 0;
+      const playerDef = calcPlayerDef(currentChar, armorBonus);
+      const enemyDmg = calculateEnemyDamage(currentEnemy, playerDef);
 
       // Trigger enemy damage visual effect
-      callbacks?.onEnemyDamageDealt?.(enemyDmg);
+      currentCallbacks?.onEnemyDamageDealt?.(enemyDmg);
 
       setChar((prev) => {
         if (prev.hp <= 0) return prev;
@@ -643,9 +681,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         const newHp = Math.max(0, prev.hp - enemyDmg);
         
         if (newHp > 0) {
-          addLog(`💥 ${enemy.name} attacks! You take ${enemyDmg} dmg.`);
+          addLog(`💥 ${currentEnemy.name} attacks! You take ${enemyDmg} dmg.`);
         } else {
-          addLog(`💀 You were defeated by ${enemy.name}!`);
+          addLog(`💀 You were defeated by ${currentEnemy.name}!`);
           setShowDeathModal(true);
         }
         
@@ -653,12 +691,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       });
     }, enemyAttackDelayMs) as unknown as number;
 
+    // Cleanup on unmount or when dependencies change
     return () => {
       if (enemyAttackTimerRef.current !== null) {
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy, currentZoneId, char.hp, equipped.armor, char.maxHp, callbacks]);
+  }, [enemy.attackSpeed, enemy.name, currentZoneId]); // Only restart when enemy or zone changes
 
   useEffect(() => {
     const id = setInterval(() => {
