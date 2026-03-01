@@ -841,36 +841,51 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }
   }
 
+  // FIXED: Use state updater functions to get fresh values
   function useHpPotion() {
-    if (hpPotions > 0 && char.hp < char.maxHp) {
-      const heal = Math.floor(char.maxHp * HP_POTION_HEAL_PERCENT);
-      setChar((prev) => ({
-        ...prev,
-        hp: Math.min(prev.maxHp, prev.hp + heal),
-      }));
-      setHpPotions((prev) => prev - 1);
-      addLog(`🍖 +${heal} HP.`);
-    } else if (hpPotions === 0) {
-      addLog("❌ No HP Pots!");
-    } else {
-      addLog("❤️ HP Full!");
-    }
+    setHpPotions((prevPotions) => {
+      if (prevPotions <= 0) {
+        addLog("❌ No HP Pots!");
+        return prevPotions;
+      }
+      
+      setChar((prevChar) => {
+        if (prevChar.hp >= prevChar.maxHp) {
+          addLog("❤️ HP Full!");
+          return prevChar;
+        }
+        
+        const heal = Math.floor(prevChar.maxHp * HP_POTION_HEAL_PERCENT);
+        const newHp = Math.min(prevChar.maxHp, prevChar.hp + heal);
+        addLog(`🍖 +${heal} HP.`);
+        return { ...prevChar, hp: newHp };
+      });
+      
+      return prevPotions - 1;
+    });
   }
 
   function useMpPotion() {
-    if (mpPotions > 0 && char.mp < char.maxMp) {
-      const recover = Math.floor(char.maxMp * MP_POTION_RECOVER_PERCENT);
-      setChar((prev) => ({
-        ...prev,
-        mp: Math.min(prev.maxMp, prev.mp + recover),
-      }));
-      setMpPotions((prev) => prev - 1);
-      addLog(`🧪 +${recover} MP.`);
-    } else if (mpPotions === 0) {
-      addLog("❌ No MP Pots!");
-    } else {
-      addLog("💙 MP Full!");
-    }
+    setMpPotions((prevPotions) => {
+      if (prevPotions <= 0) {
+        addLog("❌ No MP Pots!");
+        return prevPotions;
+      }
+      
+      setChar((prevChar) => {
+        if (prevChar.mp >= prevChar.maxMp) {
+          addLog("💙 MP Full!");
+          return prevChar;
+        }
+        
+        const recover = Math.floor(prevChar.maxMp * MP_POTION_RECOVER_PERCENT);
+        const newMp = Math.min(prevChar.maxMp, prevChar.mp + recover);
+        addLog(`🧪 +${recover} MP.`);
+        return { ...prevChar, mp: newMp };
+      });
+      
+      return prevPotions - 1;
+    });
   }
 
   return {
