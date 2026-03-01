@@ -84,6 +84,7 @@ export function MiniLevelGame() {
           <div style={{ minWidth: 0 }}>
             <CharacterStats
               character={game.char}
+              equipped={game.equipped}
               onAddStat={game.addStat}
               onOpenSkills={() => game.setShowSkillWindow(true)}
             />
