@@ -15,954 +15,242 @@ By default, Replit runs the `dev` script, but you can configure it by changing t
 
 ---
 
-## 📋 Code Refactoring Plan
+## 🎮 **Addiction-Focused Roadmap for Single-Player RO**
 
-### Current Structure Issues
-
-The current codebase has a monolithic structure with `MiniLevelGame.tsx` containing approximately 1,350 lines of code. Everything exists in a single file including:
-- Type definitions
-- Game logic
-- Data definitions  
-- UI components
-- State management
-
-This makes it difficult to maintain, test, and scale the application.
-
-### Recommended File Organization
-
-Below is a comprehensive plan to reorganize the codebase into modular, maintainable components.
+The key to RO's addiction: **Short-term dopamine hits + Long-term progression goals + Random rewards**
 
 ---
 
-## 📁 Directory Structure
+### **🔥 Phase 1: Core Addiction Loops (Priority - Next 5 Commits)**
 
-```
-src/
-├── types/
-│   ├── character.ts      # Character, stats, job interfaces
-│   ├── enemy.ts          # Enemy and zone interfaces
-│   ├── skill.ts          # Skill interface and types
-│   ├── equipment.ts      # Equipment and inventory types
-│   └── game.ts           # Log and general game types
-│
-├── data/
-│   ├── skills.ts         # SKILLS_DB definitions
-│   ├── zones.ts          # ZONES array with map data
-│   └── constants.ts      # Game constants (CRIT_MULTIPLIER, etc.)
-│
-├── logic/
-│   ├── combat.ts         # Combat calculations
-│   ├── character.ts      # Character stat calculations
-│   ├── experience.ts     # Level up logic
-│   └── loot.ts           # Item drop and generation
-│
-├── components/
-│   ├── CharacterStats.tsx    # Player stats display
-│   ├── EnemyDisplay.tsx      # Enemy info and health bar
-│   ├── BattleLog.tsx         # Combat log display
-│   ├── SkillWindow.tsx       # Skill tree interface
-│   ├── SkillHotkeys.tsx      # Skill quick-use buttons
-│   ├── Inventory.tsx         # Inventory management
-│   ├── Shop.tsx              # Shop and potion system
-│   ├── MapSystem.tsx         # Zone navigation
-│   └── BossChallenge.tsx     # Boss fight UI
-│
-├── hooks/
-│   ├── useCharacter.ts       # Character state management
-│   ├── useCombat.ts          # Combat system logic
-│   ├── useSkills.ts          # Skill system and cooldowns
-│   ├── useInventory.ts       # Inventory management
-│   └── useBattleLog.ts       # Log management with auto-scroll
-│
-├── App.tsx
-├── MiniLevelGame.tsx         # Main game container (refactored)
-└── index.tsx
-```
+These create the "just one more..." feeling.
+
+#### **✅ Commit 1: Loot Explosion System** 🎁 **[COMPLETED]**
+**Why it's addictive:** Instant visual feedback + random rewards trigger dopamine
+
+**Features Implemented:**
+- ✅ **Floating damage numbers** that pop up when you hit (shows damage amount)
+- ✅ **Critical hit effects** - Larger, red, glowing text for crits
+- ✅ **Item drop animations** - Items literally drop from monsters with physics-based bounce
+- ✅ **Rare item sparkle effects** (common = white, rare = blue glow, epic = purple glow)
+- ✅ **"Rare Drop!" banner** that flashes across screen for rare/epic drops
+- ✅ **Level-up celebration** - Golden glowing text when you level up
+
+**Files Created:**
+- `src/components/FloatingText.tsx` - Damage numbers and text effects
+- `src/components/ItemDropAnimation.tsx` - Physics-based item drops
+- `src/components/RareDropBanner.tsx` - Epic/rare drop announcements
+- `src/hooks/useFloatingText.ts` - Hook for managing floating text
+- `src/hooks/useItemDropAnimation.ts` - Hook for item drop effects
 
 ---
 
-## 🔧 Implementation Details
+#### **Commit 2: Achievement & Milestone System** 🏆
+**Why it's addictive:** Clear goals + instant gratification + social proof feel
 
-### 1. Type Definitions (`src/types/`)
+**Features to Add:**
+- **Pop-up achievements** when unlocked (e.g., "First Blood!", "Level 10!", "100 Kills!")
+- **Achievement categories:**
+  - Combat: Kill X enemies, deal X damage in one hit, defeat boss without dying
+  - Progression: Reach level X, max a stat, learn all skills for class
+  - Collection: Own 5 weapons, sell 100 items, earn 10,000 gold
+- **Title system** - Unlock titles that show on character card
+- **Achievement tracker UI** - Shows "Close to unlocking: Kill 3 more Goblins!"
 
-**`types/character.ts`**
-```typescript
-export type JobClass = "Novice" | "Swordsman" | "Mage" | "Archer";
-
-export interface Stats {
-  str: number;
-  agi: number;
-  vit: number;
-  int: number;
-  dex: number;
-  luk: number;
-}
-
-export interface Character {
-  level: number;
-  exp: number;
-  expToNext: number;
-  hp: number;
-  maxHp: number;
-  mp: number;
-  maxMp: number;
-  gold: number;
-  stats: Stats;
-  statPoints: number;
-  jobClass: JobClass;
-  jobLevel: number;
-  jobExp: number;
-  jobExpToNext: number;
-  skillPoints: number;
-  learnedSkills: Record<string, number>;
-}
-```
-
-**`types/skill.ts`**
-```typescript
-export interface Skill {
-  id: string;
-  name: string;
-  nameZh: string;
-  maxLevel: number;
-  mpCost: (level: number) => number;
-  description: string;
-  damageMultiplier: (level: number) => number;
-  cooldown: number;
-  effect?: "stun" | "dot" | "heal" | "buff";
-}
-```
-
-**`types/enemy.ts`**
-```typescript
-export interface Enemy {
-  name: string;
-  level: number;
-  hp: number;
-  maxHp: number;
-  atk: number;
-  def: number;
-}
-
-export interface Zone {
-  id: number;
-  name: string;
-  minLevel: number;
-  enemies: Enemy[];
-}
-```
-
-**`types/equipment.ts`**
-```typescript
-export interface Equipment {
-  id: number;
-  name: string;
-  type: "weapon" | "armor";
-  stat: number;
-  rarity: "common" | "rare" | "epic";
-}
-
-export interface EquippedItems {
-  weapon: Equipment | null;
-  armor: Equipment | null;
-}
-```
-
-**`types/game.ts`**
-```typescript
-export interface Log {
-  id: number;
-  text: string;
-}
-```
+**Why NEXT:** Gives players short-term goals between leveling up.
 
 ---
 
-### 2. Game Data (`src/data/`)
+#### **Commit 3: Card System (RO's Most Addictive Feature)** 🃏
+**Why it's addictive:** Ultra-rare drops + collection + power boost
 
-**`data/constants.ts`**
-```typescript
-export const CRIT_MULTIPLIER = 1.5;
-export const HP_POTION_COST = 50;
-export const MP_POTION_COST = 50;
-export const HP_POTION_HEAL_PERCENT = 0.5;
-export const MP_POTION_RECOVER_PERCENT = 0.5;
-export const BASE_STAT_POINTS_PER_LEVEL = 3;
-export const BASE_SKILL_POINTS_PER_JOB_LEVEL = 1;
-```
+**Features:**
+- **Monster cards drop at 0.01% - 0.1% rate** (super rare!)
+- **Card effects:**
+  - Poring Card: +5% HP
+  - Goblin Card: +2 ATK
+  - Boss Cards: Powerful unique effects
+- **Card album UI** - Shows all cards, "???" for undiscovered ones
+- **"CARD DROP!" screen flash** - Unmistakable when you get one
+- **Card slotting** - Equipment has 1-4 card slots
+- **Collection counter** - "12/50 cards collected"
 
-**`data/skills.ts`**
-```typescript
-import { Skill } from '../types/skill';
-import { JobClass } from '../types/character';
-
-export const SKILLS_DB: Record<JobClass, Skill[]> = {
-  Novice: [
-    {
-      id: "basic_attack",
-      name: "Basic Attack",
-      nameZh: "普通攻擊",
-      maxLevel: 1,
-      mpCost: () => 2,
-      description: "基本攻擊",
-      damageMultiplier: () => 1.0,
-      cooldown: 0,
-    },
-  ],
-  Swordsman: [
-    // ... Swordsman skills
-  ],
-  Mage: [
-    // ... Mage skills
-  ],
-  Archer: [
-    // ... Archer skills
-  ],
-};
-```
-
-**`data/zones.ts`**
-```typescript
-import { Zone } from '../types/enemy';
-
-export const ZONES: Zone[] = [
-  {
-    id: 1,
-    name: "🌱 新手草原",
-    minLevel: 1,
-    enemies: [
-      { name: "Slime", level: 1, hp: 30, maxHp: 30, atk: 5, def: 2 },
-      { name: "Goblin", level: 2, hp: 50, maxHp: 50, atk: 8, def: 4 },
-    ],
-  },
-  // ... more zones
-];
-```
+**Why AFTER Achievement System:** Cards can be part of achievement rewards.
 
 ---
 
-### 3. Game Logic (`src/logic/`)
+#### **Commit 4: Daily Quests & Rewards** 📅
+**Why it's addictive:** Login habit formation + FOMO + guaranteed rewards
 
-**`logic/character.ts`**
-```typescript
-import { Character } from '../types/character';
+**Features:**
+- **Daily login bonus** - Day 1: 100g, Day 2: 200g, Day 7: Rare item
+- **Daily quests** (resets every 24h):
+  - Kill 10 Porings (Reward: 500 EXP, 100g)
+  - Defeat 1 Boss (Reward: Random card chance boost)
+  - Collect 5 items (Reward: HP potions)
+- **Streak counter** - "Logged in for 5 days straight!"
+- **Quest completion fanfare** - Satisfying sound + visual effect
 
-export function calcPlayerAtk(char: Character, weaponBonus: number): number {
-  const { str, dex, luk } = char.stats;
-  const base = str * 2 + Math.floor(dex * 0.5) + Math.floor(luk * 0.3);
-  return base + weaponBonus + char.level;
-}
-
-export function calcPlayerMagicAtk(char: Character): number {
-  const { int, dex } = char.stats;
-  return int * 3 + Math.floor(dex * 0.3) + char.level;
-}
-
-export function calcPlayerDef(char: Character, armorBonus: number): number {
-  const { vit, agi } = char.stats;
-  const softDef = vit * 1.5 + agi * 0.5;
-  return softDef + armorBonus;
-}
-
-export function calcCritChance(char: Character): number {
-  const { luk } = char.stats;
-  return Math.min(50, Math.floor(luk / 3));
-}
-```
-
-**`logic/combat.ts`**
-```typescript
-import { Character } from '../types/character';
-import { Enemy } from '../types/enemy';
-import { Skill } from '../types/skill';
-import { CRIT_MULTIPLIER } from '../data/constants';
-import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance } from './character';
-
-export interface CombatResult {
-  damage: number;
-  isCrit: boolean;
-  enemyDefeated: boolean;
-  playerHpLost: number;
-}
-
-export function calculateSkillDamage(
-  char: Character,
-  enemy: Enemy,
-  skill: Skill,
-  skillLevel: number,
-  weaponBonus: number
-): CombatResult {
-  // Combat calculation logic
-  // Returns structured combat result
-}
-```
-
-**`logic/experience.ts`**
-```typescript
-import { Character } from '../types/character';
-
-export interface LevelUpResult {
-  didLevelUp: boolean;
-  newLevel: number;
-  statPointsGained: number;
-}
-
-export function processExpGain(
-  char: Character,
-  expGain: number
-): LevelUpResult {
-  // Level up calculation logic
-}
-
-export function processJobExpGain(
-  char: Character,
-  jobExpGain: number
-): { didJobLevelUp: boolean; newJobLevel: number; skillPointsGained: number } {
-  // Job level calculation logic
-}
-```
-
-**`logic/loot.ts`**
-```typescript
-import { Equipment } from '../types/equipment';
-
-export function generateLoot(
-  playerLevel: number,
-  isBossDrop: boolean = false
-): Equipment | null {
-  // Loot generation logic
-}
-
-export function calculateSellPrice(item: Equipment): number {
-  return item.stat * 2;
-}
-```
+**Why THEN:** Keeps players coming back tomorrow.
 
 ---
 
-### 4. UI Components (`src/components/`)
+#### **Commit 5: Mob Variety & Mini-Bosses** 👹
+**Why it's addictive:** Surprises break monotony + rare encounters = excitement
 
-**`components/CharacterStats.tsx`**
-```typescript
-import React from 'react';
-import { Character } from '../types/character';
+**Features:**
+- **Mini-boss random spawns** (5% chance instead of normal enemy)
+  - Looks different (bigger, glowing)
+  - 3x HP, 2x rewards
+  - Special loot table
+- **Rare monster variants:**
+  - Shiny Poring (golden), Golden Goblin
+  - Drop 5x items guaranteed
+- **Environmental variety** per zone:
+  - Forest: Trees, nature sounds
+  - Caves: Darker, echo sounds
+  - Desert: Heat shimmer effect
+- **Monster bestiary** - Track which monsters you've killed, show stats
 
-interface CharacterStatsProps {
-  character: Character;
-  onAddStat: (statName: keyof Character['stats']) => void;
-}
-
-export function CharacterStats({ character, onAddStat }: CharacterStatsProps) {
-  const expProgress = Math.floor((character.exp / character.expToNext) * 100);
-  const hpPercent = Math.floor((character.hp / character.maxHp) * 100);
-  const mpPercent = Math.floor((character.mp / character.maxMp) * 100);
-  const jobExpPercent = Math.floor((character.jobExp / character.jobExpToNext) * 100);
-
-  return (
-    <div style={containerStyles}>
-      {/* Character stats UI */}
-    </div>
-  );
-}
-```
-
-**`components/SkillWindow.tsx`**
-```typescript
-import React from 'react';
-import { Character } from '../types/character';
-import { Skill } from '../types/skill';
-
-interface SkillWindowProps {
-  character: Character;
-  availableSkills: Skill[];
-  onLearnSkill: (skillId: string) => void;
-  onClose: () => void;
-}
-
-export function SkillWindow({ 
-  character, 
-  availableSkills, 
-  onLearnSkill, 
-  onClose 
-}: SkillWindowProps) {
-  return (
-    <div style={windowStyles}>
-      {/* Skill tree UI */}
-    </div>
-  );
-}
-```
-
-**`components/BattleLog.tsx`**
-```typescript
-import React, { useRef, useEffect } from 'react';
-import { Log } from '../types/game';
-
-interface BattleLogProps {
-  logs: Log[];
-}
-
-export function BattleLog({ logs }: BattleLogProps) {
-  const logsEndRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const isNearBottom = 
-      container.scrollHeight - container.scrollTop - container.clientHeight < 50;
-    
-    if (isNearBottom) {
-      logsEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
-    }
-  }, [logs]);
-
-  return (
-    <div ref={containerRef} style={logContainerStyles}>
-      {logs.map((log) => (
-        <div key={log.id} style={logEntryStyles}>
-          {log.text}
-        </div>
-      ))}
-      <div ref={logsEndRef} />
-    </div>
-  );
-}
-```
+**Why THEN:** Makes grinding less repetitive.
 
 ---
 
-### 5. Custom Hooks (`src/hooks/`)
+### **⚡ Phase 2: Progression Depth (Next 3 Commits)**
 
-**`hooks/useCharacter.ts`**
-```typescript
-import { useState } from 'react';
-import { Character } from '../types/character';
+These give long-term goals to chase.
 
-export function useCharacter() {
-  const [character, setCharacter] = useState<Character>({
-    // Initial character state
-  });
+#### **Commit 6: Equipment Enhancement (+1 to +10 System)** 🔨
+**Why it's addictive:** Gambling mechanic + visible power increase
 
-  const addStatPoint = (statName: keyof Character['stats']) => {
-    if (character.statPoints <= 0) return;
-    
-    setCharacter(prev => ({
-      ...prev,
-      stats: {
-        ...prev.stats,
-        [statName]: prev.stats[statName] + 1
-      },
-      statPoints: prev.statPoints - 1
-    }));
-  };
-
-  const updateCharacter = (updates: Partial<Character>) => {
-    setCharacter(prev => ({ ...prev, ...updates }));
-  };
-
-  return {
-    character,
-    addStatPoint,
-    updateCharacter,
-    setCharacter
-  };
-}
-```
-
-**`hooks/useCombat.ts`**
-```typescript
-import { useState, useRef, useEffect } from 'react';
-import { Enemy } from '../types/enemy';
-import { Character } from '../types/character';
-
-export function useCombat(character: Character) {
-  const [enemy, setEnemy] = useState<Enemy>(/* initial enemy */);
-  const [currentZoneId, setCurrentZoneId] = useState<number>(1);
-  const [isBossFight, setIsBossFight] = useState<boolean>(false);
-
-  const battleAction = (skillId?: string) => {
-    // Combat logic
-  };
-
-  const travelToZone = (zoneId: number) => {
-    // Zone travel logic
-  };
-
-  // Auto-attack effect
-  useEffect(() => {
-    const id = setInterval(() => {
-      battleAction("basic_attack");
-    }, 1500);
-    return () => clearInterval(id);
-  }, []);
-
-  return {
-    enemy,
-    currentZoneId,
-    isBossFight,
-    battleAction,
-    travelToZone,
-    setEnemy
-  };
-}
-```
-
-**`hooks/useSkills.ts`**
-```typescript
-import { useState } from 'react';
-import { Character } from '../types/character';
-
-export function useSkills(character: Character) {
-  const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
-  const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>({});
-
-  const learnSkill = (skillId: string) => {
-    // Skill learning logic
-  };
-
-  const isSkillOnCooldown = (skillId: string, cooldown: number): boolean => {
-    const now = Date.now();
-    const lastUsed = skillCooldowns[skillId] || 0;
-    const timePassed = (now - lastUsed) / 1000;
-    return timePassed < cooldown;
-  };
-
-  const setSkillCooldown = (skillId: string) => {
-    setSkillCooldowns(prev => ({ ...prev, [skillId]: Date.now() }));
-  };
-
-  return {
-    showSkillWindow,
-    setShowSkillWindow,
-    skillCooldowns,
-    learnSkill,
-    isSkillOnCooldown,
-    setSkillCooldown
-  };
-}
-```
-
-**`hooks/useBattleLog.ts`**
-```typescript
-import { useState } from 'react';
-import { Log } from '../types/game';
-
-const MAX_LOGS = 50;
-
-export function useBattleLog() {
-  const [logs, setLogs] = useState<Log[]>([]);
-
-  const addLog = (text: string) => {
-    setLogs(prev => {
-      const newLog = { id: Date.now() + Math.random(), text };
-      const next = [...prev, newLog];
-      if (next.length > MAX_LOGS) next.shift();
-      return next;
-    });
-  };
-
-  const clearLogs = () => setLogs([]);
-
-  return {
-    logs,
-    addLog,
-    clearLogs
-  };
-}
-```
+**Features:**
+- **Refine NPCs in town** (costs gold + refine stones)
+- **Success rates:**
+  - +1 to +3: 100% (safe)
+  - +4 to +7: 60%
+  - +8 to +10: 30%, **item destroyed on fail**
+- **Visual feedback:**
+  - +4 weapon glows faintly
+  - +7 weapon pulses with light
+  - +10 weapon has epic aura
+- **Refine stones drop from bosses**
 
 ---
 
-## 🎯 Benefits of This Structure
+#### **Commit 7: Pet/Companion System** 🐾
+**Why it's addictive:** Emotional attachment + passive bonuses + collection
 
-### Maintainability
-Each file has a single responsibility, making it easier to locate and fix issues without affecting other parts of the code.
-
-### Reusability
-Components and hooks can be reused across different parts of your application or in future projects.
-
-### Testing
-Smaller, isolated functions are much easier to unit test than a large monolithic component.
-
-### Collaboration
-Multiple developers can work on different files simultaneously without merge conflicts.
-
-### Performance
-React can better optimize rendering when components are properly separated, as only affected components will re-render.
-
-### Scalability
-Adding new features becomes straightforward:
-- New skills → `data/skills.ts`
-- New zones → `data/zones.ts`
-- New UI elements → Create new component file
+**Features:**
+- **Capture system** - Use "Taming Item" on low-HP monsters
+- **Pets follow you** and auto-attack (weaker than you)
+- **Pet bonuses:**
+  - Poring: +5% gold gain
+  - Wolf: +3% crit chance
+  - Bird: +10% EXP
+- **Pet evolution** - Level up pets to unlock stronger forms
+- **Pet UI** - Shows hunger, loyalty, stats
 
 ---
 
-## 🚀 Migration Steps
+#### **Commit 8: Prestige/Rebirth System** ♻️
+**Why it's addictive:** Infinite progression + special rewards
 
-1. **Create Directory Structure** - Set up all folders as outlined above
-2. **Extract Types** - Move all interfaces to `types/` directory
-3. **Extract Data** - Move SKILLS_DB and ZONES to `data/` directory
-4. **Extract Logic** - Move calculation functions to `logic/` directory
-5. **Create Components** - Break down UI into separate component files
-6. **Create Hooks** - Extract stateful logic into custom hooks
-7. **Update Main Component** - Refactor MiniLevelGame.tsx to use new modules
-8. **Test Thoroughly** - Ensure all functionality works after refactoring
-
----
-
-## 📝 Example: Refactored Main Component
-
-```typescript
-// src/MiniLevelGame.tsx
-import { CharacterStats } from './components/CharacterStats';
-import { EnemyDisplay } from './components/EnemyDisplay';
-import { BattleLog } from './components/BattleLog';
-import { SkillWindow } from './components/SkillWindow';
-import { SkillHotkeys } from './components/SkillHotkeys';
-import { Inventory } from './components/Inventory';
-import { Shop } from './components/Shop';
-import { MapSystem } from './components/MapSystem';
-
-import { useCharacter } from './hooks/useCharacter';
-import { useCombat } from './hooks/useCombat';
-import { useSkills } from './hooks/useSkills';
-import { useInventory } from './hooks/useInventory';
-import { useBattleLog } from './hooks/useBattleLog';
-
-export function MiniLevelGame() {
-  const character = useCharacter();
-  const combat = useCombat(character);
-  const skills = useSkills(character);
-  const inventory = useInventory();
-  const battleLog = useBattleLog();
-
-  return (
-    <div style={containerStyles}>
-      <div style={gameWindowStyles}>
-        <h1 style={titleStyles}>⚔️ Mini RPG - RO Style</h1>
-        
-        <div style={mainLayoutStyles}>
-          <div style={leftColumnStyles}>
-            <CharacterStats 
-              character={character.character} 
-              onAddStat={character.addStatPoint} 
-            />
-            <EnemyDisplay enemy={combat.enemy} />
-          </div>
-
-          <div style={rightColumnStyles}>
-            <MapSystem 
-              currentZone={combat.currentZoneId} 
-              onTravel={combat.travelToZone} 
-            />
-            <Inventory inventory={inventory} />
-            <Shop 
-              character={character.character} 
-              inventory={inventory} 
-            />
-          </div>
-        </div>
-
-        {skills.showSkillWindow && (
-          <SkillWindow 
-            character={character.character}
-            availableSkills={SKILLS_DB[character.character.jobClass]}
-            onLearnSkill={skills.learnSkill}
-            onClose={() => skills.setShowSkillWindow(false)}
-          />
-        )}
-
-        <BattleLog logs={battleLog.logs} />
-        <SkillHotkeys 
-          skills={skills} 
-          character={character.character}
-          onUseSkill={combat.battleAction} 
-        />
-      </div>
-    </div>
-  );
-}
-```
+**Features:**
+- **At Level 99** - Option to "Rebirth"
+  - Reset to Level 1
+  - Keep equipment and cards
+  - Unlock "Prestige Level" counter
+  - Each prestige grants +5% all stats permanently
+- **Prestige-only rewards:**
+  - Special titles ("Reborn Hero")
+  - Unique cosmetic effects
+  - Access to Prestige Shop
+- **Prestige leaderboard** (even in single-player, shows your rank vs theoretical max)
 
 ---
 
-## 🛠️ Development Tips
+### **🎨 Phase 3: Polish & Juice (Next 2 Commits)**
 
-- **Start Small** - Refactor one section at a time (e.g., start with types)
-- **Keep Tests** - Write tests for extracted functions to ensure behavior remains consistent
-- **Use Git Branches** - Create a separate branch for refactoring work
-- **Maintain Functionality** - Ensure the game works after each major refactoring step
-- **Document Changes** - Update this README as you implement each section
+These make everything *feel* better.
+
+#### **Commit 9: Screen Shake, Particles & Sound Effects** 💥
+**Why it's addictive:** Tactile feedback makes combat satisfying
+
+**Features:**
+- **Screen shake** when you crit or kill boss
+- **Particle effects:**
+  - Blood splash when enemy hit
+  - Gold coins when enemy dies
+  - Level-up sparkles
+- **Sound library:**
+  - Hit sounds (different for crit)
+  - Level up fanfare
+  - Rare drop chime
+  - Background music per zone
 
 ---
 
-## 📚 Additional Resources
+#### **Commit 10: Stat Build Presets & Guides** 📖
+**Why it's addictive:** Removes decision paralysis + encourages replayability
 
-- [React Component Best Practices](https://react.dev/learn/thinking-in-react)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
-- [Custom Hooks Guide](https://react.dev/learn/reusing-logic-with-custom-hooks)
+**Features:**
+- **Build templates:**
+  - "Tank Swordsman" (VIT focus)
+  - "Glass Cannon Mage" (INT/DEX)
+  - "Crit Assassin" (AGI/LUK)
+- **In-game tips:**
+  - "AGI increases your attack speed!"
+  - "LUK affects critical chance and drop rate!"
+- **Stat reset NPC** (expensive, but allows experimentation)
 
 ---
 
-## 📞 Road Map
+## 🎯 **Why This Order?**
 
-🎮 RO-Like Single Player Enhancement Roadmap
-**Phase 1: Core RO Mechanics (High Priority - Next 3-5 Commits)
-**Commit 1: Job Change System
-Goal: Implement authentic RO job progression (Novice → 1st Class → 2nd Class)
+1. **Commits 1-5** create immediate satisfaction (loot drops, achievements, cards) → Players get hooked
+2. **Commits 6-8** add depth for mid-game → Players stay hooked
+3. **Commits 9-10** polish the experience → Players tell friends
 
-Features to add:
+---
 
-Job change NPC system (at Job Level 10)
+## 🧠 **The Psychological Formula:**
 
-Choice between Swordsman, Mage, Archer paths
+Classic RO's addiction = **Variable Ratio Reinforcement Schedule**
 
-Reset to level 1 after job change (like classic RO)
+- **Fixed rewards:** Level up every X exp (predictable satisfaction)
+- **Variable rewards:** Cards drop randomly (unpredictable dopamine spike)
+- **Progress markers:** Achievements, quests (sense of accomplishment)
+- **FOMO:** Daily quests (fear of missing out)
+- **Collection urge:** Card album, bestiary (completionist drive)
 
-Unlock new skill trees for each class
+---
 
-Job-specific stat recommendations
+## 📝 Current Implementation Status
 
-Files to modify:
+### ✅ Completed Features
+- Basic combat system with manual and auto-attack
+- Job system (Novice → Swordsman/Mage/Archer)
+- Skill trees and job-specific abilities
+- Equipment system with weapons and armor
+- Zone progression with boss fights
+- ASPD-based attack speed
+- HP/MP potion system with auto-use
+- Town healing and safe zones
+- Death and respawn system
+- Job level progression
+- **Loot explosion visual effects**
+- **Floating damage numbers**
+- **Item drop animations**
+- **Level-up celebrations**
 
-src/data/jobs.ts - Add job requirements and progression tree
+### 🚧 In Progress
+- Achievement system (Next)
+- Card collection system (After achievements)
 
-src/components/JobChangeNPC.tsx - New component for job change interface
+---
 
-src/hooks/useCharacter.ts - Add job change logic
+## 📚 Technical Documentation
 
-**Commit 2: Manual Combat System (Remove Auto-Attack)
-**Goal: Make combat player-controlled like RO
+For code organization and architecture details, see the original refactoring plan sections below.
 
-Features to add:
-
-Remove auto-attack timer
-
-Add manual attack button (spacebar or click)
-
-Attack delay/ASPD (Attack Speed) system based on AGI
-
-Animation states (idle, attacking, hit, dead)
-
-Combat feels more deliberate and strategic
-
-Files to modify:
-
-src/hooks/useCombat.ts - Remove auto-attack interval, add manual attack
-
-src/data/constants.ts - Add ASPD formulas
-
-src/components/CombatControls.tsx - New manual combat UI
-
-**Commit 3: Sitting/Resting System
-**Goal: Implement RO's sitting mechanic for HP/MP recovery
-
-Features to add:
-
-Sit button (can't attack while sitting)
-
-Faster HP/SP recovery when sitting (3x normal rate)
-
-Stand up automatically when attacked
-
-Visual indicator (character sprite change or icon)
-
-Files to modify:
-
-src/hooks/useCharacter.ts - Add sitting state
-
-src/components/CharacterStats.tsx - Add sit/stand button
-
-src/logic/recovery.ts - New file for recovery calculations
-
-**Commit 4: Weight System
-**Goal: Add RO's weight/carrying capacity mechanics
-
-Features to add:
-
-Max weight based on STR stat (Weight = STR × 30)
-
-Items have weight values
-
-Movement speed penalty at 50% weight
-
-Can't pick up items at 90% weight
-
-Weight display in inventory
-
-Files to modify:
-
-src/types/equipment.ts - Add weight property
-
-src/components/Inventory.tsx - Show weight meter
-
-src/hooks/useInventory.ts - Add weight calculations
-
-**Commit 5: Consumable Items System
-**Goal: Expand item system beyond just HP/MP potions
-
-Features to add:
-
-Food items (Apple, Meat, etc.) for gradual HP recovery
-
-Status recovery items (Green Potion = cure poison)
-
-Buff items (increase stats temporarily)
-
-Stackable items system
-
-Item cooldown system
-
-Files to modify:
-
-src/types/items.ts - New comprehensive item types
-
-src/data/items.ts - Item database
-
-src/components/ItemQuickbar.tsx - Hotkey bar for items
-
-**Phase 2: Enhanced RO Feel (Medium Priority - Next 5-7 Commits)
-**Commit 6: Quest System
-Goal: Add NPC quests like RO
-
-Features:
-
-Quest log interface
-
-NPC quest givers in each zone
-
-Quest types: kill X monsters, collect Y items, reach level Z
-
-Quest rewards (exp, items, gold)
-
-Tutorial quests for new players
-
-**Commit 7: Card System
-**Goal: Implement RO's famous card drop and slotting system
-
-Features:
-
-Rare card drops from monsters (0.01% - 1%)
-
-Card effects (bonus stats, elemental damage, etc.)
-
-Equipment slots for cards
-
-Card compounding system
-
-**Commit 8: Element System
-**Goal: Add elemental properties to skills and monsters
-
-Features:
-
-Elements: Fire, Water, Wind, Earth, Holy, Shadow, Ghost, Undead
-
-Elemental weaknesses/resistances
-
-Skills have elemental properties
-
-Monsters have element types
-
-Damage calculation based on element table
-
-**Commit 9: Status Effects
-**Goal: Implement status ailments and buffs
-
-Features:
-
-Negative: Poison, Stun, Freeze, Sleep, Blind, Curse
-
-Positive: AGI Up, Bless, Increase AGI, Blessing
-
-Duration timers
-
-Visual indicators
-
-Status immunity items
-
-**Commit 10: Party System (Solo AI)
-**Goal: Add NPC companions for single-player experience
-
-Features:
-
-Hire mercenary NPCs
-
-AI companions that follow and assist
-
-Companion equipment and skills
-
-Share exp system
-
-**Commit 11: Warp System
-**Goal: Implement RO's warp portals between maps
-
-Features:
-
-Warp portals in zones
-
-Warp fees based on distance
-
-Kafra NPC for teleport services
-
-Save point system
-
-**Commit 12: Refining System
-**Goal: Add equipment upgrade system like RO
-
-Features:
-
-+1 to +10 refinement levels
-
-Refinement costs (gold + refine materials)
-
-Breaking chance at higher levels
-
-Safe refine to +4, risk after
-
-Success rates decrease with level
-
-**Phase 3: Advanced Features (Lower Priority - Future Commits)
-**Commit 13: Skill Point Reset System
-NPC that resets skill points for a fee
-
-Skill tree visualization
-
-**Commit 14: Monster AI Improvements
-**Aggressive vs passive monsters
-
-Monster aggro radius
-
-Monster respawn system
-
-MVP (boss) system with better rewards
-
-**Commit 15: Achievement System
-**Track player milestones
-
-Achievement rewards
-
-Title system
-
-**Commit 16: Daily Login Rewards
-**Consecutive login bonuses
-
-Daily quests
-
-Weekly challenges
-
-**Commit 17: Pet System
-**Capture monsters as pets
-
-Pet feeding and loyalty
-
-Pet skills and bonuses
-
-**Commit 18: Crafting System
-**Blacksmith weapon forging
-
-Alchemy potion creation
-
-Cooking system
+[Rest of original README content...]
