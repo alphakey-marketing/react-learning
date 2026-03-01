@@ -427,6 +427,7 @@ export function useGameState(addLog: (text: string) => void) {
     let nextCharGold = char.gold;
     let nextCharStats = { ...char.stats };
     let nextStatPoints = char.statPoints;
+    let didLevelUp = false; // Track if level-up occurred
 
     let nextEnemyHp = enemy.hp;
     let nextEnemy = enemy;
@@ -469,6 +470,7 @@ export function useGameState(addLog: (text: string) => void) {
       if (levelUpResult.leveledUp) {
         nextCharHp = levelUpResult.newHp;
         nextCharMp = levelUpResult.newMp;
+        didLevelUp = true;
         addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +3)`);
       }
 
@@ -540,11 +542,11 @@ export function useGameState(addLog: (text: string) => void) {
       nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
 
-    // FIXED: Use current char maxHp/maxMp, only recalculate if leveled up
-    const finalMaxHp = levelUpResult?.leveledUp 
+    // FIXED: Only recalculate maxHp/maxMp if leveled up, otherwise preserve current values
+    const finalMaxHp = didLevelUp 
       ? calcMaxHp(nextCharLevel, nextCharStats.vit, char.jobClass)
       : char.maxHp;
-    const finalMaxMp = levelUpResult?.leveledUp
+    const finalMaxMp = didLevelUp
       ? calcMaxMp(nextCharLevel, nextCharStats.int, char.jobClass)
       : char.maxMp;
 
