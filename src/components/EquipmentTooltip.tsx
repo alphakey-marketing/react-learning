@@ -1,5 +1,5 @@
 import { Equipment, getRarityColor, getEquipmentIcon } from "../types/equipment";
-import { CSSProperties } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 
 interface EquipmentTooltipProps {
   item: Equipment;
@@ -10,6 +10,7 @@ interface EquipmentTooltipProps {
 export function EquipmentTooltip({ item, currentItem, position }: EquipmentTooltipProps) {
   const rarityColor = getRarityColor(item.rarity);
   const icon = getEquipmentIcon(item.type);
+  const [tooltipDimensions, setTooltipDimensions] = useState({ width: 240, height: 350 });
   
   // Calculate stat differences
   const getStatDiff = (newVal: number = 0, oldVal: number = 0) => {
@@ -23,26 +24,30 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
   const defDiff = getStatDiff(item.def || 0, currentItem?.def || 0);
   
   // Smart positioning - prevent tooltip from going off screen
-  const tooltipWidth = 220;
-  const tooltipHeight = 300; // approximate
-  const offset = 15;
+  const padding = 15;
+  const tooltipWidth = tooltipDimensions.width;
+  const tooltipHeight = tooltipDimensions.height;
   
-  let left = position.x + offset;
-  let top = position.y + 10;
+  // Start with default position (right and below cursor)
+  let left = position.x + padding;
+  let top = position.y + padding;
   
-  // Flip to left if would overflow right side
-  if (left + tooltipWidth > window.innerWidth) {
-    left = position.x - tooltipWidth - offset;
+  // Check if tooltip would overflow viewport
+  const wouldOverflowRight = left + tooltipWidth > window.innerWidth - padding;
+  const wouldOverflowBottom = top + tooltipHeight > window.innerHeight - padding;
+  
+  // Adjust position if would overflow
+  if (wouldOverflowRight) {
+    left = position.x - tooltipWidth - padding;
   }
   
-  // Flip to top if would overflow bottom
-  if (top + tooltipHeight > window.innerHeight) {
-    top = position.y - tooltipHeight - 10;
+  if (wouldOverflowBottom) {
+    top = position.y - tooltipHeight - padding;
   }
   
-  // Keep minimum distance from edges
-  left = Math.max(10, Math.min(left, window.innerWidth - tooltipWidth - 10));
-  top = Math.max(10, top);
+  // Final bounds check - ensure tooltip stays within viewport
+  left = Math.max(padding, Math.min(left, window.innerWidth - tooltipWidth - padding));
+  top = Math.max(padding, Math.min(top, window.innerHeight - tooltipHeight - padding));
   
   const tooltipStyle: CSSProperties = {
     position: "fixed",
@@ -52,8 +57,7 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
     border: `2px solid ${rarityColor}`,
     borderRadius: "6px",
     padding: "12px",
-    minWidth: "220px",
-    maxWidth: "220px",
+    width: `${tooltipWidth}px`,
     fontSize: "11px",
     color: "#fff",
     zIndex: 9999,

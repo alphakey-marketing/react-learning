@@ -467,6 +467,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const newMp = Math.min(char.maxMp, char.mp + mpRegen);
       setChar((prev) => ({ ...prev, mp: newMp }));
       addLog(`💤 Too low MP! Resting... Recovered ${mpRegen} MP.`);
+      // Don't set canAttack here - let it continue on next cycle after MP recovery
+      setLastAttackTime(now);
+      setCanAttack(false);
+      setAttackCooldownPercent(0);
       return;
     }
 
