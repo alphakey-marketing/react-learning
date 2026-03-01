@@ -181,13 +181,16 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       addLog("❌ No stat points!");
       return;
     }
-    setChar((prev) => ({
-      ...prev,
-      stats: { ...prev.stats, [stat]: prev.stats[stat] + 1 },
-      statPoints: prev.statPoints - 1,
-      maxHp: stat === 'vit' ? calcMaxHp(prev.level, prev.stats.vit + 1, prev.jobClass) : prev.maxHp,
-      maxMp: stat === 'int' ? calcMaxMp(prev.level, prev.stats.int + 1, prev.jobClass) : prev.maxMp,
-    }));
+    setChar((prev) => {
+      const newStats = { ...prev.stats, [stat]: prev.stats[stat] + 1 };
+      return {
+        ...prev,
+        stats: newStats,
+        statPoints: prev.statPoints - 1,
+        maxHp: stat === 'vit' ? calcMaxHp(prev.level, newStats.vit, prev.jobClass) : prev.maxHp,
+        maxMp: stat === 'int' ? calcMaxMp(prev.level, newStats.int, prev.jobClass) : prev.maxMp,
+      };
+    });
   }
 
   function learnSkill(skillId: string) {
@@ -426,6 +429,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextCharGold = char.gold;
     let nextCharStats = { ...char.stats };
     let nextStatPoints = char.statPoints;
+    let nextMaxHp = char.maxHp; // PRESERVE maxHp
+    let nextMaxMp = char.maxMp; // PRESERVE maxMp
 
     let nextEnemyHp = enemy.hp;
     let nextEnemy = enemy;
@@ -471,6 +476,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       if (levelUpResult.leveledUp) {
         nextCharHp = levelUpResult.newHp;
         nextCharMp = levelUpResult.newMp;
+        nextMaxHp = calcMaxHp(nextCharLevel, nextCharStats.vit, char.jobClass); // Recalc on level up
+        nextMaxMp = calcMaxMp(nextCharLevel, nextCharStats.int, char.jobClass);
         addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +3)`);
         // Trigger level-up visual effect
         callbacks?.onLevelUp?.(nextCharLevel);
@@ -549,9 +556,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     setChar({
       hp: nextCharHp,
-      maxHp: calcMaxHp(nextCharLevel, nextCharStats.vit, char.jobClass),
+      maxHp: nextMaxHp, // Use preserved/recalculated maxHp
       mp: nextCharMp,
-      maxMp: calcMaxMp(nextCharLevel, nextCharStats.int, char.jobClass),
+      maxMp: nextMaxMp, // Use preserved/recalculated maxMp
       level: nextCharLevel,
       exp: nextCharExp,
       expToNext: nextCharExpToNext,
@@ -606,13 +613,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }
   }, [autoAttackEnabled, canAttack, currentZoneId, char.hp]);
 
+  // ENEMY ATTACK SYSTEM
   useEffect(() => {
     if (enemyAttackTimerRef.current !== null) {
       clearInterval(enemyAttackTimerRef.current);
       enemyAttackTimerRef.current = null;
     }
 
-    if (currentZoneId === 0 || char.hp <= 0 || enemy.attackSpeed === 0) {
+    // Don't attack if in town, player is dead, or enemy has 0 attack speed (Practice Dummy)
+    if (currentZoneId === 0 || char.hp <= 0 || enemy.attackSpeed <= 0) {
       return;
     }
 
@@ -649,7 +658,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy, currentZoneId, char.hp, equipped.armor, callbacks]);
+  }, [enemy, currentZoneId, char.hp, equipped.armor, char.maxHp, callbacks]);
 
   useEffect(() => {
     const id = setInterval(() => {
