@@ -5,6 +5,7 @@ import { SkillWindow } from "./components/SkillWindow";
 import { SkillHotkeys } from "./components/SkillHotkeys";
 import { Inventory } from "./components/Inventory";
 import { Shop } from "./components/Shop";
+import { PotionBar } from "./components/PotionBar";
 import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
@@ -49,7 +50,7 @@ export function MiniLevelGame() {
         fontFamily: "system-ui, sans-serif",
         padding: "20px",
         paddingTop: "40px",
-        paddingBottom: "120px", // Space for fixed skill bar
+        paddingBottom: "120px",
       }}
     >
       <DevTools
@@ -174,6 +175,18 @@ export function MiniLevelGame() {
           <div style={{ minWidth: 0 }}>
             <BattleLog logs={logs} />
             
+            <PotionBar
+              character={game.char}
+              hpPotions={game.hpPotions}
+              mpPotions={game.mpPotions}
+              autoHpPercent={game.autoHpPercent}
+              autoMpPercent={game.autoMpPercent}
+              onUseHpPotion={game.useHpPotion}
+              onUseMpPotion={game.useMpPotion}
+              onSetAutoHpPercent={game.setAutoHpPercent}
+              onSetAutoMpPercent={game.setAutoMpPercent}
+            />
+            
             <MapSystem
               currentZoneId={game.currentZoneId}
               unlockedZoneIds={game.unlockedZoneIds}
@@ -186,18 +199,10 @@ export function MiniLevelGame() {
             />
             <Shop
               character={game.char}
-              hpPotions={game.hpPotions}
-              mpPotions={game.mpPotions}
               isInTown={game.currentZoneId === 0}
-              autoHpPercent={game.autoHpPercent}
-              autoMpPercent={game.autoMpPercent}
               onSellItem={game.sellItem}
               onBuyHpPotion={game.buyHpPotion}
               onBuyMpPotion={game.buyMpPotion}
-              onUseHpPotion={game.useHpPotion}
-              onUseMpPotion={game.useMpPotion}
-              onSetAutoHpPercent={game.setAutoHpPercent}
-              onSetAutoMpPercent={game.setAutoMpPercent}
             />
           </div>
         </div>

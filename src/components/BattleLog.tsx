@@ -6,20 +6,14 @@ interface BattleLogProps {
 }
 
 export function BattleLog({ logs }: BattleLogProps) {
-  const logsEndRef = useRef<HTMLDivElement>(null);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = logContainerRef.current;
     if (!container) return;
 
-    const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 50;
-
-    if (isNearBottom) {
-      // Use scrollTop instead of scrollIntoView to prevent page jumping
-      container.scrollTop = container.scrollHeight;
-    }
+    // Always scroll to bottom when new logs arrive
+    container.scrollTop = container.scrollHeight;
   }, [logs]);
 
   return (
@@ -55,7 +49,6 @@ export function BattleLog({ logs }: BattleLogProps) {
             {log.text}
           </div>
         ))}
-        <div ref={logsEndRef} />
         {logs.length === 0 && (
           <div style={{ color: "#666" }}>Battle started...</div>
         )}
