@@ -1,6 +1,6 @@
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems } from "../types/equipment";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance } from "../logic/character";
+import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD } from "../logic/character";
 
 interface CharacterStatsProps {
   character: Character;
@@ -30,6 +30,7 @@ export function CharacterStats({
   const matk = calcPlayerMagicAtk(character);
   const def = calcPlayerDef(character, armorBonus);
   const crit = calcCritChance(character);
+  const aspd = calcASPD(character).toFixed(2);
 
   return (
     <div>
@@ -281,9 +282,14 @@ export function CharacterStats({
             <span style={{ color: "#bbb" }}>CRIT</span>
             <span style={{ fontWeight: "bold", color: "#fbbf24" }}>{crit}%</span>
           </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+            <span style={{ color: "#bbb" }}>ASPD</span>
+            <span style={{ fontWeight: "bold", color: "#2dd4bf" }}>{aspd} <span style={{fontSize: "9px", color: "#777"}}>/s</span></span>
+          </div>
           
           {/* Helpful tooltips for class scaling */}
-          <div style={{ marginTop: "12px", fontSize: "9px", color: "#666", fontStyle: "italic", borderTop: "1px solid #222", paddingTop: "4px" }}>
+          <div style={{ marginTop: "8px", fontSize: "9px", color: "#666", fontStyle: "italic", borderTop: "1px solid #222", paddingTop: "4px" }}>
             {character.jobClass === "Swordsman" || character.jobClass === "Knight" ? "STR increases ATK greatly" : ""}
             {character.jobClass === "Archer" || character.jobClass === "Hunter" ? "DEX & AGI increase ATK" : ""}
             {character.jobClass === "Mage" || character.jobClass === "Wizard" ? "INT increases MATK" : ""}

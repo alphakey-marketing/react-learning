@@ -18,7 +18,7 @@ export function calcPlayerAtk(char: Character, weaponBonus: number): number {
   }
   // Mages use magic attack, but basic attack is physical with balanced scaling
   else if (char.jobClass === "Mage" || char.jobClass === "Wizard") {
-    baseAtk = str * 1.0 + dex * 0.5 + int * 0.5 + luk * 0.3;
+    baseAtk = str * 1.0 + dex * 0.5 + char.stats.int * 0.5 + luk * 0.3;
   }
   // Novice: Balanced scaling for all stats
   else {
@@ -47,6 +47,21 @@ export function calcPlayerDef(char: Character, armorBonus: number): number {
 export function calcCritChance(char: Character): number {
   const { luk } = char.stats;
   return Math.min(50, Math.floor(luk / 3));
+}
+
+// Attack Speed (ASPD) - AGI and DEX based
+// Returns attacks per second (e.g., 1.5 means 1.5 attacks every second)
+export function calcASPD(char: Character): number {
+  const { agi, dex } = char.stats;
+  
+  // Base ASPD is 1 attack per 1.5 seconds (0.66 attacks/sec)
+  // Max ASPD is roughly 3 attacks per second (like RO 190 ASPD)
+  const baseASPD = 0.66; 
+  
+  // AGI provides the bulk of ASPD, DEX provides a small amount
+  const aspdBonus = (agi * 0.02) + (dex * 0.005);
+  
+  return Math.min(3.0, baseASPD + aspdBonus);
 }
 
 // Max HP - Level + VIT, scaled by job multiplier

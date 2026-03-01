@@ -9,4 +9,4 @@ export const BOSS_ATK_MULTIPLIER = 2;
 export const BOSS_DEF_MULTIPLIER = 2;
 export const DROP_CHANCE = 0.2;
 export const MAX_LOGS = 50;
-export const AUTO_ATTACK_INTERVAL = 1500;
+// export const AUTO_ATTACK_INTERVAL = 1500; // Removed: Manual combat implemented

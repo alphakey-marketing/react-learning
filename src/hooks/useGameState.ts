@@ -8,9 +8,8 @@ import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
 import {
   calculateDamage,
   calculateEnemyDamage,
-  isMagicSkill,
 } from "../logic/combat";
-import { calcPlayerDef, calcMaxHp, calcMaxMp } from "../logic/character";
+import { calcPlayerDef, calcMaxHp, calcMaxMp, calcASPD } from "../logic/character";
 import {
   calculateExpGain,
   calculateJobExpGain,
@@ -32,7 +31,6 @@ import {
   MP_POTION_COST,
   HP_POTION_HEAL_PERCENT,
   MP_POTION_RECOVER_PERCENT,
-  AUTO_ATTACK_INTERVAL,
 } from "../data/constants";
 
 export function useGameState(addLog: (text: string) => void) {
@@ -81,11 +79,13 @@ export function useGameState(addLog: (text: string) => void) {
   const [showSkillWindow, setShowSkillWindow] = useState<boolean>(false);
   const [showJobChangeNPC, setShowJobChangeNPC] = useState<boolean>(false);
   const [showDeathModal, setShowDeathModal] = useState<boolean>(false);
-  const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>(
-    {}
-  );
+  const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>({});
 
-  const battleActionRef = useRef<(skillId?: string) => void>(() => {});
+  // ASPD & Manual Attack System States
+  const [lastAttackTime, setLastAttackTime] = useState<number>(0);
+  const [canAttack, setCanAttack] = useState<boolean>(true);
+  const [attackCooldownPercent, setAttackCooldownPercent] = useState<number>(100);
+
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
 
@@ -227,7 +227,7 @@ export function useGameState(addLog: (text: string) => void) {
       autoAttackSkillId: skillId,
     }));
 
-    addLog(`⭐ Auto-attack set to: ${skill.nameZh}`);
+    addLog(`⭐ Default skill set to: ${skill.nameZh}`);
   }
 
   function handleJobChange(newJob: JobClass) {
@@ -268,7 +268,7 @@ export function useGameState(addLog: (text: string) => void) {
     addLog(`🏛️ Teleported to Town for safety!`);
     addLog(`💫 You received 3 Skill Points to learn new skills!`);
     if (firstJobSkill) {
-      addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your auto-attack skill.`);
+      addLog(`📖 You learned ${firstJobSkill.nameZh}! It's now your default skill.`);
     }
     addLog(`🛡️ Job Bonuses: HP ${Math.floor((jobBonuses.hpMultiplier - 1) * 100)}%, MP ${Math.floor((jobBonuses.mpMultiplier - 1) * 100)}%, +${jobBonuses.atkBonus} ATK, +${jobBonuses.defBonus} DEF`);
     setShowJobChangeNPC(false);
@@ -353,11 +353,50 @@ export function useGameState(addLog: (text: string) => void) {
   
   autoPotionRef.current = processAutoPotion;
 
+  // ASPD loop for cooldown UI
+  useEffect(() => {
+    if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
+
+    // Attacks per second (e.g., 2.0 = 2 attacks per second)
+    const attacksPerSecond = calcASPD(char);
+    // Time needed between attacks in milliseconds (e.g., 500ms for 2.0 ASPD)
+    const attackDelayMs = 1000 / attacksPerSecond;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const timePassed = now - lastAttackTime;
+      
+      if (timePassed >= attackDelayMs) {
+        setCanAttack(true);
+        setAttackCooldownPercent(100);
+      } else {
+        setAttackCooldownPercent(Math.floor((timePassed / attackDelayMs) * 100));
+      }
+    }, 50); // Update UI frequently
+
+    return () => clearInterval(interval);
+  }, [canAttack, lastAttackTime, char, currentZoneId]);
+
+  // Periodic effects (Town healing)
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (currentZoneId === 0) {
+        townHealingRef.current();
+      }
+    }, 3000); // Check healing every 3 seconds
+    return () => clearInterval(id);
+  }, [currentZoneId]);
+
   function battleAction(skillId?: string) {
     if (char.hp <= 0) return;
     if (currentZoneId === 0) {
-      townHealingRef.current();
+      addLog("❌ You are in town! Go to a zone to fight.");
       return;
+    }
+    
+    if (!canAttack) {
+      // Trying to attack too fast based on ASPD
+      return; 
     }
 
     autoPotionRef.current();
@@ -381,13 +420,18 @@ export function useGameState(addLog: (text: string) => void) {
     }
 
     const now = Date.now();
-    const lastUsed = skillCooldowns[actualSkillId] || 0;
-    const timePassed = (now - lastUsed) / 1000;
+    
+    // Check specific skill cooldown
+    if (skill.cooldown > 0) {
+      const lastUsed = skillCooldowns[actualSkillId] || 0;
+      const timePassed = (now - lastUsed) / 1000;
 
-    if (timePassed < skill.cooldown) {
-      const remaining = (skill.cooldown - timePassed).toFixed(1);
-      addLog(`⏳ ${skill.nameZh} on cooldown (${remaining}s)`);
-      return;
+      if (timePassed < skill.cooldown) {
+        const remaining = (skill.cooldown - timePassed).toFixed(1);
+        addLog(`⏳ ${skill.nameZh} on cooldown (${remaining}s)`);
+        return;
+      }
+      setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
     }
 
     const mpCost = skill.mpCost(skillLevel);
@@ -399,7 +443,10 @@ export function useGameState(addLog: (text: string) => void) {
       return;
     }
 
-    setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
+    // Set ASPD cooldown
+    setLastAttackTime(now);
+    setCanAttack(false);
+    setAttackCooldownPercent(0);
 
     let nextCharHp = char.hp;
     let nextCharMp = char.mp - mpCost;
@@ -518,6 +565,7 @@ export function useGameState(addLog: (text: string) => void) {
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
       }
     } else {
+      // Enemy counter-attacks immediately after player attacks
       const playerDef = calcPlayerDef(char, armorBonus);
       const enemyDmg = calculateEnemyDamage(enemy, playerDef);
 
@@ -555,8 +603,6 @@ export function useGameState(addLog: (text: string) => void) {
 
     setEnemy(nextEnemy);
   }
-
-  battleActionRef.current = battleAction;
 
   function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);
@@ -666,13 +712,6 @@ export function useGameState(addLog: (text: string) => void) {
     }
   }
 
-  useEffect(() => {
-    const id = setInterval(() => {
-      battleActionRef.current();
-    }, AUTO_ATTACK_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
   return {
     char,
     enemy,
@@ -692,6 +731,8 @@ export function useGameState(addLog: (text: string) => void) {
     showJobChangeNPC,
     showDeathModal,
     skillCooldowns,
+    canAttack,
+    attackCooldownPercent,
     setShowSkillWindow,
     setShowJobChangeNPC,
     setAutoHpPercent,

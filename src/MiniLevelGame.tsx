@@ -12,6 +12,7 @@ import { DevTools } from "./components/DevTools";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { canChangeJob } from "./data/jobs";
+import { useEffect } from "react";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -19,6 +20,24 @@ export function MiniLevelGame() {
 
   // Check if player can change job
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
+
+  // Keyboard shortcut for attacking (Spacebar)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      if (e.code === 'Space' && game.currentZoneId !== 0 && game.canAttack) {
+        e.preventDefault(); // Prevent scrolling down
+        game.battleAction();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [game.canAttack, game.currentZoneId, game.battleAction]);
 
   return (
     <div
@@ -139,7 +158,14 @@ export function MiniLevelGame() {
               )}
             </div>
 
-            <EnemyDisplay enemy={game.enemy} />
+            <EnemyDisplay 
+              enemy={game.enemy} 
+              onAttack={() => game.battleAction()}
+              canAttack={game.canAttack}
+              inTown={game.currentZoneId === 0}
+              attackCooldownPercent={game.attackCooldownPercent}
+            />
+            
             <BossChallenge
               bossAvailable={game.bossAvailable}
               bossDefeated={game.bossDefeated}
@@ -150,7 +176,6 @@ export function MiniLevelGame() {
 
           {/* Right Column */}
           <div style={{ minWidth: 0 }}>
-            {/* Battle Log moved to top of right column */}
             <BattleLog logs={logs} />
             
             <MapSystem
@@ -298,7 +323,7 @@ export function MiniLevelGame() {
           character={game.char}
           skillCooldowns={game.skillCooldowns}
           onUseSkill={game.battleAction}
-          disabled={game.char.hp <= 0}
+          disabled={game.char.hp <= 0 || !game.canAttack || game.currentZoneId === 0}
         />
       </div>
 
