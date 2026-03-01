@@ -777,18 +777,31 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }
 
   function equipItem(item: Equipment) {
+    // Handle equipment swap - return old item to inventory
     if (item.type === "accessory") {
+      // For accessories, check both slots
       if (!equipped.accessory1) {
         setEquipped((prev) => ({ ...prev, accessory1: item }));
       } else if (!equipped.accessory2) {
         setEquipped((prev) => ({ ...prev, accessory2: item }));
       } else {
+        // Both slots filled, replace accessory1 and return it to inventory
+        const oldItem = equipped.accessory1;
         setEquipped((prev) => ({ ...prev, accessory1: item }));
+        if (oldItem) {
+          setInventory((prev) => [...prev, oldItem]);
+        }
       }
     } else {
+      // For other equipment types
+      const oldItem = equipped[item.type as keyof EquippedItems];
       setEquipped((prev) => ({ ...prev, [item.type]: item }));
+      if (oldItem) {
+        setInventory((prev) => [...prev, oldItem]);
+      }
     }
     
+    // Remove new item from inventory
     setInventory((prev) => prev.filter((i) => i.id !== item.id));
     addLog(`⚔️ Equipped ${item.name}!`);
   }

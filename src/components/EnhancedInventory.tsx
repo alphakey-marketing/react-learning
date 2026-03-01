@@ -172,10 +172,6 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 key={item.id}
                 onClick={() => onEquip(item)}
                 onMouseEnter={(e) => {
-                  const currentEquipped = item.type === "accessory" 
-                    ? (equipped.accessory1 || equipped.accessory2)
-                    : equipped[item.type as keyof EquippedItems];
-                  
                   setHoveredItem({
                     item,
                     x: e.clientX,
@@ -183,9 +179,9 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                   });
                 }}
                 onMouseMove={(e) => {
-                  if (hoveredItem) {
+                  if (hoveredItem && hoveredItem.item.id === item.id) {
                     setHoveredItem({
-                      ...hoveredItem,
+                      item,
                       x: e.clientX,
                       y: e.clientY,
                     });
@@ -203,15 +199,9 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                   alignItems: "center",
                   justifyContent: "center",
                   position: "relative",
-                  transition: "all 0.2s",
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = "scale(1.05)";
-                  e.currentTarget.style.boxShadow = `0 0 10px ${rarityColor}`;
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "none";
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                  transform: hoveredItem && hoveredItem.item.id === item.id ? "scale(1.05)" : "scale(1)",
+                  boxShadow: hoveredItem && hoveredItem.item.id === item.id ? `0 0 10px ${rarityColor}` : "none",
                 }}
               >
                 {icon}
