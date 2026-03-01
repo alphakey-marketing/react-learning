@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Character, CharacterStats } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Equipment, EquippedItems } from "../types/equipment";
@@ -101,18 +101,31 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
 
-  const [lastEnemyAttackTime, setLastEnemyAttackTime] = useState<number>(0);
   const enemyAttackTimerRef = useRef<number | null>(null);
+  const isMountedRef = useRef<boolean>(true);
+  const lastPotionCheckRef = useRef<number>(0);
 
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
   
-  // Store callbacks and char state in refs to avoid dependency issues
+  // Store callbacks and state in refs to avoid dependency issues
   const callbacksRef = useRef<GameCallbacks | undefined>(callbacks);
   const charRef = useRef<Character>(char);
   const equippedRef = useRef<EquippedItems>(equipped);
   const enemyRef = useRef<Enemy>(enemy);
   const currentZoneIdRef = useRef<number>(currentZoneId);
+  const hpPotionsRef = useRef<number>(hpPotions);
+  const mpPotionsRef = useRef<number>(mpPotions);
+  const autoHpPercentRef = useRef<number>(autoHpPercent);
+  const autoMpPercentRef = useRef<number>(autoMpPercent);
+  
+  // Component mount/unmount tracking
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   // Update refs whenever values change
   useEffect(() => {
@@ -134,6 +147,32 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => {
     currentZoneIdRef.current = currentZoneId;
   }, [currentZoneId]);
+  
+  useEffect(() => {
+    hpPotionsRef.current = hpPotions;
+  }, [hpPotions]);
+  
+  useEffect(() => {
+    mpPotionsRef.current = mpPotions;
+  }, [mpPotions]);
+  
+  useEffect(() => {
+    autoHpPercentRef.current = autoHpPercent;
+  }, [autoHpPercent]);
+  
+  useEffect(() => {
+    autoMpPercentRef.current = autoMpPercent;
+  }, [autoMpPercent]);
+
+  // Memoize equipment bonuses for performance
+  const weaponBonus = useMemo(() => equipped.weapon?.stat || 0, [equipped.weapon]);
+  const armorBonus = useMemo(() => equipped.armor?.stat || 0, [equipped.armor]);
+  
+  // Memoize ASPD calculation for performance
+  const attacksPerSecond = useMemo(() => 
+    calcASPD(char), 
+    [char.stats.agi, char.stats.dex, char.level]
+  );
 
   // ========== DEV TOOLS FUNCTIONS ==========
   function devAddBaseLevel() {
@@ -373,9 +412,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }
 
   function processTownHealing() {
-    if (currentZoneId === 0 && (char.hp < char.maxHp || char.mp < char.maxMp) && char.hp > 0) {
-      const healHp = Math.floor(char.maxHp * 0.1);
-      const healMp = Math.floor(char.maxMp * 0.1);
+    const currentChar = charRef.current;
+    const currentZone = currentZoneIdRef.current;
+    
+    if (currentZone === 0 && (currentChar.hp < currentChar.maxHp || currentChar.mp < currentChar.maxMp) && currentChar.hp > 0) {
+      const healHp = Math.floor(currentChar.maxHp * 0.1);
+      const healMp = Math.floor(currentChar.maxMp * 0.1);
       
       setChar(prev => {
         const newHp = Math.min(prev.maxHp, prev.hp + healHp);
@@ -393,18 +435,24 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   townHealingRef.current = processTownHealing;
 
   function processAutoPotion() {
-    if (char.hp <= 0) return;
+    const currentChar = charRef.current;
+    const currentHpPotions = hpPotionsRef.current;
+    const currentMpPotions = mpPotionsRef.current;
+    const currentAutoHpPercent = autoHpPercentRef.current;
+    const currentAutoMpPercent = autoMpPercentRef.current;
     
-    if (autoHpPercent > 0 && hpPotions > 0) {
-      const hpPercentage = (char.hp / char.maxHp) * 100;
-      if (hpPercentage < autoHpPercent && hpPercentage < 100) {
+    if (currentChar.hp <= 0) return;
+    
+    if (currentAutoHpPercent > 0 && currentHpPotions > 0) {
+      const hpPercentage = (currentChar.hp / currentChar.maxHp) * 100;
+      if (hpPercentage < currentAutoHpPercent && hpPercentage < 100) {
         useHpPotion();
       }
     }
     
-    if (autoMpPercent > 0 && mpPotions > 0) {
-      const mpPercentage = (char.mp / char.maxMp) * 100;
-      if (mpPercentage < autoMpPercent && mpPercentage < 100) {
+    if (currentAutoMpPercent > 0 && currentMpPotions > 0) {
+      const mpPercentage = (currentChar.mp / currentChar.maxMp) * 100;
+      if (mpPercentage < currentAutoMpPercent && mpPercentage < 100) {
         useMpPotion();
       }
     }
@@ -413,15 +461,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   autoPotionRef.current = processAutoPotion;
 
   function battleAction(skillId?: string) {
+    if (!isMountedRef.current) return;
     if (char.hp <= 0) return;
     if (currentZoneId === 0) return;
     
     if (!canAttack) return;
 
-    autoPotionRef.current();
-
-    const weaponBonus = equipped.weapon?.stat || 0;
-    const armorBonus = equipped.armor?.stat || 0;
+    // Debounced auto-potion check (max once per second)
+    const now = Date.now();
+    if (now - lastPotionCheckRef.current > 1000) {
+      autoPotionRef.current();
+      lastPotionCheckRef.current = now;
+    }
 
     const actualSkillId = skillId || char.autoAttackSkillId;
     const skillLevel = char.learnedSkills[actualSkillId] || 0;
@@ -430,8 +481,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     const skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
     if (!skill) return;
-
-    const now = Date.now();
     
     if (skill.cooldown > 0) {
       const lastUsed = skillCooldowns[actualSkillId] || 0;
@@ -582,13 +631,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
 
-    // FIXED: Preserve current stats and maxHp/maxMp unless leveling up
+    // Preserve current stats and maxHp/maxMp unless leveling up
     const finalMaxHp = didLevelUp 
       ? calcMaxHp(nextCharLevel, char.stats.vit, char.jobClass)
       : char.maxHp;
     const finalMaxMp = didLevelUp
       ? calcMaxMp(nextCharLevel, char.stats.int, char.jobClass)
       : char.maxMp;
+
+    if (!isMountedRef.current) return;
 
     setChar({
       hp: nextCharHp,
@@ -599,7 +650,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       exp: nextCharExp,
       expToNext: nextCharExpToNext,
       gold: nextCharGold,
-      stats: char.stats, // FIXED: Always preserve current stats
+      stats: char.stats,
       statPoints: nextStatPoints,
       jobClass: char.jobClass,
       jobLevel: nextJobLevel,
@@ -614,14 +665,16 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }
 
   const battleActionRef = useRef(battleAction);
+  
+  // Update battleAction ref with proper dependencies
   useEffect(() => {
     battleActionRef.current = battleAction;
-  });
+  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight]);
 
+  // Player ASPD cooldown UI loop - optimized dependencies
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
 
-    const attacksPerSecond = calcASPD(char);
     const attackDelayMs = 1000 / attacksPerSecond;
 
     const interval = setInterval(() => {
@@ -637,17 +690,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }, 50);
 
     return () => clearInterval(interval);
-  }, [canAttack, lastAttackTime, char, currentZoneId]);
+  }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId, char.hp]);
 
+  // Auto-Attack System - Fixed infinite loop by removing char.hp dependency
   useEffect(() => {
-    if (autoAttackEnabled && canAttack && currentZoneId !== 0 && char.hp > 0) {
+    if (autoAttackEnabled && canAttack && currentZoneId !== 0 && charRef.current.hp > 0) {
       const timer = setTimeout(() => {
         battleActionRef.current();
       }, 10);
       
       return () => clearTimeout(timer);
     }
-  }, [autoAttackEnabled, canAttack, currentZoneId, char.hp]);
+  }, [autoAttackEnabled, canAttack, currentZoneId]);
 
   // ENEMY ATTACK SYSTEM - Uses refs to avoid restarting interval
   useEffect(() => {
@@ -677,6 +731,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
       currentCallbacks?.onEnemyDamageDealt?.(enemyDmg);
 
+      if (!isMountedRef.current) return;
+
       setChar((prev) => {
         if (prev.hp <= 0) return prev;
         
@@ -700,14 +756,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, [enemy.attackSpeed, enemy.name, currentZoneId]);
 
+  // Periodic town healing
   useEffect(() => {
     const id = setInterval(() => {
-      if (currentZoneId === 0) {
-        townHealingRef.current();
-      }
+      townHealingRef.current();
     }, 3000);
     return () => clearInterval(id);
-  }, [currentZoneId]);
+  }, []);
 
   function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);
