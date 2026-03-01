@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Character, CharacterStats } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Equipment, EquippedItems } from "../types/equipment";
@@ -370,122 +370,12 @@ export function useGameState(addLog: (text: string) => void) {
   
   autoPotionRef.current = processAutoPotion;
 
-  // Player ASPD cooldown UI loop
-  useEffect(() => {
-    if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
-
-    const attacksPerSecond = calcASPD(char);
-    const attackDelayMs = 1000 / attacksPerSecond;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const timePassed = now - lastAttackTime;
-      
-      if (timePassed >= attackDelayMs) {
-        setCanAttack(true);
-        setAttackCooldownPercent(100);
-      } else {
-        setAttackCooldownPercent(Math.floor((timePassed / attackDelayMs) * 100));
-      }
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [canAttack, lastAttackTime, char, currentZoneId]);
-
-  // Auto-Attack Timer
-  useEffect(() => {
-    if (autoAttackTimerRef.current) {
-      clearInterval(autoAttackTimerRef.current);
-      autoAttackTimerRef.current = null;
-    }
-
-    if (!autoAttackEnabled || currentZoneId === 0 || char.hp <= 0) {
-      return;
-    }
-
-    const attacksPerSecond = calcASPD(char);
-    const attackDelayMs = 1000 / attacksPerSecond;
-
-    autoAttackTimerRef.current = setInterval(() => {
-      if (char.hp <= 0 || currentZoneId === 0) return;
-      if (canAttack) {
-        battleAction();
-      }
-    }, attackDelayMs);
-
-    return () => {
-      if (autoAttackTimerRef.current) {
-        clearInterval(autoAttackTimerRef.current);
-      }
-    };
-  }, [autoAttackEnabled, currentZoneId, char.hp, canAttack]);
-
-  // Enemy Independent Attack Timer (Classic RO style)
-  useEffect(() => {
-    // Clear previous timer when changing zones or enemies
-    if (enemyAttackTimerRef.current) {
-      clearInterval(enemyAttackTimerRef.current);
-      enemyAttackTimerRef.current = null;
-    }
-
-    // Don't attack in town or when player is dead
-    if (currentZoneId === 0 || char.hp <= 0 || enemy.attackSpeed === 0) {
-      return;
-    }
-
-    // Enemy attacks on their own independent timer
-    const enemyAttackDelayMs = 1000 / enemy.attackSpeed;
-    
-    enemyAttackTimerRef.current = setInterval(() => {
-      if (char.hp <= 0 || currentZoneId === 0) return;
-
-      const armorBonus = equipped.armor?.stat || 0;
-      const playerDef = calcPlayerDef(char, armorBonus);
-      const enemyDmg = calculateEnemyDamage(enemy, playerDef);
-
-      setChar((prev) => {
-        if (prev.hp <= 0) return prev;
-        
-        const newHp = Math.max(0, prev.hp - enemyDmg);
-        
-        if (newHp > 0) {
-          addLog(`💥 ${enemy.name} attacks! You take ${enemyDmg} dmg.`);
-        } else {
-          addLog(`💀 You were defeated by ${enemy.name}!`);
-          setShowDeathModal(true);
-        }
-        
-        return { ...prev, hp: newHp };
-      });
-    }, enemyAttackDelayMs);
-
-    return () => {
-      if (enemyAttackTimerRef.current) {
-        clearInterval(enemyAttackTimerRef.current);
-      }
-    };
-  }, [enemy, currentZoneId, char.hp, equipped.armor]);
-
-  // Periodic town healing
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (currentZoneId === 0) {
-        townHealingRef.current();
-      }
-    }, 3000);
-    return () => clearInterval(id);
-  }, [currentZoneId]);
-
-  function battleAction(skillId?: string) {
+  // Wrap battleAction in useCallback with proper dependencies
+  const battleAction = useCallback((skillId?: string) => {
     if (char.hp <= 0) return;
-    if (currentZoneId === 0) {
-      addLog("❌ You are in town! Go to a zone to fight.");
-      return;
-    }
+    if (currentZoneId === 0) return;
     
-    if (!canAttack) {
-      return; 
-    }
+    if (!canAttack) return;
 
     autoPotionRef.current();
 
@@ -495,17 +385,10 @@ export function useGameState(addLog: (text: string) => void) {
     const actualSkillId = skillId || char.autoAttackSkillId;
     const skillLevel = char.learnedSkills[actualSkillId] || 0;
 
-    if (skillLevel === 0) {
-      addLog("❌ Skill not learned!");
-      return;
-    }
+    if (skillLevel === 0) return;
 
     const skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
-
-    if (!skill) {
-      addLog("❌ Skill not found!");
-      return;
-    }
+    if (!skill) return;
 
     const now = Date.now();
     
@@ -678,7 +561,110 @@ export function useGameState(addLog: (text: string) => void) {
     });
 
     setEnemy(nextEnemy);
-  }
+  }, [char, enemy, currentZoneId, canAttack, equipped, skillCooldowns, killCount, isBossFight]);
+
+  // Player ASPD cooldown UI loop
+  useEffect(() => {
+    if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
+
+    const attacksPerSecond = calcASPD(char);
+    const attackDelayMs = 1000 / attacksPerSecond;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const timePassed = now - lastAttackTime;
+      
+      if (timePassed >= attackDelayMs) {
+        setCanAttack(true);
+        setAttackCooldownPercent(100);
+      } else {
+        setAttackCooldownPercent(Math.floor((timePassed / attackDelayMs) * 100));
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [canAttack, lastAttackTime, char, currentZoneId]);
+
+  // Auto-Attack Timer
+  useEffect(() => {
+    if (autoAttackTimerRef.current) {
+      clearInterval(autoAttackTimerRef.current);
+      autoAttackTimerRef.current = null;
+    }
+
+    if (!autoAttackEnabled || currentZoneId === 0 || char.hp <= 0) {
+      return;
+    }
+
+    const attacksPerSecond = calcASPD(char);
+    const attackDelayMs = 1000 / attacksPerSecond;
+
+    autoAttackTimerRef.current = setInterval(() => {
+      battleAction();
+    }, attackDelayMs);
+
+    return () => {
+      if (autoAttackTimerRef.current) {
+        clearInterval(autoAttackTimerRef.current);
+      }
+    };
+  }, [autoAttackEnabled, currentZoneId, char.hp, char.stats.agi, char.stats.dex, battleAction]);
+
+  // Enemy Independent Attack Timer (Classic RO style)
+  useEffect(() => {
+    // Clear previous timer when changing zones or enemies
+    if (enemyAttackTimerRef.current) {
+      clearInterval(enemyAttackTimerRef.current);
+      enemyAttackTimerRef.current = null;
+    }
+
+    // Don't attack in town or when player is dead
+    if (currentZoneId === 0 || char.hp <= 0 || enemy.attackSpeed === 0) {
+      return;
+    }
+
+    // Enemy attacks on their own independent timer
+    const enemyAttackDelayMs = 1000 / enemy.attackSpeed;
+    
+    enemyAttackTimerRef.current = setInterval(() => {
+      if (char.hp <= 0 || currentZoneId === 0) return;
+
+      const armorBonus = equipped.armor?.stat || 0;
+      const playerDef = calcPlayerDef(char, armorBonus);
+      const enemyDmg = calculateEnemyDamage(enemy, playerDef);
+
+      setChar((prev) => {
+        if (prev.hp <= 0) return prev;
+        
+        const newHp = Math.max(0, prev.hp - enemyDmg);
+        
+        if (newHp > 0) {
+          addLog(`💥 ${enemy.name} attacks! You take ${enemyDmg} dmg.`);
+        } else {
+          addLog(`💀 You were defeated by ${enemy.name}!`);
+          setShowDeathModal(true);
+        }
+        
+        return { ...prev, hp: newHp };
+      });
+    }, enemyAttackDelayMs);
+
+    return () => {
+      if (enemyAttackTimerRef.current) {
+        clearInterval(enemyAttackTimerRef.current);
+      }
+    };
+  }, [enemy, currentZoneId, char.hp, equipped.armor]);
+
+  // Periodic town healing
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (currentZoneId === 0) {
+        townHealingRef.current();
+      }
+    }, 3000);
+    return () => clearInterval(id);
+  }, [currentZoneId]);
 
   function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);

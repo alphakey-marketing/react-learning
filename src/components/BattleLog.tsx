@@ -17,7 +17,8 @@ export function BattleLog({ logs }: BattleLogProps) {
       container.scrollHeight - container.scrollTop - container.clientHeight < 50;
 
     if (isNearBottom) {
-      logsEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+      // Use scrollTop instead of scrollIntoView to prevent page jumping
+      container.scrollTop = container.scrollHeight;
     }
   }, [logs]);
 
@@ -31,12 +32,14 @@ export function BattleLog({ logs }: BattleLogProps) {
         style={{
           height: "150px",
           overflowY: "auto",
+          overflowX: "hidden",
           background: "#111",
           border: "1px solid #444",
           borderRadius: "4px",
           padding: "8px",
           fontSize: "11px",
           fontFamily: "monospace",
+          scrollBehavior: "smooth",
         }}
       >
         {logs.map((log) => (
@@ -46,6 +49,7 @@ export function BattleLog({ logs }: BattleLogProps) {
               marginBottom: "3px",
               borderBottom: "1px solid #222",
               paddingBottom: "2px",
+              wordWrap: "break-word",
             }}
           >
             {log.text}
