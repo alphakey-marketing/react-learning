@@ -209,16 +209,16 @@ export function useAchievements(): UseAchievementsReturn {
 
     const skillsLearned = Object.keys(char.learnedSkills).length;
 
-    // Track unique items from inventory
+    // Track unique items from inventory - Convert item.id to string
     inventory.forEach((item) => {
-      uniqueItemsOwned.current.add(item.id);
+      uniqueItemsOwned.current.add(String(item.id));
     });
 
-    // Track unique items from equipped gear
+    // Track unique items from equipped gear - Convert item.id to string
     if (equipped) {
       Object.values(equipped).forEach((item) => {
         if (item) {
-          uniqueItemsOwned.current.add(item.id);
+          uniqueItemsOwned.current.add(String(item.id));
         }
       });
     }

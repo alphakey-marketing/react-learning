@@ -46,11 +46,15 @@ function DroppingItemSprite({
   const [opacity, setOpacity] = useState(0);
   const [scale, setScale] = useState(0.5);
 
-  const rarityColor = {
+  const rarityColor: Record<string, string> = {
     common: '#ffffff',
+    uncommon: '#22c55e',
     rare: '#4a9eff',
     epic: '#a335ee',
-  }[item.item.rarity];
+    legendary: '#f59e0b',
+  };
+
+  const color = rarityColor[item.item.rarity] || '#ffffff';
 
   useEffect(() => {
     // Smoother "pop up and float" animation
@@ -113,19 +117,19 @@ function DroppingItemSprite({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        filter: item.item.rarity === 'epic' ? 'drop-shadow(0 0 10px #a335ee)' : 
-                item.item.rarity === 'rare' ? 'drop-shadow(0 0 8px #4a9eff)' : 'none',
+        filter: item.item.rarity === 'epic' || item.item.rarity === 'legendary' ? `drop-shadow(0 0 10px ${color})` : 
+                item.item.rarity === 'rare' ? `drop-shadow(0 0 8px ${color})` : 'none',
       }}
     >
       <div style={{
         fontSize: '32px',
-        textShadow: `0 0 15px ${rarityColor}`,
+        textShadow: `0 0 15px ${color}`,
         userSelect: 'none',
       }}>
         {item.item.type === 'weapon' ? '⚔️' : '🛡️'}
       </div>
       <div style={{
-        color: rarityColor,
+        color: color,
         fontSize: '14px',
         fontWeight: 'bold',
         textShadow: '1px 1px 2px #000',
@@ -133,7 +137,7 @@ function DroppingItemSprite({
         background: 'rgba(0,0,0,0.6)',
         padding: '2px 8px',
         borderRadius: '10px',
-        border: `1px solid ${rarityColor}55`,
+        border: `1px solid ${color}55`,
         whiteSpace: 'nowrap',
       }}>
         {item.item.name}
