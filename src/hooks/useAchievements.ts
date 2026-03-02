@@ -71,17 +71,31 @@ export function useAchievements(): UseAchievementsReturn {
   const combatStartTime = useRef<number>(0);
   const isInCombat = useRef<boolean>(false);
   const lastZoneId = useRef<number>(0);
+  
+  // Use refs to prevent circular dependencies
+  const statsRef = useRef<AchievementStats>(stats);
+  const unlockedRef = useRef<Set<string>>(playerAchievements.unlocked);
+  
+  useEffect(() => {
+    statsRef.current = stats;
+  }, [stats]);
+  
+  useEffect(() => {
+    unlockedRef.current = playerAchievements.unlocked;
+  }, [playerAchievements.unlocked]);
 
-  // Check for newly unlocked achievements
+  // Check for newly unlocked achievements - use refs to avoid circular dependency
   const checkAchievements = useCallback(() => {
     const newUnlocks: Achievement[] = [];
+    const currentStats = statsRef.current;
+    const currentUnlocked = unlockedRef.current;
 
     ACHIEVEMENTS_DB.forEach((achievement) => {
-      if (playerAchievements.unlocked.has(achievement.id)) return;
+      if (currentUnlocked.has(achievement.id)) return;
 
       const reqType = achievement.requirement.type;
       const reqTarget = achievement.requirement.target;
-      const currentValue = stats[reqType as keyof AchievementStats] || 0;
+      const currentValue = currentStats[reqType as keyof AchievementStats] || 0;
 
       if (currentValue >= reqTarget) {
         newUnlocks.push(achievement);
@@ -110,11 +124,12 @@ export function useAchievements(): UseAchievementsReturn {
 
       setNewlyUnlocked((prev) => [...prev, ...newUnlocks]);
     }
-  }, [stats, playerAchievements.unlocked]);
+  }, []); // No dependencies - uses refs instead
 
+  // Only check achievements when stats change
   useEffect(() => {
     checkAchievements();
-  }, [checkAchievements]);
+  }, [stats]); // Only depend on stats, not checkAchievements
 
   // Update progress for all achievements
   useEffect(() => {
