@@ -73,6 +73,31 @@ export function getRarityColor(rarity: EquipmentRarity): string {
   return colors[rarity];
 }
 
+// Helper to calculate Gear Score (Combat Power) for a single item
+export function calculateGearScore(item: Equipment): number {
+  if (!item) return 0;
+  
+  let score = 0;
+  
+  // Base stats weight
+  score += (item.atk || 0) * 2;
+  score += (item.def || 0) * 1.5;
+  score += (item.stat || 0) * 2; // Legacy stat support (usually atk or def)
+  
+  // Bonus stats weight (very valuable)
+  const stats = ['str', 'agi', 'vit', 'int', 'dex', 'luk'] as const;
+  stats.forEach(stat => {
+    score += (item[stat] || 0) * 5;
+  });
+  
+  // Refinement bonus
+  if (item.refinement) {
+    score += item.refinement * 3;
+  }
+  
+  return Math.floor(score);
+}
+
 // Helper to calculate total stats from equipment
 export function calculateEquipmentStats(equipped: EquippedItems): {
   totalAtk: number;

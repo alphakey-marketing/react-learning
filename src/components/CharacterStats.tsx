@@ -1,5 +1,5 @@
 import { Character, CharacterStats as Stats } from "../types/character";
-import { EquippedItems } from "../types/equipment";
+import { EquippedItems, calculateGearScore } from "../types/equipment";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD } from "../logic/character";
 
 interface CharacterStatsProps {
@@ -34,6 +34,14 @@ export function CharacterStats({
   const crit = calcCritChance(character);
   const aspd = calcASPD(character).toFixed(2);
 
+  // Calculate Total Combat Power
+  const totalEquipPower = Object.values(equipped)
+    .filter(item => item !== null)
+    .reduce((sum, item) => sum + calculateGearScore(item as any), 0);
+    
+  const basePower = (character.level * 10) + (character.jobLevel * 5);
+  const totalPower = basePower + totalEquipPower;
+
   return (
     <div>
       <div
@@ -43,13 +51,35 @@ export function CharacterStats({
           padding: "15px",
           borderRadius: "8px",
           border: "1px solid #444",
+          position: "relative",
         }}
       >
+        {/* Total Combat Power Badge */}
+        <div style={{
+          position: "absolute",
+          top: "-12px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "linear-gradient(90deg, #b45309, #f59e0b, #b45309)",
+          padding: "4px 16px",
+          borderRadius: "20px",
+          fontWeight: "bold",
+          color: "white",
+          fontSize: "13px",
+          boxShadow: "0 4px 10px rgba(245, 158, 11, 0.4)",
+          border: "1px solid #fcd34d",
+          whiteSpace: "nowrap",
+          zIndex: 10
+        }}>
+          ⚔️ Combat Power: {totalPower}
+        </div>
+
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             marginBottom: "2px",
+            marginTop: "8px", // Added margin to clear the badge
           }}
         >
           <strong>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Equipment, EquippedItems, getEquipmentIcon, getRarityColor } from "../types/equipment";
+import { Equipment, EquippedItems, getEquipmentIcon, getRarityColor, calculateGearScore } from "../types/equipment";
 import { EquipmentComparisonModal } from "./EquipmentComparisonModal";
 
 interface EnhancedInventoryProps {
@@ -8,7 +8,7 @@ interface EnhancedInventoryProps {
   onEquip: (item: Equipment) => void;
 }
 
-type SortOption = "type" | "rarity" | "stat" | "name";
+type SortOption = "type" | "rarity" | "power" | "name";
 
 export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInventoryProps) {
   const [sortBy, setSortBy] = useState<SortOption>("type");
@@ -22,8 +22,8 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
       case "rarity":
         const rarityOrder = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
         return (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0);
-      case "stat":
-        return (b.atk || b.def || b.stat || 0) - (a.atk || a.def || a.stat || 0);
+      case "power":
+        return calculateGearScore(b) - calculateGearScore(a);
       case "name":
         return a.name.localeCompare(b.name);
       default:
@@ -87,6 +87,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
         {slots.map((slot) => {
           const item = equipped[slot.key];
           const rarityColor = item ? getRarityColor(item.rarity) : "#444";
+          const gearScore = item ? calculateGearScore(item) : 0;
           
           return (
             <div
@@ -100,11 +101,27 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
+                position: "relative",
               }}
             >
-              <div style={{ color: "#9ca3af", fontSize: "9px" }}>
-                {slot.icon} {slot.label}
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#9ca3af", fontSize: "9px" }}>
+                  {slot.icon} {slot.label}
+                </span>
+                {item && (
+                  <span style={{ 
+                    background: "#333", 
+                    padding: "1px 4px", 
+                    borderRadius: "3px", 
+                    color: "#fbbf24",
+                    fontSize: "8px",
+                    fontWeight: "bold"
+                  }}>
+                    ⭐ {gearScore}
+                  </span>
+                )}
               </div>
+              
               {item ? (
                 <div style={{ color: rarityColor, fontWeight: "500" }}>
                   {item.name}
@@ -114,13 +131,6 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 </div>
               ) : (
                 <div style={{ color: "#666", fontStyle: "italic" }}>Empty</div>
-              )}
-              {item && (
-                <div style={{ fontSize: "9px", color: "#9ca3af" }}>
-                  {item.atk && `ATK: ${item.atk}`}
-                  {item.def && `DEF: ${item.def}`}
-                  {!item.atk && !item.def && item.stat && `+${item.stat}`}
-                </div>
               )}
             </div>
           );
@@ -135,7 +145,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
         fontSize: "9px",
       }}>
         <span style={{ color: "#9ca3af", marginRight: "4px" }}>Sort:</span>
-        {(["type", "rarity", "stat", "name"] as SortOption[]).map((option) => (
+        {(["type", "rarity", "power", "name"] as SortOption[]).map((option) => (
           <button
             key={option}
             onClick={() => setSortBy(option)}
@@ -180,6 +190,10 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
           sortedInventory.map((item) => {
             const icon = getEquipmentIcon(item.type);
             const rarityColor = getRarityColor(item.rarity);
+            const gearScore = calculateGearScore(item);
+            const currentlyEquipped = getCurrentlyEquipped(item);
+            const equippedScore = currentlyEquipped ? calculateGearScore(currentlyEquipped) : 0;
+            const isUpgrade = gearScore > equippedScore;
             
             return (
               <button
@@ -220,6 +234,38 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                     +{item.refinement}
                   </span>
                 )}
+                
+                {/* Upgrade indicator arrow */}
+                {isUpgrade && (
+                  <span style={{
+                    position: "absolute",
+                    bottom: "2px",
+                    right: "2px",
+                    fontSize: "10px",
+                    color: "#22c55e",
+                    fontWeight: "bold",
+                    textShadow: "0 0 2px black"
+                  }}>
+                    ▲
+                  </span>
+                )}
+                
+                {/* Power Badge */}
+                <span style={{
+                  position: "absolute",
+                  bottom: "-4px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  fontSize: "7px",
+                  background: "#111",
+                  color: "#fbbf24",
+                  padding: "1px 4px",
+                  borderRadius: "4px",
+                  border: "1px solid #444",
+                  whiteSpace: "nowrap"
+                }}>
+                  ⭐{gearScore}
+                </span>
               </button>
             );
           })

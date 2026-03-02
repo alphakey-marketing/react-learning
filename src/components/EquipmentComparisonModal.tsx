@@ -1,4 +1,4 @@
-import { Equipment, getRarityColor, getEquipmentIcon } from "../types/equipment";
+import { Equipment, getRarityColor, getEquipmentIcon, calculateGearScore } from "../types/equipment";
 import { CSSProperties } from "react";
 
 interface EquipmentComparisonModalProps {
@@ -18,6 +18,10 @@ export function EquipmentComparisonModal({
   const currentRarityColor = currentItem ? getRarityColor(currentItem.rarity) : "#666";
   const newIcon = getEquipmentIcon(newItem.type);
   const currentIcon = currentItem ? getEquipmentIcon(currentItem.type) : "❌";
+
+  const newGearScore = calculateGearScore(newItem);
+  const currentGearScore = currentItem ? calculateGearScore(currentItem) : 0;
+  const scoreDiff = newGearScore - currentGearScore;
 
   // Calculate stat differences
   const getStatDiff = (newVal: number = 0, oldVal: number = 0) => {
@@ -55,14 +59,14 @@ export function EquipmentComparisonModal({
 
   const modalStyle: CSSProperties = {
     background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
-    border: "3px solid #fbbf24",
+    border: `3px solid ${scoreDiff > 0 ? "#22c55e" : "#fbbf24"}`,
     borderRadius: "12px",
     padding: "20px",
     maxWidth: "600px",
     width: "100%",
     maxHeight: "90vh",
     overflowY: "auto",
-    boxShadow: "0 10px 40px rgba(251, 191, 36, 0.4)",
+    boxShadow: `0 10px 40px ${scoreDiff > 0 ? "rgba(34, 197, 94, 0.3)" : "rgba(251, 191, 36, 0.4)"}`,
   };
 
   const cardStyle = (color: string): CSSProperties => ({
@@ -71,6 +75,7 @@ export function EquipmentComparisonModal({
     borderRadius: "8px",
     padding: "12px",
     flex: 1,
+    position: "relative",
   });
 
   const statRowStyle: CSSProperties = {
@@ -80,26 +85,55 @@ export function EquipmentComparisonModal({
     fontSize: "12px",
   };
 
+  const BadgeStyle: CSSProperties = {
+    position: "absolute",
+    top: "-10px",
+    right: "10px",
+    background: "#111",
+    padding: "4px 8px",
+    borderRadius: "12px",
+    border: "1px solid #444",
+    fontSize: "11px",
+    fontWeight: "bold",
+    color: "#fbbf24",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px"
+  };
+
   return (
     <div style={overlayStyle} onClick={onCancel}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         {/* Title */}
         <h2
           style={{
-            margin: "0 0 20px 0",
+            margin: "0 0 5px 0",
             fontSize: "20px",
-            color: "#fbbf24",
+            color: "#white",
             textAlign: "center",
             fontWeight: "bold",
           }}
         >
           ⚖️ Equipment Comparison
         </h2>
+        
+        {/* Power Level Summary */}
+        <div style={{ 
+          textAlign: "center", 
+          marginBottom: "20px",
+          fontSize: "14px",
+          color: scoreDiff > 0 ? "#22c55e" : (scoreDiff < 0 ? "#ef4444" : "#9ca3af"),
+          fontWeight: "bold"
+        }}>
+          {scoreDiff > 0 ? `▲ Upgrade! (+${scoreDiff} Power)` : 
+           (scoreDiff < 0 ? `▼ Downgrade (${scoreDiff} Power)` : "▶ Same Power Level")}
+        </div>
 
         {/* Comparison Grid */}
         <div style={{ display: "flex", gap: "15px", marginBottom: "20px" }}>
           {/* Current Item */}
           <div style={cardStyle(currentRarityColor)}>
+            <div style={BadgeStyle}>⭐ {currentGearScore}</div>
             <div
               style={{
                 fontSize: "14px",
@@ -109,6 +143,7 @@ export function EquipmentComparisonModal({
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
+                marginTop: "4px",
               }}
             >
               <span style={{ fontSize: "20px" }}>{currentIcon}</span>
@@ -193,7 +228,7 @@ export function EquipmentComparisonModal({
               display: "flex",
               alignItems: "center",
               fontSize: "24px",
-              color: "#fbbf24",
+              color: scoreDiff > 0 ? "#22c55e" : (scoreDiff < 0 ? "#ef4444" : "#fbbf24"),
             }}
           >
             →
@@ -201,6 +236,9 @@ export function EquipmentComparisonModal({
 
           {/* New Item */}
           <div style={cardStyle(newRarityColor)}>
+            <div style={{...BadgeStyle, color: scoreDiff > 0 ? "#22c55e" : "#fbbf24"}}>
+              ⭐ {newGearScore}
+            </div>
             <div
               style={{
                 fontSize: "14px",
@@ -210,6 +248,7 @@ export function EquipmentComparisonModal({
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
+                marginTop: "4px",
               }}
             >
               <span style={{ fontSize: "20px" }}>{newIcon}</span>
@@ -342,17 +381,17 @@ export function EquipmentComparisonModal({
             style={{
               flex: 1,
               padding: "12px",
-              background: "linear-gradient(45deg, #10b981, #059669)",
+              background: scoreDiff >= 0 ? "linear-gradient(45deg, #10b981, #059669)" : "linear-gradient(45deg, #f59e0b, #d97706)",
               color: "white",
               border: "none",
               borderRadius: "6px",
               cursor: "pointer",
               fontSize: "14px",
               fontWeight: "bold",
-              boxShadow: "0 4px 15px rgba(16, 185, 129, 0.4)",
+              boxShadow: scoreDiff >= 0 ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "0 4px 15px rgba(245, 158, 11, 0.4)",
             }}
           >
-            ✅ Equip
+            {scoreDiff >= 0 ? "✅ Equip Upgrade" : "⚠️ Equip Anyway"}
           </button>
         </div>
       </div>
