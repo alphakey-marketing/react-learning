@@ -269,16 +269,19 @@ export function MiniLevelGame() {
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <CharacterStats
-              character={game.char}
-              equipped={game.equipped}
-              onAddStat={game.addStat}
-              onOpenSkills={() => game.setShowSkillWindow(true)}
-              selectedTitle={achievements.playerAchievements.selectedTitle}
-            />
+            <div data-tutorial="character-stats">
+              <CharacterStats
+                character={game.char}
+                equipped={game.equipped}
+                onAddStat={game.addStat}
+                onOpenSkills={() => game.setShowSkillWindow(true)}
+                selectedTitle={achievements.playerAchievements.selectedTitle}
+              />
+            </div>
             
             <div style={{ marginTop: "10px", marginBottom: "10px", display: "flex", gap: "8px" }}>
               <button
+                data-tutorial="job-master"
                 onClick={game.openJobChangeNPC}
                 style={{
                   flex: 1,
@@ -358,25 +361,31 @@ export function MiniLevelGame() {
               onSetAutoMpPercent={game.setAutoMpPercent}
             />
             
-            <MapSystem
-              currentZoneId={game.currentZoneId}
-              unlockedZoneIds={game.unlockedZoneIds}
-              onTravel={game.travelToZone}
-            />
+            <div data-tutorial="map-system">
+              <MapSystem
+                currentZoneId={game.currentZoneId}
+                unlockedZoneIds={game.unlockedZoneIds}
+                onTravel={game.travelToZone}
+              />
+            </div>
             
-            <EnhancedInventory
-              inventory={game.inventory}
-              equipped={game.equipped}
-              onEquip={game.equipItem}
-            />
+            <div data-tutorial="inventory">
+              <EnhancedInventory
+                inventory={game.inventory}
+                equipped={game.equipped}
+                onEquip={game.equipItem}
+              />
+            </div>
             
-            <Shop
-              character={game.char}
-              isInTown={game.currentZoneId === 0}
-              onSellItem={wrappedSellItem}
-              onBuyHpPotion={game.buyHpPotion}
-              onBuyMpPotion={game.buyMpPotion}
-            />
+            <div data-tutorial="shop">
+              <Shop
+                character={game.char}
+                isInTown={game.currentZoneId === 0}
+                onSellItem={wrappedSellItem}
+                onBuyHpPotion={game.buyHpPotion}
+                onBuyMpPotion={game.buyMpPotion}
+              />
+            </div>
           </div>
         </div>
 

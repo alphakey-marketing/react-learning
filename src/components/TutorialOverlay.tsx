@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TutorialStep {
   title: string;
   icon: string;
   description: React.ReactNode;
+  highlightSelector?: string; // CSS selector for element to highlight
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'center'; // Where to position tutorial box
 }
 
 const steps: TutorialStep[] = [
@@ -11,6 +13,7 @@ const steps: TutorialStep[] = [
     title: "Welcome to Mini RPG!",
     icon: "🌟",
     description: "Welcome to your nostalgic RO-style adventure! Let's quickly cover the basics to get you started on your journey.",
+    position: 'center',
   },
   {
     title: "Combat & Exploration",
@@ -22,6 +25,8 @@ const steps: TutorialStep[] = [
         To fight, click the <b>Attack</b> button or press <b>'A'</b> on your keyboard. You can also turn on <b>Auto-Attack</b> for idle farming!
       </>
     ),
+    highlightSelector: '[data-tutorial="map-system"]',
+    position: 'left',
   },
   {
     title: "Stats & Growth",
@@ -33,11 +38,15 @@ const steps: TutorialStep[] = [
         Base level ups give you <b>Stat Points</b> (STR, AGI, INT, etc.) to increase your power. Job level ups give you <b>Skill Points</b> to learn new abilities!
       </>
     ),
+    highlightSelector: '[data-tutorial="character-stats"]',
+    position: 'right',
   },
   {
     title: "Loot & Equipment",
     icon: "🛡️",
     description: "Monsters have a chance to drop valuable equipment. Check your Inventory to equip Weapons and Armor to boost your combat stats. Unwanted items can be sold in Town for Gold.",
+    highlightSelector: '[data-tutorial="inventory"]',
+    position: 'left',
   },
   {
     title: "Job Advancement",
@@ -49,16 +58,34 @@ const steps: TutorialStep[] = [
         You can evolve from a Novice into advanced classes like <b>Swordsman, Mage, or Archer</b>!
       </>
     ),
+    highlightSelector: '[data-tutorial="job-master"]',
+    position: 'bottom',
   },
   {
     title: "Town & Survival",
     icon: "🏛️",
     description: "Town is your safe haven. Here you slowly regenerate HP and MP for free. Don't forget to buy Potions from the Shop before challenging dangerous Bosses. Good luck!",
+    highlightSelector: '[data-tutorial="shop"]',
+    position: 'left',
   }
 ];
 
 export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
+
+  const step = steps[currentStep];
+
+  useEffect(() => {
+    if (step.highlightSelector) {
+      const element = document.querySelector(step.highlightSelector);
+      if (element) {
+        setHighlightRect(element.getBoundingClientRect());
+      }
+    } else {
+      setHighlightRect(null);
+    }
+  }, [currentStep, step.highlightSelector]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -75,102 +102,214 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
-  const step = steps[currentStep];
+  const getBoxPosition = (): React.CSSProperties => {
+    if (!highlightRect || step.position === 'center') {
+      return {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+      };
+    }
+
+    const padding = 20;
+    switch (step.position) {
+      case 'right':
+        return {
+          top: `${highlightRect.top + highlightRect.height / 2}px`,
+          left: `${highlightRect.right + padding}px`,
+          transform: 'translateY(-50%)',
+        };
+      case 'left':
+        return {
+          top: `${highlightRect.top + highlightRect.height / 2}px`,
+          right: `${window.innerWidth - highlightRect.left + padding}px`,
+          transform: 'translateY(-50%)',
+        };
+      case 'bottom':
+        return {
+          top: `${highlightRect.bottom + padding}px`,
+          left: `${highlightRect.left + highlightRect.width / 2}px`,
+          transform: 'translateX(-50%)',
+        };
+      case 'top':
+        return {
+          bottom: `${window.innerHeight - highlightRect.top + padding}px`,
+          left: `${highlightRect.left + highlightRect.width / 2}px`,
+          transform: 'translateX(-50%)',
+        };
+      default:
+        return {
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        };
+    }
+  };
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.85)",
-      zIndex: 10000,
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      backdropFilter: "blur(4px)",
-      padding: "20px"
-    }}>
+    <>
+      {/* Dark overlay with cutout for highlighted element */}
       <div style={{
-        background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-        border: "2px solid #3b82f6",
-        borderRadius: "16px",
-        width: "100%",
-        maxWidth: "500px",
-        padding: "30px",
-        color: "white",
-        boxShadow: "0 10px 40px rgba(59, 130, 246, 0.3)",
-        position: "relative",
-        animation: "popupFadeIn 0.3s ease-out"
+        position: "fixed",
+        top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 10000,
+        pointerEvents: "none",
       }}>
-        <div style={{ fontSize: "48px", textAlign: "center", marginBottom: "10px" }}>
-          {step.icon}
-        </div>
-        <h2 style={{ textAlign: "center", color: "#60a5fa", marginTop: 0, marginBottom: "20px" }}>
-          {step.title}
-        </h2>
-        <div style={{ 
-          fontSize: "16px", 
-          lineHeight: "1.6", 
-          color: "#e2e8f0", 
-          minHeight: "120px", 
-          textAlign: "center",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center"
-        }}>
-          {step.description}
-        </div>
+        {/* Dark background */}
+        <div style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.85)",
+          backdropFilter: "blur(4px)",
+        }} />
         
-        {/* Progress Dots */}
-        <div style={{ display: "flex", justifyContent: "center", gap: "8px", margin: "25px 0" }}>
-          {steps.map((_, idx) => (
-            <div key={idx} style={{
-              width: "10px", height: "10px", borderRadius: "50%",
-              background: idx === currentStep ? "#3b82f6" : "#475569",
-              transition: "background 0.3s",
-              boxShadow: idx === currentStep ? "0 0 8px #3b82f6" : "none"
-            }} />
-          ))}
-        </div>
+        {/* Spotlight cutout */}
+        {highlightRect && (
+          <>
+            <div 
+              style={{
+                position: "absolute",
+                top: `${highlightRect.top - 8}px`,
+                left: `${highlightRect.left - 8}px`,
+                width: `${highlightRect.width + 16}px`,
+                height: `${highlightRect.height + 16}px`,
+                border: "3px solid #3b82f6",
+                borderRadius: "12px",
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.85), 0 0 30px #3b82f6",
+                animation: "pulse-border 2s ease-in-out infinite",
+                pointerEvents: "none",
+              }}
+            />
+            
+            {/* Pulsing arrow pointing to element */}
+            {step.position === 'right' && (
+              <div style={{
+                position: "absolute",
+                top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
+                left: `${highlightRect.right + 25}px`,
+                fontSize: "30px",
+                animation: "bounce-horizontal 1s ease-in-out infinite",
+              }}>
+                ⬅️
+              </div>
+            )}
+            {step.position === 'left' && (
+              <div style={{
+                position: "absolute",
+                top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
+                right: `${window.innerWidth - highlightRect.left + 25}px`,
+                fontSize: "30px",
+                animation: "bounce-horizontal 1s ease-in-out infinite",
+              }}>
+                ➡️
+              </div>
+            )}
+            {step.position === 'bottom' && (
+              <div style={{
+                position: "absolute",
+                top: `${highlightRect.bottom + 30}px`,
+                left: `${highlightRect.left + highlightRect.width / 2 - 15}px`,
+                fontSize: "30px",
+                animation: "bounce-vertical 1s ease-in-out infinite",
+              }}>
+                ⬆️
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
-        {/* Buttons */}
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "15px", marginTop: "20px" }}>
-          <button 
-            onClick={handleClose}
-            style={{
-              padding: "12px 20px",
-              background: "transparent",
-              color: "#94a3b8",
-              border: "1px solid #475569",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              flex: 1,
-              transition: "all 0.2s"
-            }}
-            onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
-            onMouseOut={e => e.currentTarget.style.background = "transparent"}
-          >
-            Skip Tutorial
-          </button>
-          <button 
-            onClick={handleNext}
-            style={{
-              padding: "12px 20px",
-              background: "linear-gradient(45deg, #3b82f6, #2563eb)", 
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              flex: 2,
-              boxShadow: "0 4px 12px rgba(59, 130, 246, 0.4)",
-              transition: "transform 0.1s"
-            }}
-            onMouseDown={e => e.currentTarget.style.transform = "scale(0.98)"}
-            onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}
-          >
-            {currentStep < steps.length - 1 ? "Next ➡️" : "Start Playing! 🎮"}
-          </button>
+      {/* Tutorial box */}
+      <div style={{
+        position: "fixed",
+        ...getBoxPosition(),
+        zIndex: 10001,
+        padding: "20px",
+        maxWidth: step.position === 'center' ? "500px" : "400px",
+        width: step.position === 'center' ? "90%" : "auto",
+      }}>
+        <div style={{
+          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          border: "2px solid #3b82f6",
+          borderRadius: "16px",
+          padding: "30px",
+          color: "white",
+          boxShadow: "0 10px 40px rgba(59, 130, 246, 0.5)",
+          animation: "popupFadeIn 0.3s ease-out",
+        }}>
+          <div style={{ fontSize: "48px", textAlign: "center", marginBottom: "10px" }}>
+            {step.icon}
+          </div>
+          <h2 style={{ textAlign: "center", color: "#60a5fa", marginTop: 0, marginBottom: "20px" }}>
+            {step.title}
+          </h2>
+          <div style={{ 
+            fontSize: "16px", 
+            lineHeight: "1.6", 
+            color: "#e2e8f0", 
+            minHeight: "100px", 
+            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center"
+          }}>
+            {step.description}
+          </div>
+          
+          {/* Progress Dots */}
+          <div style={{ display: "flex", justifyContent: "center", gap: "8px", margin: "25px 0" }}>
+            {steps.map((_, idx) => (
+              <div key={idx} style={{
+                width: "10px", height: "10px", borderRadius: "50%",
+                background: idx === currentStep ? "#3b82f6" : "#475569",
+                transition: "background 0.3s",
+                boxShadow: idx === currentStep ? "0 0 8px #3b82f6" : "none"
+              }} />
+            ))}
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "15px", marginTop: "20px" }}>
+            <button 
+              onClick={handleClose}
+              style={{
+                padding: "12px 20px",
+                background: "transparent",
+                color: "#94a3b8",
+                border: "1px solid #475569",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                flex: 1,
+                transition: "all 0.2s",
+                pointerEvents: "auto",
+              }}
+              onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+              onMouseOut={e => e.currentTarget.style.background = "transparent"}
+            >
+              Skip Tutorial
+            </button>
+            <button 
+              onClick={handleNext}
+              style={{
+                padding: "12px 20px",
+                background: "linear-gradient(45deg, #3b82f6, #2563eb)", 
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                flex: 2,
+                boxShadow: "0 4px 12px rgba(59, 130, 246, 0.4)",
+                transition: "transform 0.1s",
+                pointerEvents: "auto",
+              }}
+              onMouseDown={e => e.currentTarget.style.transform = "scale(0.98)"}
+              onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}
+            >
+              {currentStep < steps.length - 1 ? "Next ➡️" : "Start Playing! 🎮"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -179,7 +318,25 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
           from { opacity: 0; transform: translateY(20px) scale(0.95); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
+        @keyframes pulse-border {
+          0%, 100% { 
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.85), 0 0 30px #3b82f6;
+          }
+          50% { 
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.85), 0 0 40px #60a5fa;
+          }
+        }
+        @keyframes bounce-horizontal {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(-10px); }
+        }
+        @keyframes bounce-vertical {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
       `}</style>
-    </div>
+    </>
   );
 }
