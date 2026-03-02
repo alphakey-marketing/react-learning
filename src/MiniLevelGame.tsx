@@ -14,6 +14,7 @@ import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { AchievementPopup } from "./components/AchievementPopup";
 import { AchievementList } from "./components/AchievementList";
+import { TutorialOverlay } from "./components/TutorialOverlay";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
@@ -27,7 +28,14 @@ export function MiniLevelGame() {
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
   const achievements = useAchievements();
+  
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("hasSeenTutorial") !== "true";
+    }
+    return true;
+  });
   
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
@@ -80,6 +88,9 @@ export function MiniLevelGame() {
         return;
       }
       
+      // Disable hotkeys while tutorial is showing
+      if (showTutorial) return;
+      
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
         e.preventDefault();
         game.battleAction();
@@ -88,7 +99,7 @@ export function MiniLevelGame() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [game.canAttack, game.currentZoneId, game.battleAction]);
+  }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial]);
 
   // Wrap game functions to track achievements
   const wrappedSellItem = () => {
@@ -131,6 +142,8 @@ export function MiniLevelGame() {
         paddingBottom: "120px",
       }}
     >
+      {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
+      
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
 
@@ -192,8 +205,29 @@ export function MiniLevelGame() {
           ⚔️ Mini RPG - RO Style
         </h1>
 
-        {/* Achievement Button */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: "15px" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "15px" }}>
+          {/* Tutorial Button */}
+          <button
+            onClick={() => setShowTutorial(true)}
+            style={{
+              padding: "8px 16px",
+              background: "rgba(59, 130, 246, 0.2)",
+              color: "#60a5fa",
+              border: "1px solid #3b82f6",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span>📖</span>
+            <span>How to Play</span>
+          </button>
+
+          {/* Achievement Button */}
           <button
             onClick={() => setShowAchievements(true)}
             style={{
