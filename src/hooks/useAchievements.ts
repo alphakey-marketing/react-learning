@@ -40,6 +40,9 @@ interface UseAchievementsReturn {
 }
 
 export function useAchievements(): UseAchievementsReturn {
+  // Separate combat_time from other stats to prevent triggering checks every second
+  const [combatTime, setCombatTime] = useState<number>(0);
+  
   const [stats, setStats] = useState<AchievementStats>({
     total_kills: 0,
     boss_kills: 0,
@@ -74,11 +77,17 @@ export function useAchievements(): UseAchievementsReturn {
   
   // Use refs to prevent circular dependencies
   const statsRef = useRef<AchievementStats>(stats);
+  const combatTimeRef = useRef<number>(combatTime);
   const unlockedRef = useRef<Set<string>>(playerAchievements.unlocked);
   
   useEffect(() => {
-    statsRef.current = stats;
+    statsRef.current = { ...stats, combat_time: combatTimeRef.current };
   }, [stats]);
+  
+  useEffect(() => {
+    combatTimeRef.current = combatTime;
+    statsRef.current = { ...statsRef.current, combat_time: combatTime };
+  }, [combatTime]);
   
   useEffect(() => {
     unlockedRef.current = playerAchievements.unlocked;
@@ -126,26 +135,68 @@ export function useAchievements(): UseAchievementsReturn {
     }
   }, []); // No dependencies - uses refs instead
 
-  // Only check achievements when stats change
+  // Only check achievements when gameplay stats change (NOT combat_time)
   useEffect(() => {
     checkAchievements();
-  }, [stats]); // Only depend on stats, not checkAchievements
+  }, [
+    stats.total_kills,
+    stats.boss_kills,
+    stats.max_damage,
+    stats.base_level,
+    stats.job_level,
+    stats.max_stat,
+    stats.skills_learned,
+    stats.job_changes,
+    stats.total_gold_earned,
+    stats.unique_items_owned,
+    stats.items_sold,
+    stats.potions_used,
+    stats.zones_visited,
+    stats.deaths,
+  ]); // Intentionally exclude combat_time to prevent checks every second
 
-  // Update progress for all achievements
+  // Update progress for all achievements (include combat_time here)
   useEffect(() => {
-    const newProgress: Record<string, number> = {};
-    Object.keys(stats).forEach((key) => {
-      newProgress[key] = stats[key as keyof AchievementStats];
-    });
+    const newProgress: Record<string, number> = {
+      ...stats,
+      combat_time: combatTime,
+    };
     setPlayerAchievements((prev) => ({ ...prev, progress: newProgress }));
-  }, [stats]);
+  }, [stats, combatTime]);
 
-  // Combat time tracker
+  // Combat time tracker - separate state to avoid triggering achievement checks
   useEffect(() => {
     const interval = setInterval(() => {
       if (isInCombat.current) {
         const elapsed = Math.floor((Date.now() - combatStartTime.current) / 1000);
-        setStats((prev) => ({ ...prev, combat_time: elapsed }));
+        setCombatTime(elapsed);
+        
+        // Check combat_time achievements independently (not via stats)
+        const currentUnlocked = unlockedRef.current;
+        ACHIEVEMENTS_DB.forEach((achievement) => {
+          if (currentUnlocked.has(achievement.id)) return;
+          if (achievement.requirement.type === 'combat_time' && elapsed >= achievement.requirement.target) {
+            // Directly unlock without triggering full stats update
+            setPlayerAchievements((prev) => {
+              const newUnlockedSet = new Set(prev.unlocked);
+              newUnlockedSet.add(achievement.id);
+              
+              const newTitles = [...prev.titles];
+              if (achievement.rewardTitle && !newTitles.includes(achievement.rewardTitle)) {
+                newTitles.push(achievement.rewardTitle);
+              }
+              
+              return {
+                ...prev,
+                unlocked: newUnlockedSet,
+                titles: newTitles,
+                selectedTitle: prev.selectedTitle || newTitles[0],
+              };
+            });
+            
+            setNewlyUnlocked((prev) => [...prev, achievement]);
+          }
+        });
       }
     }, 1000);
 
@@ -259,7 +310,7 @@ export function useAchievements(): UseAchievementsReturn {
 
   return {
     playerAchievements,
-    stats,
+    stats: { ...stats, combat_time: combatTime },
     newlyUnlocked,
     clearNewlyUnlocked,
     removeUnlockedAchievement,
