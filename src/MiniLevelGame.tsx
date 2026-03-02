@@ -66,8 +66,8 @@ export function MiniLevelGame() {
 
   // Update character stats for achievements
   useEffect(() => {
-    achievements.updateCharacterStats(game.char, game.inventory);
-  }, [game.char, game.inventory, achievements]);
+    achievements.updateCharacterStats(game.char, game.inventory, game.equipped);
+  }, [game.char, game.inventory, game.equipped, achievements]);
 
   // Track zone visits
   useEffect(() => {
