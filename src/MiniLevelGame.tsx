@@ -12,14 +12,14 @@ import { JobChangeNPC } from "./components/JobChangeNPC";
 // import { DevTools } from "./components/DevTools"; // Hidden for MVP
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
-import { AchievementPopup } from "./components/AchievementPopup";
-import { AchievementList } from "./components/AchievementList";
+// import { AchievementPopup } from "./components/AchievementPopup";
+// import { AchievementList } from "./components/AchievementList";
 import { TutorialOverlay } from "./components/TutorialOverlay";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
-import { useAchievements } from "./hooks/useAchievements";
+// import { useAchievements } from "./hooks/useAchievements";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState } from "react";
 
@@ -27,9 +27,9 @@ export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
-  const achievements = useAchievements();
+  // const achievements = useAchievements(); // DISABLED - causing freeze
   
-  const [showAchievements, setShowAchievements] = useState(false);
+  // const [showAchievements, setShowAchievements] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("hasSeenTutorial") !== "true";
@@ -43,7 +43,7 @@ export function MiniLevelGame() {
         color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
       });
-      achievements.trackDamage(damage);
+      // achievements.trackDamage(damage); // DISABLED
     },
     onEnemyDamageDealt: (damage: number) => {
       const windowCenterX = window.innerWidth / 2;
@@ -65,22 +65,22 @@ export function MiniLevelGame() {
       addDroppingItem(item);
     },
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
-      achievements.trackKill(isBoss);
-      achievements.trackGoldEarned(goldEarned);
+      // achievements.trackKill(isBoss); // DISABLED
+      // achievements.trackGoldEarned(goldEarned); // DISABLED
     },
   });
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // Update character stats for achievements
-  useEffect(() => {
-    achievements.updateCharacterStats(game.char, game.inventory, game.equipped);
-  }, [game.char, game.inventory, game.equipped, achievements]);
+  // Update character stats for achievements - DISABLED
+  // useEffect(() => {
+  //   achievements.updateCharacterStats(game.char, game.inventory, game.equipped);
+  // }, [game.char, game.inventory, game.equipped, achievements]);
 
-  // Track zone visits
-  useEffect(() => {
-    achievements.trackZoneVisit(game.currentZoneId);
-  }, [game.currentZoneId, achievements]);
+  // Track zone visits - DISABLED
+  // useEffect(() => {
+  //   achievements.trackZoneVisit(game.currentZoneId);
+  // }, [game.currentZoneId, achievements]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -101,30 +101,30 @@ export function MiniLevelGame() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial]);
 
-  // Wrap game functions to track achievements
+  // Wrap game functions to track achievements - DISABLED
   const wrappedSellItem = () => {
     game.sellItem();
-    achievements.trackItemSold();
+    // achievements.trackItemSold();
   };
 
   const wrappedUseHpPotion = () => {
     game.useHpPotion();
-    achievements.trackPotionUsed();
+    // achievements.trackPotionUsed();
   };
 
   const wrappedUseMpPotion = () => {
     game.useMpPotion();
-    achievements.trackPotionUsed();
+    // achievements.trackPotionUsed();
   };
 
   const wrappedHandleRespawn = () => {
     game.handleRespawn();
-    achievements.trackDeath();
+    // achievements.trackDeath();
   };
 
   const wrappedHandleJobChange = (newJob: any) => {
     game.handleJobChange(newJob);
-    achievements.trackJobChange();
+    // achievements.trackJobChange();
   };
 
   return (
@@ -147,8 +147,8 @@ export function MiniLevelGame() {
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
 
-      {/* Achievement Popups */}
-      {achievements.newlyUnlocked.map((achievement, index) => (
+      {/* Achievement Popups - DISABLED */}
+      {/* {achievements.newlyUnlocked.map((achievement, index) => (
         <AchievementPopup
           key={`${achievement.id}-${index}`}
           achievement={achievement}
@@ -156,16 +156,16 @@ export function MiniLevelGame() {
             achievements.removeUnlockedAchievement(achievementId);
           }}
         />
-      ))}
+      ))} */}
 
-      {/* Achievement Gallery */}
-      {showAchievements && (
+      {/* Achievement Gallery - DISABLED */}
+      {/* {showAchievements && (
         <AchievementList
           unlockedIds={achievements.playerAchievements.unlocked}
           progress={achievements.playerAchievements.progress}
           onClose={() => setShowAchievements(false)}
         />
-      )}
+      )} */}
 
       {/* DevTools hidden for MVP - Uncomment to enable during development */}
       {/* <DevTools
@@ -227,8 +227,8 @@ export function MiniLevelGame() {
             <span>How to Play</span>
           </button>
 
-          {/* Achievement Button */}
-          <button
+          {/* Achievement Button - DISABLED */}
+          {/* <button
             onClick={() => setShowAchievements(true)}
             style={{
               padding: "8px 16px",
@@ -257,7 +257,7 @@ export function MiniLevelGame() {
             >
               {achievements.playerAchievements.unlocked.size}
             </span>
-          </button>
+          </button> */}
         </div>
 
         <div
@@ -275,7 +275,7 @@ export function MiniLevelGame() {
                 equipped={game.equipped}
                 onAddStat={game.addStat}
                 onOpenSkills={() => game.setShowSkillWindow(true)}
-                selectedTitle={achievements.playerAchievements.selectedTitle}
+                // selectedTitle={achievements.playerAchievements.selectedTitle} // DISABLED
               />
             </div>
             
