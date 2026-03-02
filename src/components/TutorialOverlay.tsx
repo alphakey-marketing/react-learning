@@ -4,8 +4,8 @@ interface TutorialStep {
   title: string;
   icon: string;
   description: React.ReactNode;
-  highlightSelector?: string; // CSS selector for element to highlight
-  position?: 'top' | 'bottom' | 'left' | 'right' | 'center'; // Where to position tutorial box
+  highlightSelector?: string;
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
 }
 
 const steps: TutorialStep[] = [
@@ -73,54 +73,29 @@ const steps: TutorialStep[] = [
 export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
-  const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
 
   const step = steps[currentStep];
 
-  // Update highlight position
   const updateHighlight = () => {
-    // Remove previous highlight styling
-    if (highlightedElement) {
-      highlightedElement.style.position = '';
-      highlightedElement.style.zIndex = '';
-      highlightedElement.style.pointerEvents = '';
-    }
-
     if (step.highlightSelector) {
       const element = document.querySelector(step.highlightSelector) as HTMLElement;
       if (element) {
         const rect = element.getBoundingClientRect();
         setHighlightRect(rect);
-        setHighlightedElement(element);
-        
-        // Make highlighted element appear above overlay
-        element.style.position = 'relative';
-        element.style.zIndex = '10001';
-        element.style.pointerEvents = 'auto';
       } else {
         setHighlightRect(null);
-        setHighlightedElement(null);
       }
     } else {
       setHighlightRect(null);
-      setHighlightedElement(null);
     }
   };
 
   useEffect(() => {
     updateHighlight();
-    
-    // Update on window resize or scroll
     window.addEventListener('resize', updateHighlight);
     window.addEventListener('scroll', updateHighlight);
     
     return () => {
-      // Cleanup: remove highlight styling
-      if (highlightedElement) {
-        highlightedElement.style.position = '';
-        highlightedElement.style.zIndex = '';
-        highlightedElement.style.pointerEvents = '';
-      }
       window.removeEventListener('resize', updateHighlight);
       window.removeEventListener('scroll', updateHighlight);
     };
@@ -152,16 +127,14 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
 
     const padding = 20;
     const boxWidth = 380;
-    const boxHeight = 400; // Approximate height
+    const boxHeight = 400;
 
     switch (step.position) {
       case 'right': {
         const left = highlightRect.right + padding;
         const top = highlightRect.top + highlightRect.height / 2;
         
-        // Check if box would overflow right side
         if (left + boxWidth > window.innerWidth) {
-          // Position on left instead
           return {
             top: `${top}px`,
             right: `${window.innerWidth - highlightRect.left + padding}px`,
@@ -180,9 +153,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         const right = window.innerWidth - highlightRect.left + padding;
         const top = highlightRect.top + highlightRect.height / 2;
         
-        // Check if box would overflow left side
         if (window.innerWidth - right + boxWidth < boxWidth) {
-          // Position on right instead
           return {
             top: `${top}px`,
             left: `${highlightRect.right + padding}px`,
@@ -201,9 +172,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         const top = highlightRect.bottom + padding;
         const left = highlightRect.left + highlightRect.width / 2;
         
-        // Check if box would overflow bottom
         if (top + boxHeight > window.innerHeight) {
-          // Position on top instead
           return {
             bottom: `${window.innerHeight - highlightRect.top + padding}px`,
             left: `${left}px`,
@@ -222,9 +191,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         const bottom = window.innerHeight - highlightRect.top + padding;
         const left = highlightRect.left + highlightRect.width / 2;
         
-        // Check if box would overflow top
         if (window.innerHeight - bottom + boxHeight < boxHeight) {
-          // Position on bottom instead
           return {
             top: `${highlightRect.bottom + padding}px`,
             left: `${left}px`,
@@ -250,36 +217,73 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      {/* Dark overlay - everything except highlighted element */}
-      <div style={{
-        position: "fixed",
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.85)",
-        backdropFilter: "blur(4px)",
-        zIndex: 10000,
-        pointerEvents: "none",
-      }} />
+      {/* SVG overlay with cutout mask */}
+      <svg
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          zIndex: 10000,
+          pointerEvents: "none",
+        }}
+      >
+        <defs>
+          <mask id="spotlight-mask">
+            {/* White = visible, Black = hidden */}
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            {highlightRect && (
+              <rect
+                x={highlightRect.left - 8}
+                y={highlightRect.top - 8}
+                width={highlightRect.width + 16}
+                height={highlightRect.height + 16}
+                rx="12"
+                fill="black"
+              />
+            )}
+          </mask>
+          
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        
+        {/* Dark overlay with cutout */}
+        <rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="rgba(0, 0, 0, 0.85)"
+          mask="url(#spotlight-mask)"
+        />
+        
+        {/* Glowing border around cutout */}
+        {highlightRect && (
+          <rect
+            x={highlightRect.left - 8}
+            y={highlightRect.top - 8}
+            width={highlightRect.width + 16}
+            height={highlightRect.height + 16}
+            rx="12"
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth="4"
+            filter="url(#glow)"
+            style={{ animation: "pulse-stroke 2s ease-in-out infinite" }}
+          />
+        )}
+      </svg>
       
-      {/* Glowing border around highlighted element */}
+      {/* Pulsing arrows */}
       {highlightRect && (
         <>
-          <div 
-            style={{
-              position: "fixed",
-              top: `${highlightRect.top - 8}px`,
-              left: `${highlightRect.left - 8}px`,
-              width: `${highlightRect.width + 16}px`,
-              height: `${highlightRect.height + 16}px`,
-              border: "4px solid #3b82f6",
-              borderRadius: "12px",
-              boxShadow: "0 0 40px rgba(59, 130, 246, 0.8), inset 0 0 40px rgba(59, 130, 246, 0.2)",
-              animation: "pulse-border 2s ease-in-out infinite",
-              pointerEvents: "none",
-              zIndex: 10000,
-            }}
-          />
-          
-          {/* Pulsing arrow pointing to element */}
           {step.position === 'right' && highlightRect.right + 80 < window.innerWidth && (
             <div style={{
               position: "fixed",
@@ -288,6 +292,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
               fontSize: "30px",
               animation: "bounce-horizontal 1s ease-in-out infinite",
               zIndex: 10002,
+              pointerEvents: "none",
             }}>
               ⬅️
             </div>
@@ -300,6 +305,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
               fontSize: "30px",
               animation: "bounce-horizontal 1s ease-in-out infinite",
               zIndex: 10002,
+              pointerEvents: "none",
             }}>
               ➡️
             </div>
@@ -312,6 +318,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
               fontSize: "30px",
               animation: "bounce-vertical 1s ease-in-out infinite",
               zIndex: 10002,
+              pointerEvents: "none",
             }}>
               ⬆️
             </div>
@@ -420,14 +427,14 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
           from { opacity: 0; transform: translateY(20px) scale(0.95); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes pulse-border {
+        @keyframes pulse-stroke {
           0%, 100% { 
-            border-color: #3b82f6;
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.8), inset 0 0 40px rgba(59, 130, 246, 0.2);
+            stroke: #3b82f6;
+            stroke-width: 4;
           }
           50% { 
-            border-color: #60a5fa;
-            box-shadow: 0 0 60px rgba(96, 165, 250, 1), inset 0 0 60px rgba(96, 165, 250, 0.3);
+            stroke: #60a5fa;
+            stroke-width: 5;
           }
         }
         @keyframes bounce-horizontal {
