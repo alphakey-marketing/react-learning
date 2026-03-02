@@ -56,6 +56,10 @@ export function MiniLevelGame() {
     onItemDrop: (item) => {
       addDroppingItem(item);
     },
+    onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
+      achievements.trackKill(isBoss);
+      achievements.trackGoldEarned(goldEarned);
+    },
   });
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
@@ -87,17 +91,6 @@ export function MiniLevelGame() {
   }, [game.canAttack, game.currentZoneId, game.battleAction]);
 
   // Wrap game functions to track achievements
-  const wrappedBattleAction = (skillId?: string) => {
-    const enemyHpBefore = game.enemy.hp;
-    const isBoss = game.enemy.name.includes("Boss");
-    game.battleAction(skillId);
-    
-    // Check if enemy was killed
-    if (enemyHpBefore > 0 && game.enemy.hp <= 0) {
-      achievements.trackKill(isBoss);
-    }
-  };
-
   const wrappedSellItem = () => {
     game.sellItem();
     achievements.trackItemSold();
@@ -299,7 +292,7 @@ export function MiniLevelGame() {
 
             <EnemyDisplay 
               enemy={game.enemy} 
-              onAttack={wrappedBattleAction}
+              onAttack={() => game.battleAction()}
               canAttack={game.canAttack}
               inTown={game.currentZoneId === 0}
               attackCooldownPercent={game.attackCooldownPercent}
@@ -464,7 +457,7 @@ export function MiniLevelGame() {
         <SkillHotkeys
           character={game.char}
           skillCooldowns={game.skillCooldowns}
-          onUseSkill={wrappedBattleAction}
+          onUseSkill={game.battleAction}
           disabled={game.char.hp <= 0 || !game.canAttack || game.currentZoneId === 0}
         />
       </div>
