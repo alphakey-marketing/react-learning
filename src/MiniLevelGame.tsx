@@ -12,17 +12,22 @@ import { JobChangeNPC } from "./components/JobChangeNPC";
 import { DevTools } from "./components/DevTools";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
+import { AchievementPopup } from "./components/AchievementPopup";
+import { AchievementList } from "./components/AchievementList";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
+import { useAchievements } from "./hooks/useAchievements";
 import { canChangeJob } from "./data/jobs";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
+  const achievements = useAchievements();
+  const [showAchievements, setShowAchievements] = useState(false);
   
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
@@ -30,6 +35,7 @@ export function MiniLevelGame() {
         color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
       });
+      achievements.trackDamage(damage);
     },
     onEnemyDamageDealt: (damage: number) => {
       const windowCenterX = window.innerWidth / 2;
@@ -54,6 +60,16 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
+  // Update character stats for achievements
+  useEffect(() => {
+    achievements.updateCharacterStats(game.char, game.inventory);
+  }, [game.char, game.inventory, achievements]);
+
+  // Track zone visits
+  useEffect(() => {
+    achievements.trackZoneVisit(game.currentZoneId);
+  }, [game.currentZoneId, achievements]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -69,6 +85,43 @@ export function MiniLevelGame() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [game.canAttack, game.currentZoneId, game.battleAction]);
+
+  // Wrap game functions to track achievements
+  const wrappedBattleAction = (skillId?: string) => {
+    const enemyHpBefore = game.enemy.hp;
+    const isBoss = game.enemy.name.includes("Boss");
+    game.battleAction(skillId);
+    
+    // Check if enemy was killed
+    if (enemyHpBefore > 0 && game.enemy.hp <= 0) {
+      achievements.trackKill(isBoss);
+    }
+  };
+
+  const wrappedSellItem = () => {
+    game.sellItem();
+    achievements.trackItemSold();
+  };
+
+  const wrappedUseHpPotion = () => {
+    game.useHpPotion();
+    achievements.trackPotionUsed();
+  };
+
+  const wrappedUseMpPotion = () => {
+    game.useMpPotion();
+    achievements.trackPotionUsed();
+  };
+
+  const wrappedHandleRespawn = () => {
+    game.handleRespawn();
+    achievements.trackDeath();
+  };
+
+  const wrappedHandleJobChange = (newJob: any) => {
+    game.handleJobChange(newJob);
+    achievements.trackJobChange();
+  };
 
   return (
     <div
@@ -87,6 +140,26 @@ export function MiniLevelGame() {
     >
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
+
+      {/* Achievement Popups */}
+      {achievements.newlyUnlocked.map((achievement, index) => (
+        <AchievementPopup
+          key={`${achievement.id}-${index}`}
+          achievement={achievement}
+          onComplete={() => {
+            achievements.clearNewlyUnlocked();
+          }}
+        />
+      ))}
+
+      {/* Achievement Gallery */}
+      {showAchievements && (
+        <AchievementList
+          unlockedIds={achievements.playerAchievements.unlocked}
+          progress={achievements.playerAchievements.progress}
+          onClose={() => setShowAchievements(false)}
+        />
+      )}
 
       <DevTools
         character={game.char}
@@ -125,6 +198,40 @@ export function MiniLevelGame() {
           ⚔️ Mini RPG - RO Style
         </h1>
 
+        {/* Achievement Button */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "15px" }}>
+          <button
+            onClick={() => setShowAchievements(true)}
+            style={{
+              padding: "8px 16px",
+              background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
+              color: "white",
+              border: "2px solid #fcd34d",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "14px",
+              boxShadow: "0 0 15px rgba(251, 191, 36, 0.4)",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span>🏆</span>
+            <span>Achievements</span>
+            <span
+              style={{
+                background: "rgba(0, 0, 0, 0.3)",
+                padding: "2px 8px",
+                borderRadius: "12px",
+                fontSize: "12px",
+              }}
+            >
+              {achievements.playerAchievements.unlocked.size}
+            </span>
+          </button>
+        </div>
+
         <div
           style={{
             display: "grid",
@@ -139,6 +246,7 @@ export function MiniLevelGame() {
               equipped={game.equipped}
               onAddStat={game.addStat}
               onOpenSkills={() => game.setShowSkillWindow(true)}
+              selectedTitle={achievements.playerAchievements.selectedTitle}
             />
             
             <div style={{ marginTop: "10px", marginBottom: "10px", display: "flex", gap: "8px" }}>
@@ -191,7 +299,7 @@ export function MiniLevelGame() {
 
             <EnemyDisplay 
               enemy={game.enemy} 
-              onAttack={() => game.battleAction()}
+              onAttack={wrappedBattleAction}
               canAttack={game.canAttack}
               inTown={game.currentZoneId === 0}
               attackCooldownPercent={game.attackCooldownPercent}
@@ -216,8 +324,8 @@ export function MiniLevelGame() {
               mpPotions={game.mpPotions}
               autoHpPercent={game.autoHpPercent}
               autoMpPercent={game.autoMpPercent}
-              onUseHpPotion={game.useHpPotion}
-              onUseMpPotion={game.useMpPotion}
+              onUseHpPotion={wrappedUseHpPotion}
+              onUseMpPotion={wrappedUseMpPotion}
               onSetAutoHpPercent={game.setAutoHpPercent}
               onSetAutoMpPercent={game.setAutoMpPercent}
             />
@@ -237,7 +345,7 @@ export function MiniLevelGame() {
             <Shop
               character={game.char}
               isInTown={game.currentZoneId === 0}
-              onSellItem={game.sellItem}
+              onSellItem={wrappedSellItem}
               onBuyHpPotion={game.buyHpPotion}
               onBuyMpPotion={game.buyMpPotion}
             />
@@ -257,7 +365,7 @@ export function MiniLevelGame() {
           <JobChangeNPC
             currentJob={game.char.jobClass}
             currentJobLevel={game.char.jobLevel}
-            onJobChange={game.handleJobChange}
+            onJobChange={wrappedHandleJobChange}
             onClose={() => game.setShowJobChangeNPC(false)}
           />
         )}
@@ -322,7 +430,7 @@ export function MiniLevelGame() {
                 You will respawn at town with 50% HP and MP.
               </p>
               <button
-                onClick={game.handleRespawn}
+                onClick={wrappedHandleRespawn}
                 style={{
                   width: "100%",
                   padding: "15px",
@@ -356,7 +464,7 @@ export function MiniLevelGame() {
         <SkillHotkeys
           character={game.char}
           skillCooldowns={game.skillCooldowns}
-          onUseSkill={game.battleAction}
+          onUseSkill={wrappedBattleAction}
           disabled={game.char.hp <= 0 || !game.canAttack || game.currentZoneId === 0}
         />
       </div>
