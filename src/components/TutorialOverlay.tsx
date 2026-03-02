@@ -73,21 +73,37 @@ const steps: TutorialStep[] = [
 export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
+  const [highlightedElement, setHighlightedElement] = useState<HTMLElement | null>(null);
 
   const step = steps[currentStep];
 
   // Update highlight position
   const updateHighlight = () => {
+    // Remove previous highlight styling
+    if (highlightedElement) {
+      highlightedElement.style.position = '';
+      highlightedElement.style.zIndex = '';
+      highlightedElement.style.pointerEvents = '';
+    }
+
     if (step.highlightSelector) {
-      const element = document.querySelector(step.highlightSelector);
+      const element = document.querySelector(step.highlightSelector) as HTMLElement;
       if (element) {
         const rect = element.getBoundingClientRect();
         setHighlightRect(rect);
+        setHighlightedElement(element);
+        
+        // Make highlighted element appear above overlay
+        element.style.position = 'relative';
+        element.style.zIndex = '10001';
+        element.style.pointerEvents = 'auto';
       } else {
         setHighlightRect(null);
+        setHighlightedElement(null);
       }
     } else {
       setHighlightRect(null);
+      setHighlightedElement(null);
     }
   };
 
@@ -99,6 +115,12 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
     window.addEventListener('scroll', updateHighlight);
     
     return () => {
+      // Cleanup: remove highlight styling
+      if (highlightedElement) {
+        highlightedElement.style.position = '';
+        highlightedElement.style.zIndex = '';
+        highlightedElement.style.pointerEvents = '';
+      }
       window.removeEventListener('resize', updateHighlight);
       window.removeEventListener('scroll', updateHighlight);
     };
@@ -228,82 +250,80 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      {/* Dark overlay with cutout for highlighted element */}
+      {/* Dark overlay - everything except highlighted element */}
       <div style={{
         position: "fixed",
         top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.85)",
+        backdropFilter: "blur(4px)",
         zIndex: 10000,
         pointerEvents: "none",
-      }}>
-        {/* Dark background */}
-        <div style={{
-          position: "absolute",
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: "rgba(0,0,0,0.85)",
-          backdropFilter: "blur(4px)",
-        }} />
-        
-        {/* Spotlight cutout */}
-        {highlightRect && (
-          <>
-            <div 
-              style={{
-                position: "absolute",
-                top: `${highlightRect.top - 8}px`,
-                left: `${highlightRect.left - 8}px`,
-                width: `${highlightRect.width + 16}px`,
-                height: `${highlightRect.height + 16}px`,
-                border: "3px solid #3b82f6",
-                borderRadius: "12px",
-                boxShadow: "0 0 0 9999px rgba(0,0,0,0.85), 0 0 30px #3b82f6",
-                animation: "pulse-border 2s ease-in-out infinite",
-                pointerEvents: "none",
-              }}
-            />
-            
-            {/* Pulsing arrow pointing to element */}
-            {step.position === 'right' && highlightRect.right + 80 < window.innerWidth && (
-              <div style={{
-                position: "absolute",
-                top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
-                left: `${highlightRect.right + 25}px`,
-                fontSize: "30px",
-                animation: "bounce-horizontal 1s ease-in-out infinite",
-              }}>
-                ⬅️
-              </div>
-            )}
-            {step.position === 'left' && highlightRect.left > 80 && (
-              <div style={{
-                position: "absolute",
-                top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
-                right: `${window.innerWidth - highlightRect.left + 25}px`,
-                fontSize: "30px",
-                animation: "bounce-horizontal 1s ease-in-out infinite",
-              }}>
-                ➡️
-              </div>
-            )}
-            {step.position === 'bottom' && highlightRect.bottom + 80 < window.innerHeight && (
-              <div style={{
-                position: "absolute",
-                top: `${highlightRect.bottom + 30}px`,
-                left: `${highlightRect.left + highlightRect.width / 2 - 15}px`,
-                fontSize: "30px",
-                animation: "bounce-vertical 1s ease-in-out infinite",
-              }}>
-                ⬆️
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      }} />
+      
+      {/* Glowing border around highlighted element */}
+      {highlightRect && (
+        <>
+          <div 
+            style={{
+              position: "fixed",
+              top: `${highlightRect.top - 8}px`,
+              left: `${highlightRect.left - 8}px`,
+              width: `${highlightRect.width + 16}px`,
+              height: `${highlightRect.height + 16}px`,
+              border: "4px solid #3b82f6",
+              borderRadius: "12px",
+              boxShadow: "0 0 40px rgba(59, 130, 246, 0.8), inset 0 0 40px rgba(59, 130, 246, 0.2)",
+              animation: "pulse-border 2s ease-in-out infinite",
+              pointerEvents: "none",
+              zIndex: 10000,
+            }}
+          />
+          
+          {/* Pulsing arrow pointing to element */}
+          {step.position === 'right' && highlightRect.right + 80 < window.innerWidth && (
+            <div style={{
+              position: "fixed",
+              top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
+              left: `${highlightRect.right + 25}px`,
+              fontSize: "30px",
+              animation: "bounce-horizontal 1s ease-in-out infinite",
+              zIndex: 10002,
+            }}>
+              ⬅️
+            </div>
+          )}
+          {step.position === 'left' && highlightRect.left > 80 && (
+            <div style={{
+              position: "fixed",
+              top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
+              right: `${window.innerWidth - highlightRect.left + 25}px`,
+              fontSize: "30px",
+              animation: "bounce-horizontal 1s ease-in-out infinite",
+              zIndex: 10002,
+            }}>
+              ➡️
+            </div>
+          )}
+          {step.position === 'bottom' && highlightRect.bottom + 80 < window.innerHeight && (
+            <div style={{
+              position: "fixed",
+              top: `${highlightRect.bottom + 30}px`,
+              left: `${highlightRect.left + highlightRect.width / 2 - 15}px`,
+              fontSize: "30px",
+              animation: "bounce-vertical 1s ease-in-out infinite",
+              zIndex: 10002,
+            }}>
+              ⬆️
+            </div>
+          )}
+        </>
+      )}
 
       {/* Tutorial box */}
       <div style={{
         position: "fixed",
         ...getBoxPosition(),
-        zIndex: 10001,
+        zIndex: 10003,
         padding: "20px",
         maxWidth: step.position === 'center' ? "500px" : "380px",
         width: step.position === 'center' ? "90%" : "auto",
@@ -403,11 +423,11 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         @keyframes pulse-border {
           0%, 100% { 
             border-color: #3b82f6;
-            box-shadow: 0 0 0 9999px rgba(0,0,0,0.85), 0 0 30px #3b82f6;
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.8), inset 0 0 40px rgba(59, 130, 246, 0.2);
           }
           50% { 
             border-color: #60a5fa;
-            box-shadow: 0 0 0 9999px rgba(0,0,0,0.85), 0 0 40px #60a5fa;
+            box-shadow: 0 0 60px rgba(96, 165, 250, 1), inset 0 0 60px rgba(96, 165, 250, 0.3);
           }
         }
         @keyframes bounce-horizontal {
