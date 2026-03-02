@@ -40,9 +40,6 @@ interface UseAchievementsReturn {
 }
 
 export function useAchievements(): UseAchievementsReturn {
-  // Separate combat_time from other stats to prevent triggering checks every second
-  const [combatTime, setCombatTime] = useState<number>(0);
-  
   const [stats, setStats] = useState<AchievementStats>({
     total_kills: 0,
     boss_kills: 0,
@@ -75,25 +72,21 @@ export function useAchievements(): UseAchievementsReturn {
   const isInCombat = useRef<boolean>(false);
   const lastZoneId = useRef<number>(0);
   
-  // Use refs to prevent circular dependencies
+  // Combat time stored ONLY in ref - never triggers re-renders
+  const combatTimeRef = useRef<number>(0);
+  
   const statsRef = useRef<AchievementStats>(stats);
-  const combatTimeRef = useRef<number>(combatTime);
   const unlockedRef = useRef<Set<string>>(playerAchievements.unlocked);
   
   useEffect(() => {
-    statsRef.current = { ...stats, combat_time: combatTimeRef.current };
+    statsRef.current = stats;
   }, [stats]);
-  
-  useEffect(() => {
-    combatTimeRef.current = combatTime;
-    statsRef.current = { ...statsRef.current, combat_time: combatTime };
-  }, [combatTime]);
   
   useEffect(() => {
     unlockedRef.current = playerAchievements.unlocked;
   }, [playerAchievements.unlocked]);
 
-  // Check for newly unlocked achievements - use refs to avoid circular dependency
+  // Check for newly unlocked achievements - uses refs to avoid circular dependency
   const checkAchievements = useCallback(() => {
     const newUnlocks: Achievement[] = [];
     const currentStats = statsRef.current;
@@ -104,7 +97,14 @@ export function useAchievements(): UseAchievementsReturn {
 
       const reqType = achievement.requirement.type;
       const reqTarget = achievement.requirement.target;
-      const currentValue = currentStats[reqType as keyof AchievementStats] || 0;
+      
+      // Get value from ref for combat_time, from stats for everything else
+      let currentValue: number;
+      if (reqType === 'combat_time') {
+        currentValue = combatTimeRef.current;
+      } else {
+        currentValue = currentStats[reqType as keyof AchievementStats] || 0;
+      }
 
       if (currentValue >= reqTarget) {
         newUnlocks.push(achievement);
@@ -133,7 +133,7 @@ export function useAchievements(): UseAchievementsReturn {
 
       setNewlyUnlocked((prev) => [...prev, ...newUnlocks]);
     }
-  }, []); // No dependencies - uses refs instead
+  }, []); // Empty deps - uses refs
 
   // Only check achievements when gameplay stats change (NOT combat_time)
   useEffect(() => {
@@ -153,55 +153,46 @@ export function useAchievements(): UseAchievementsReturn {
     stats.potions_used,
     stats.zones_visited,
     stats.deaths,
-  ]); // Intentionally exclude combat_time to prevent checks every second
+    checkAchievements,
+  ]); // Exclude combat_time - it's in ref only
 
-  // Update progress for all achievements (include combat_time here)
+  // Update progress for display only - doesn't trigger achievement checks
   useEffect(() => {
     const newProgress: Record<string, number> = {
       ...stats,
-      combat_time: combatTime,
+      combat_time: combatTimeRef.current,
     };
-    setPlayerAchievements((prev) => ({ ...prev, progress: newProgress }));
-  }, [stats, combatTime]);
+    setPlayerAchievements((prev) => {
+      // Only update if progress actually changed to avoid unnecessary renders
+      const currentProgress = prev.progress;
+      const hasChanged = Object.keys(newProgress).some(
+        key => currentProgress[key] !== newProgress[key]
+      );
+      if (!hasChanged) return prev;
+      return { ...prev, progress: newProgress };
+    });
+  }, [stats]);
 
-  // Combat time tracker - separate state to avoid triggering achievement checks
+  // Combat time tracker - ONLY updates ref, no state changes
   useEffect(() => {
-    const interval = setInterval(() => {
+    let interval: number | undefined;
+    
+    interval = window.setInterval(() => {
       if (isInCombat.current) {
         const elapsed = Math.floor((Date.now() - combatStartTime.current) / 1000);
-        setCombatTime(elapsed);
+        combatTimeRef.current = elapsed;
         
-        // Check combat_time achievements independently (not via stats)
-        const currentUnlocked = unlockedRef.current;
-        ACHIEVEMENTS_DB.forEach((achievement) => {
-          if (currentUnlocked.has(achievement.id)) return;
-          if (achievement.requirement.type === 'combat_time' && elapsed >= achievement.requirement.target) {
-            // Directly unlock without triggering full stats update
-            setPlayerAchievements((prev) => {
-              const newUnlockedSet = new Set(prev.unlocked);
-              newUnlockedSet.add(achievement.id);
-              
-              const newTitles = [...prev.titles];
-              if (achievement.rewardTitle && !newTitles.includes(achievement.rewardTitle)) {
-                newTitles.push(achievement.rewardTitle);
-              }
-              
-              return {
-                ...prev,
-                unlocked: newUnlockedSet,
-                titles: newTitles,
-                selectedTitle: prev.selectedTitle || newTitles[0],
-              };
-            });
-            
-            setNewlyUnlocked((prev) => [...prev, achievement]);
-          }
-        });
+        // Only check combat_time achievements every 10 seconds to reduce checks
+        if (elapsed % 10 === 0) {
+          checkAchievements();
+        }
       }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [checkAchievements]);
 
   const trackKill = useCallback((isBoss: boolean) => {
     setStats((prev) => ({
@@ -234,19 +225,15 @@ export function useAchievements(): UseAchievementsReturn {
   }, []);
 
   const trackZoneVisit = useCallback((zoneId: number) => {
-    // Track unique zones
     if (!visitedZones.current.has(zoneId)) {
       visitedZones.current.add(zoneId);
       setStats((prev) => ({ ...prev, zones_visited: visitedZones.current.size }));
     }
 
-    // Start/stop combat timer
     if (zoneId !== 0 && !isInCombat.current) {
-      // Entering combat zone
       isInCombat.current = true;
       combatStartTime.current = Date.now();
     } else if (zoneId === 0 && isInCombat.current) {
-      // Leaving combat zone (returning to town)
       isInCombat.current = false;
     }
 
@@ -255,7 +242,6 @@ export function useAchievements(): UseAchievementsReturn {
 
   const trackDeath = useCallback(() => {
     setStats((prev) => ({ ...prev, deaths: prev.deaths + 1 }));
-    // Stop combat timer on death
     isInCombat.current = false;
   }, []);
 
@@ -264,7 +250,6 @@ export function useAchievements(): UseAchievementsReturn {
   }, []);
 
   const updateCharacterStats = useCallback((char: Character, inventory: Equipment[], equipped?: EquippedItems) => {
-    // Update character-related stats
     const maxStat = Math.max(
       char.stats.str,
       char.stats.agi,
@@ -276,12 +261,10 @@ export function useAchievements(): UseAchievementsReturn {
 
     const skillsLearned = Object.keys(char.learnedSkills).length;
 
-    // Track unique items from inventory - Convert item.id to string
     inventory.forEach((item) => {
       uniqueItemsOwned.current.add(String(item.id));
     });
 
-    // Track unique items from equipped gear - Convert item.id to string
     if (equipped) {
       Object.values(equipped).forEach((item) => {
         if (item) {
@@ -310,7 +293,7 @@ export function useAchievements(): UseAchievementsReturn {
 
   return {
     playerAchievements,
-    stats: { ...stats, combat_time: combatTime },
+    stats: { ...stats, combat_time: combatTimeRef.current },
     newlyUnlocked,
     clearNewlyUnlocked,
     removeUnlockedAchievement,
