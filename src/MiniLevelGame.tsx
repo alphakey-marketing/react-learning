@@ -9,7 +9,7 @@ import { PotionBar } from "./components/PotionBar";
 import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
-import { DevTools } from "./components/DevTools";
+// import { DevTools } from "./components/DevTools"; // Hidden for MVP
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { AchievementPopup } from "./components/AchievementPopup";
@@ -154,7 +154,8 @@ export function MiniLevelGame() {
         />
       )}
 
-      <DevTools
+      {/* DevTools hidden for MVP - Uncomment to enable during development */}
+      {/* <DevTools
         character={game.char}
         onAddBaseLevel={game.devAddBaseLevel}
         onAddJobLevel={game.devAddJobLevel}
@@ -163,7 +164,7 @@ export function MiniLevelGame() {
         onFullHeal={game.devFullHeal}
         onAddGear={game.devAddGear}
         onUnlockAllZones={game.devUnlockAllZones}
-      />
+      /> */}
 
       <div
         style={{
