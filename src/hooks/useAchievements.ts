@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Achievement, PlayerAchievements } from "../types/achievement";
 import { ACHIEVEMENTS_DB } from "../data/achievements";
 import { Character } from "../types/character";
-import { Equipment } from "../types/equipment";
+import { Equipment, EquippedItems } from "../types/equipment";
 
 interface AchievementStats {
   total_kills: number;
@@ -35,7 +35,7 @@ interface UseAchievementsReturn {
   trackZoneVisit: (zoneId: number) => void;
   trackDeath: () => void;
   trackJobChange: () => void;
-  updateCharacterStats: (char: Character, inventory: Equipment[]) => void;
+  updateCharacterStats: (char: Character, inventory: Equipment[], equipped?: EquippedItems) => void;
 }
 
 export function useAchievements(): UseAchievementsReturn {
@@ -68,6 +68,8 @@ export function useAchievements(): UseAchievementsReturn {
   const visitedZones = useRef<Set<number>>(new Set([0]));
   const uniqueItemsOwned = useRef<Set<string>>(new Set());
   const combatStartTime = useRef<number>(0);
+  const isInCombat = useRef<boolean>(false);
+  const lastZoneId = useRef<number>(0);
 
   // Check for newly unlocked achievements
   const checkAchievements = useCallback(() => {
@@ -122,6 +124,18 @@ export function useAchievements(): UseAchievementsReturn {
     setPlayerAchievements((prev) => ({ ...prev, progress: newProgress }));
   }, [stats]);
 
+  // Combat time tracker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isInCombat.current) {
+        const elapsed = Math.floor((Date.now() - combatStartTime.current) / 1000);
+        setStats((prev) => ({ ...prev, combat_time: elapsed }));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const trackKill = useCallback((isBoss: boolean) => {
     setStats((prev) => ({
       ...prev,
@@ -153,21 +167,36 @@ export function useAchievements(): UseAchievementsReturn {
   }, []);
 
   const trackZoneVisit = useCallback((zoneId: number) => {
+    // Track unique zones
     if (!visitedZones.current.has(zoneId)) {
       visitedZones.current.add(zoneId);
       setStats((prev) => ({ ...prev, zones_visited: visitedZones.current.size }));
     }
+
+    // Start/stop combat timer
+    if (zoneId !== 0 && !isInCombat.current) {
+      // Entering combat zone
+      isInCombat.current = true;
+      combatStartTime.current = Date.now();
+    } else if (zoneId === 0 && isInCombat.current) {
+      // Leaving combat zone (returning to town)
+      isInCombat.current = false;
+    }
+
+    lastZoneId.current = zoneId;
   }, []);
 
   const trackDeath = useCallback(() => {
     setStats((prev) => ({ ...prev, deaths: prev.deaths + 1 }));
+    // Stop combat timer on death
+    isInCombat.current = false;
   }, []);
 
   const trackJobChange = useCallback(() => {
     setStats((prev) => ({ ...prev, job_changes: prev.job_changes + 1 }));
   }, []);
 
-  const updateCharacterStats = useCallback((char: Character, inventory: Equipment[]) => {
+  const updateCharacterStats = useCallback((char: Character, inventory: Equipment[], equipped?: EquippedItems) => {
     // Update character-related stats
     const maxStat = Math.max(
       char.stats.str,
@@ -180,10 +209,19 @@ export function useAchievements(): UseAchievementsReturn {
 
     const skillsLearned = Object.keys(char.learnedSkills).length;
 
-    // Track unique items
+    // Track unique items from inventory
     inventory.forEach((item) => {
       uniqueItemsOwned.current.add(item.id);
     });
+
+    // Track unique items from equipped gear
+    if (equipped) {
+      Object.values(equipped).forEach((item) => {
+        if (item) {
+          uniqueItemsOwned.current.add(item.id);
+        }
+      });
+    }
 
     setStats((prev) => ({
       ...prev,

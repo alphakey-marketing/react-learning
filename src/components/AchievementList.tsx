@@ -24,11 +24,36 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
     exploration: "🗺️",
   };
 
-  const getProgress = (achievement: Achievement): { current: number; target: number; percent: number } => {
+  const getProgress = (achievement: Achievement): { current: number; target: number; percent: number; remaining: number } => {
     const current = progress[achievement.requirement.type] || 0;
     const target = achievement.requirement.target;
     const percent = Math.min(100, Math.floor((current / target) * 100));
-    return { current, target, percent };
+    const remaining = Math.max(0, target - current);
+    return { current, target, percent, remaining };
+  };
+
+  const getProgressHint = (achievement: Achievement, remaining: number): string => {
+    if (remaining <= 0) return "Ready to unlock!";
+    
+    const type = achievement.requirement.type;
+    
+    if (type === "total_kills") return `Kill ${remaining} more!`;
+    if (type === "boss_kills") return `Defeat ${remaining} more boss${remaining > 1 ? 'es' : ''}!`;
+    if (type === "max_damage") return `Deal ${remaining} more damage in one hit!`;
+    if (type === "base_level") return `${remaining} level${remaining > 1 ? 's' : ''} to go!`;
+    if (type === "job_level") return `${remaining} job level${remaining > 1 ? 's' : ''} to go!`;
+    if (type === "max_stat") return `Raise a stat by ${remaining} more!`;
+    if (type === "skills_learned") return `Learn ${remaining} more skill${remaining > 1 ? 's' : ''}!`;
+    if (type === "job_changes") return "Change your job class!";
+    if (type === "total_gold_earned") return `Earn ${remaining} more gold!`;
+    if (type === "unique_items_owned") return `Collect ${remaining} more item${remaining > 1 ? 's' : ''}!`;
+    if (type === "items_sold") return `Sell ${remaining} more item${remaining > 1 ? 's' : ''}!`;
+    if (type === "potions_used") return `Use ${remaining} more potion${remaining > 1 ? 's' : ''}!`;
+    if (type === "zones_visited") return `Visit ${remaining} more zone${remaining > 1 ? 's' : ''}!`;
+    if (type === "combat_time") return `${Math.ceil(remaining / 60)} more minute${Math.ceil(remaining / 60) > 1 ? 's' : ''} in combat!`;
+    if (type === "deaths") return "Die once to unlock!";
+    
+    return `${remaining} to go!`;
   };
 
   return (
@@ -145,7 +170,7 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
               >
                 {categoryAchievements.map((achievement) => {
                   const unlocked = unlockedIds.has(achievement.id);
-                  const { current, target, percent } = getProgress(achievement);
+                  const { current, target, percent, remaining } = getProgress(achievement);
                   const rarityColor = rarityColorMap[achievement.rarity];
 
                   return (
@@ -156,7 +181,7 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
                         border: `2px solid ${unlocked ? rarityColor : "#333"}`,
                         borderRadius: "8px",
                         padding: "12px",
-                        opacity: unlocked ? 1 : 0.6,
+                        opacity: unlocked ? 1 : 0.7,
                         transition: "all 0.3s ease",
                         position: "relative",
                         overflow: "hidden",
@@ -193,7 +218,7 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
                               style={{
                                 fontSize: "14px",
                                 fontWeight: "bold",
-                                color: unlocked ? rarityColor : "#666",
+                                color: unlocked ? rarityColor : "#999",
                                 marginBottom: "2px",
                               }}
                             >
@@ -211,33 +236,46 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
                           </div>
                         </div>
 
-                        {/* Description */}
+                        {/* Description - ALWAYS SHOW */}
                         <div
                           style={{
                             fontSize: "11px",
-                            color: unlocked ? "#9ca3af" : "#555",
+                            color: unlocked ? "#9ca3af" : "#777",
                             marginBottom: "8px",
                           }}
                         >
-                          {unlocked ? achievement.description : "Locked"}
+                          {achievement.description}
                         </div>
 
                         {/* Progress */}
                         {!unlocked && (
-                          <div
-                            style={{
-                              fontSize: "10px",
-                              color: "#666",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <span>
-                              {current} / {target}
-                            </span>
-                            <span>{percent}%</span>
-                          </div>
+                          <>
+                            <div
+                              style={{
+                                fontSize: "10px",
+                                color: "#666",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              <span>
+                                {current} / {target}
+                              </span>
+                              <span>{percent}%</span>
+                            </div>
+                            {/* Progress Hint */}
+                            <div
+                              style={{
+                                fontSize: "10px",
+                                color: remaining <= 5 && remaining > 0 ? "#fbbf24" : "#888",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {getProgressHint(achievement, remaining)}
+                            </div>
+                          </>
                         )}
 
                         {/* Reward */}
@@ -252,7 +290,7 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
                               borderRadius: "4px",
                             }}
                           >
-                            🎁 {achievement.rewardTitle}
+                            🎁 Title: "{achievement.rewardTitle}"
                           </div>
                         )}
                       </div>
