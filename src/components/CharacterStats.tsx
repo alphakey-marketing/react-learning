@@ -52,24 +52,26 @@ export function CharacterStats({
           borderRadius: "8px",
           border: "1px solid #444",
           position: "relative",
+          marginTop: "10px", // Give room for the badge
         }}
       >
-        {/* Total Combat Power Badge */}
+        {/* Total Combat Power Badge - BIGGER */}
         <div style={{
           position: "absolute",
-          top: "-12px",
+          top: "-16px",
           left: "50%",
           transform: "translateX(-50%)",
           background: "linear-gradient(90deg, #b45309, #f59e0b, #b45309)",
-          padding: "4px 16px",
-          borderRadius: "20px",
-          fontWeight: "bold",
+          padding: "6px 20px",
+          borderRadius: "24px",
+          fontWeight: "900",
           color: "white",
-          fontSize: "13px",
-          boxShadow: "0 4px 10px rgba(245, 158, 11, 0.4)",
-          border: "1px solid #fcd34d",
+          fontSize: "16px", // Increased from 13px
+          boxShadow: "0 6px 15px rgba(245, 158, 11, 0.5)",
+          border: "2px solid #fcd34d",
           whiteSpace: "nowrap",
-          zIndex: 10
+          zIndex: 10,
+          textShadow: "1px 1px 2px rgba(0,0,0,0.5)"
         }}>
           ⚔️ Combat Power: {totalPower}
         </div>
@@ -78,8 +80,8 @@ export function CharacterStats({
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: "2px",
-            marginTop: "8px", // Added margin to clear the badge
+            marginBottom: "4px",
+            marginTop: "12px", // Added margin to clear the bigger badge
           }}
         >
           <strong>
@@ -113,7 +115,7 @@ export function CharacterStats({
             display: "flex",
             justifyContent: "space-between",
             marginBottom: "4px",
-            fontSize: "11px",
+            fontSize: "12px",
           }}
         >
           <span>Job Lv.{character.jobLevel}</span>
@@ -125,11 +127,11 @@ export function CharacterStats({
         <div
           style={{
             width: "100%",
-            height: "4px",
+            height: "5px",
             background: "#555",
             borderRadius: "5px",
             overflow: "hidden",
-            marginBottom: "4px",
+            marginBottom: "6px",
           }}
         >
           <div
@@ -145,9 +147,9 @@ export function CharacterStats({
         <div
           style={{
             width: "100%",
-            height: "10px",
+            height: "12px",
             background: "#555",
-            borderRadius: "5px",
+            borderRadius: "6px",
             overflow: "hidden",
             marginBottom: "8px",
           }}
@@ -201,7 +203,7 @@ export function CharacterStats({
         <div
           style={{
             width: "100%",
-            height: "4px",
+            height: "5px",
             background: "#555",
             borderRadius: "5px",
             overflow: "hidden",
@@ -223,7 +225,8 @@ export function CharacterStats({
             textAlign: "center",
             color: "#fbbf24",
             fontWeight: "bold",
-            fontSize: "14px",
+            fontSize: "15px",
+            marginTop: "10px",
           }}
         >
           💰 Gold: {character.gold}

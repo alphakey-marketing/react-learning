@@ -104,18 +104,19 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 position: "relative",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#9ca3af", fontSize: "9px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: "#9ca3af", fontSize: "10px", fontWeight: "bold" }}>
                   {slot.icon} {slot.label}
                 </span>
                 {item && (
                   <span style={{ 
                     background: "#333", 
-                    padding: "1px 4px", 
-                    borderRadius: "3px", 
+                    padding: "2px 6px", 
+                    borderRadius: "4px", 
                     color: "#fbbf24",
-                    fontSize: "8px",
-                    fontWeight: "bold"
+                    fontSize: "10px",
+                    fontWeight: "bold",
+                    border: "1px solid #444"
                   }}>
                     ⭐ {gearScore}
                   </span>
@@ -123,14 +124,14 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
               </div>
               
               {item ? (
-                <div style={{ color: rarityColor, fontWeight: "500" }}>
+                <div style={{ color: rarityColor, fontWeight: "500", fontSize: "11px" }}>
                   {item.name}
                   {item.refinement !== undefined && item.refinement > 0 && (
                     <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
                   )}
                 </div>
               ) : (
-                <div style={{ color: "#666", fontStyle: "italic" }}>Empty</div>
+                <div style={{ color: "#666", fontStyle: "italic", fontSize: "11px" }}>Empty</div>
               )}
             </div>
           );
@@ -142,9 +143,9 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
         display: "flex",
         gap: "4px",
         marginBottom: "8px",
-        fontSize: "9px",
+        fontSize: "10px",
       }}>
-        <span style={{ color: "#9ca3af", marginRight: "4px" }}>Sort:</span>
+        <span style={{ color: "#9ca3af", marginRight: "4px", alignSelf: "center" }}>Sort:</span>
         {(["type", "rarity", "power", "name"] as SortOption[]).map((option) => (
           <button
             key={option}
@@ -154,10 +155,11 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
               background: sortBy === option ? "#3b82f6" : "#444",
               color: "white",
               border: "none",
-              borderRadius: "3px",
+              borderRadius: "4px",
               cursor: "pointer",
               textTransform: "capitalize",
-              fontSize: "9px",
+              fontSize: "10px",
+              fontWeight: sortBy === option ? "bold" : "normal",
             }}
           >
             {option}
@@ -169,10 +171,10 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "4px",
-        maxHeight: "180px",
+        gap: "8px", // slightly increased gap to make room for bigger badges
+        maxHeight: "220px", // slightly taller to fit bigger items
         overflowY: "auto",
-        padding: "4px",
+        padding: "6px",
         background: "#1a1a1a",
         borderRadius: "4px",
       }}>
@@ -180,7 +182,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
           <div style={{ 
             gridColumn: "1 / -1",
             color: "#666", 
-            fontSize: "10px",
+            fontSize: "12px",
             textAlign: "center",
             padding: "20px",
           }}>
@@ -200,11 +202,11 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
                 style={{
-                  fontSize: "20px",
-                  padding: "8px",
+                  fontSize: "24px", // Bigger icon
+                  padding: "10px 8px 14px 8px", // More bottom padding for the badge
                   background: "#2a2a2a",
                   border: `2px solid ${rarityColor}`,
-                  borderRadius: "4px",
+                  borderRadius: "6px",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -214,7 +216,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "scale(1.05)";
-                  e.currentTarget.style.boxShadow = `0 0 10px ${rarityColor}`;
+                  e.currentTarget.style.boxShadow = `0 0 12px ${rarityColor}`;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "scale(1)";
@@ -226,10 +228,11 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                   <span style={{
                     position: "absolute",
                     top: "2px",
-                    right: "2px",
-                    fontSize: "8px",
+                    right: "4px",
+                    fontSize: "10px",
                     color: "#fbbf24",
                     fontWeight: "bold",
+                    textShadow: "0px 1px 2px rgba(0,0,0,0.8)"
                   }}>
                     +{item.refinement}
                   </span>
@@ -239,12 +242,19 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 {isUpgrade && (
                   <span style={{
                     position: "absolute",
-                    bottom: "2px",
-                    right: "2px",
-                    fontSize: "10px",
+                    top: "-6px",
+                    left: "-6px",
+                    fontSize: "14px",
                     color: "#22c55e",
                     fontWeight: "bold",
-                    textShadow: "0 0 2px black"
+                    textShadow: "0 0 4px black",
+                    background: "rgba(0,0,0,0.5)",
+                    borderRadius: "50%",
+                    width: "18px",
+                    height: "18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}>
                     ▲
                   </span>
@@ -253,18 +263,20 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 {/* Power Badge */}
                 <span style={{
                   position: "absolute",
-                  bottom: "-4px",
+                  bottom: "-6px",
                   left: "50%",
                   transform: "translateX(-50%)",
-                  fontSize: "7px",
+                  fontSize: "10px", // Much bigger font
+                  fontWeight: "bold",
                   background: "#111",
                   color: "#fbbf24",
-                  padding: "1px 4px",
+                  padding: "2px 6px",
                   borderRadius: "4px",
-                  border: "1px solid #444",
-                  whiteSpace: "nowrap"
+                  border: "1px solid #666",
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.5)"
                 }}>
-                  ⭐{gearScore}
+                  ⭐ {gearScore}
                 </span>
               </button>
             );
