@@ -7,6 +7,7 @@ interface CharacterStatsProps {
   equipped: EquippedItems;
   onAddStat: (stat: keyof Stats) => void;
   onOpenSkills: () => void;
+  selectedTitle?: string;
 }
 
 export function CharacterStats({
@@ -14,6 +15,7 @@ export function CharacterStats({
   equipped,
   onAddStat,
   onOpenSkills,
+  selectedTitle,
 }: CharacterStatsProps) {
   const expProgress = Math.floor((character.exp / character.expToNext) * 100);
   const hpPercent = Math.floor((character.hp / character.maxHp) * 100);
@@ -57,6 +59,24 @@ export function CharacterStats({
             HP: {character.hp}/{character.maxHp}
           </span>
         </div>
+
+        {/* Achievement Title Display */}
+        {selectedTitle && (
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#fbbf24",
+              fontStyle: "italic",
+              marginBottom: "6px",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <span>✨</span>
+            <span>"{selectedTitle}"</span>
+          </div>
+        )}
 
         <div
           style={{
