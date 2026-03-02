@@ -38,6 +38,7 @@ interface GameCallbacks {
   onEnemyDamageDealt?: (damage: number) => void;
   onLevelUp?: (newLevel: number) => void;
   onItemDrop?: (item: Equipment) => void;
+  onEnemyKilled?: (isBoss: boolean, goldEarned: number) => void;
 }
 
 export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
@@ -553,6 +554,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const goldGain = calculateGoldGain(enemy);
       nextCharGold += goldGain;
       addLog(`💰 Gained ${goldGain} Gold.`);
+
+      // ACHIEVEMENT TRACKING: Enemy killed
+      callbacks?.onEnemyKilled?.(isBossFight, goldGain);
 
       const expGain = calculateExpGain(enemy);
       const levelUpResult = processLevelUp(char, expGain);
