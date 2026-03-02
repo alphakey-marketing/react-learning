@@ -76,15 +76,32 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
 
   const step = steps[currentStep];
 
-  useEffect(() => {
+  // Update highlight position
+  const updateHighlight = () => {
     if (step.highlightSelector) {
       const element = document.querySelector(step.highlightSelector);
       if (element) {
-        setHighlightRect(element.getBoundingClientRect());
+        const rect = element.getBoundingClientRect();
+        setHighlightRect(rect);
+      } else {
+        setHighlightRect(null);
       }
     } else {
       setHighlightRect(null);
     }
+  };
+
+  useEffect(() => {
+    updateHighlight();
+    
+    // Update on window resize or scroll
+    window.addEventListener('resize', updateHighlight);
+    window.addEventListener('scroll', updateHighlight);
+    
+    return () => {
+      window.removeEventListener('resize', updateHighlight);
+      window.removeEventListener('scroll', updateHighlight);
+    };
   }, [currentStep, step.highlightSelector]);
 
   const handleNext = () => {
@@ -112,31 +129,94 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
     }
 
     const padding = 20;
+    const boxWidth = 380;
+    const boxHeight = 400; // Approximate height
+
     switch (step.position) {
-      case 'right':
+      case 'right': {
+        const left = highlightRect.right + padding;
+        const top = highlightRect.top + highlightRect.height / 2;
+        
+        // Check if box would overflow right side
+        if (left + boxWidth > window.innerWidth) {
+          // Position on left instead
+          return {
+            top: `${top}px`,
+            right: `${window.innerWidth - highlightRect.left + padding}px`,
+            transform: 'translateY(-50%)',
+          };
+        }
+        
         return {
-          top: `${highlightRect.top + highlightRect.height / 2}px`,
-          left: `${highlightRect.right + padding}px`,
+          top: `${top}px`,
+          left: `${left}px`,
           transform: 'translateY(-50%)',
         };
-      case 'left':
+      }
+      
+      case 'left': {
+        const right = window.innerWidth - highlightRect.left + padding;
+        const top = highlightRect.top + highlightRect.height / 2;
+        
+        // Check if box would overflow left side
+        if (window.innerWidth - right + boxWidth < boxWidth) {
+          // Position on right instead
+          return {
+            top: `${top}px`,
+            left: `${highlightRect.right + padding}px`,
+            transform: 'translateY(-50%)',
+          };
+        }
+        
         return {
-          top: `${highlightRect.top + highlightRect.height / 2}px`,
-          right: `${window.innerWidth - highlightRect.left + padding}px`,
+          top: `${top}px`,
+          right: `${right}px`,
           transform: 'translateY(-50%)',
         };
-      case 'bottom':
+      }
+      
+      case 'bottom': {
+        const top = highlightRect.bottom + padding;
+        const left = highlightRect.left + highlightRect.width / 2;
+        
+        // Check if box would overflow bottom
+        if (top + boxHeight > window.innerHeight) {
+          // Position on top instead
+          return {
+            bottom: `${window.innerHeight - highlightRect.top + padding}px`,
+            left: `${left}px`,
+            transform: 'translateX(-50%)',
+          };
+        }
+        
         return {
-          top: `${highlightRect.bottom + padding}px`,
-          left: `${highlightRect.left + highlightRect.width / 2}px`,
+          top: `${top}px`,
+          left: `${left}px`,
           transform: 'translateX(-50%)',
         };
-      case 'top':
+      }
+      
+      case 'top': {
+        const bottom = window.innerHeight - highlightRect.top + padding;
+        const left = highlightRect.left + highlightRect.width / 2;
+        
+        // Check if box would overflow top
+        if (window.innerHeight - bottom + boxHeight < boxHeight) {
+          // Position on bottom instead
+          return {
+            top: `${highlightRect.bottom + padding}px`,
+            left: `${left}px`,
+            transform: 'translateX(-50%)',
+          };
+        }
+        
         return {
-          bottom: `${window.innerHeight - highlightRect.top + padding}px`,
-          left: `${highlightRect.left + highlightRect.width / 2}px`,
+          bottom: `${bottom}px`,
+          left: `${left}px`,
           transform: 'translateX(-50%)',
         };
+      }
+      
       default:
         return {
           top: '50%',
@@ -182,7 +262,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
             />
             
             {/* Pulsing arrow pointing to element */}
-            {step.position === 'right' && (
+            {step.position === 'right' && highlightRect.right + 80 < window.innerWidth && (
               <div style={{
                 position: "absolute",
                 top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
@@ -193,7 +273,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
                 ⬅️
               </div>
             )}
-            {step.position === 'left' && (
+            {step.position === 'left' && highlightRect.left > 80 && (
               <div style={{
                 position: "absolute",
                 top: `${highlightRect.top + highlightRect.height / 2 - 15}px`,
@@ -204,7 +284,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
                 ➡️
               </div>
             )}
-            {step.position === 'bottom' && (
+            {step.position === 'bottom' && highlightRect.bottom + 80 < window.innerHeight && (
               <div style={{
                 position: "absolute",
                 top: `${highlightRect.bottom + 30}px`,
@@ -225,7 +305,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         ...getBoxPosition(),
         zIndex: 10001,
         padding: "20px",
-        maxWidth: step.position === 'center' ? "500px" : "400px",
+        maxWidth: step.position === 'center' ? "500px" : "380px",
         width: step.position === 'center' ? "90%" : "auto",
       }}>
         <div style={{
@@ -240,11 +320,11 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
           <div style={{ fontSize: "48px", textAlign: "center", marginBottom: "10px" }}>
             {step.icon}
           </div>
-          <h2 style={{ textAlign: "center", color: "#60a5fa", marginTop: 0, marginBottom: "20px" }}>
+          <h2 style={{ textAlign: "center", color: "#60a5fa", marginTop: 0, marginBottom: "20px", fontSize: "20px" }}>
             {step.title}
           </h2>
           <div style={{ 
-            fontSize: "16px", 
+            fontSize: "15px", 
             lineHeight: "1.6", 
             color: "#e2e8f0", 
             minHeight: "100px", 
@@ -273,13 +353,14 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
             <button 
               onClick={handleClose}
               style={{
-                padding: "12px 20px",
+                padding: "10px 16px",
                 background: "transparent",
                 color: "#94a3b8",
                 border: "1px solid #475569",
                 borderRadius: "8px",
                 cursor: "pointer",
                 fontWeight: "bold",
+                fontSize: "13px",
                 flex: 1,
                 transition: "all 0.2s",
                 pointerEvents: "auto",
@@ -292,13 +373,14 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
             <button 
               onClick={handleNext}
               style={{
-                padding: "12px 20px",
+                padding: "10px 16px",
                 background: "linear-gradient(45deg, #3b82f6, #2563eb)", 
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
                 cursor: "pointer",
                 fontWeight: "bold",
+                fontSize: "13px",
                 flex: 2,
                 boxShadow: "0 4px 12px rgba(59, 130, 246, 0.4)",
                 transition: "transform 0.1s",
