@@ -139,8 +139,8 @@ export function MiniLevelGame() {
         <AchievementPopup
           key={`${achievement.id}-${index}`}
           achievement={achievement}
-          onComplete={() => {
-            achievements.clearNewlyUnlocked();
+          onComplete={(achievementId) => {
+            achievements.removeUnlockedAchievement(achievementId);
           }}
         />
       ))}

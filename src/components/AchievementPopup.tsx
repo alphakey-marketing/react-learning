@@ -4,7 +4,7 @@ import { getRarityColor } from "../types/equipment";
 
 interface AchievementPopupProps {
   achievement: Achievement;
-  onComplete: () => void;
+  onComplete: (achievementId: string) => void;
 }
 
 export function AchievementPopup({ achievement, onComplete }: AchievementPopupProps) {
@@ -19,12 +19,12 @@ export function AchievementPopup({ achievement, onComplete }: AchievementPopupPr
     const hideTimer = setTimeout(() => {
       setExiting(true);
       setTimeout(() => {
-        onComplete();
+        onComplete(achievement.id);
       }, 500);
     }, 5000);
 
     return () => clearTimeout(hideTimer);
-  }, [onComplete]);
+  }, [achievement.id, onComplete]);
 
   const rarityColorMap = {
     common: "#9ca3af",

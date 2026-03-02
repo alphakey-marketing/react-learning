@@ -27,6 +27,7 @@ interface UseAchievementsReturn {
   stats: AchievementStats;
   newlyUnlocked: Achievement[];
   clearNewlyUnlocked: () => void;
+  removeUnlockedAchievement: (achievementId: string) => void;
   trackKill: (isBoss: boolean) => void;
   trackDamage: (damage: number) => void;
   trackGoldEarned: (gold: number) => void;
@@ -237,11 +238,16 @@ export function useAchievements(): UseAchievementsReturn {
     setNewlyUnlocked([]);
   }, []);
 
+  const removeUnlockedAchievement = useCallback((achievementId: string) => {
+    setNewlyUnlocked((prev) => prev.filter((ach) => ach.id !== achievementId));
+  }, []);
+
   return {
     playerAchievements,
     stats,
     newlyUnlocked,
     clearNewlyUnlocked,
+    removeUnlockedAchievement,
     trackKill,
     trackDamage,
     trackGoldEarned,
