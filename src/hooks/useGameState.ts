@@ -123,6 +123,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const mpPotionsRef = useRef<number>(mpPotions);
   const autoHpPercentRef = useRef<number>(autoHpPercent);
   const autoMpPercentRef = useRef<number>(autoMpPercent);
+  const autoAttackEnabledRef = useRef<boolean>(autoAttackEnabled);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -140,6 +141,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { mpPotionsRef.current = mpPotions; }, [mpPotions]);
   useEffect(() => { autoHpPercentRef.current = autoHpPercent; }, [autoHpPercent]);
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
+  useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
   const weaponBonus = useMemo(() => equipped.weapon?.atk || equipped.weapon?.stat || 0, [equipped.weapon]);
   const armorBonus = useMemo(() => equipped.armor?.def || equipped.armor?.stat || 0, [equipped.armor]);
@@ -702,15 +704,23 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId, char.hp]);
 
+  // Auto-attack effect - use ref to prevent stale closure
   useEffect(() => {
-    if (autoAttackEnabled && canAttack && currentZoneId !== 0 && charRef.current.hp > 0) {
-      const timer = setTimeout(() => {
-        battleActionRef.current();
-      }, 10);
-      
-      return () => clearTimeout(timer);
+    if (!autoAttackEnabled || !canAttack || currentZoneId === 0) {
+      return;
     }
-  }, [autoAttackEnabled, canAttack, currentZoneId]);
+    
+    // Double-check character is still alive using ref (prevents race conditions)
+    if (charRef.current.hp <= 0) {
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      battleActionRef.current();
+    }, 10);
+    
+    return () => clearTimeout(timer);
+  }, [autoAttackEnabled, canAttack, currentZoneId, char.hp]);
 
   useEffect(() => {
     if (autoPotionTimerRef.current !== null) {
