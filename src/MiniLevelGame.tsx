@@ -9,6 +9,7 @@ import { PotionBar } from "./components/PotionBar";
 import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
+import { RefineNPC } from "./components/RefineNPC";
 // import { DevTools } from "./components/DevTools"; // Hidden for MVP
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
@@ -30,6 +31,7 @@ export function MiniLevelGame() {
   // const achievements = useAchievements(); // DISABLED - causing freeze
   
   // const [showAchievements, setShowAchievements] = useState(false);
+  const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("hasSeenTutorial") !== "true";
@@ -72,16 +74,6 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // Update character stats for achievements - DISABLED
-  // useEffect(() => {
-  //   achievements.updateCharacterStats(game.char, game.inventory, game.equipped);
-  // }, [game.char, game.inventory, game.equipped, achievements]);
-
-  // Track zone visits - DISABLED
-  // useEffect(() => {
-  //   achievements.trackZoneVisit(game.currentZoneId);
-  // }, [game.currentZoneId, achievements]);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -101,30 +93,24 @@ export function MiniLevelGame() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial]);
 
-  // Wrap game functions to track achievements - DISABLED
   const wrappedSellItem = () => {
     game.sellItem();
-    // achievements.trackItemSold();
   };
 
   const wrappedUseHpPotion = () => {
     game.useHpPotion();
-    // achievements.trackPotionUsed();
   };
 
   const wrappedUseMpPotion = () => {
     game.useMpPotion();
-    // achievements.trackPotionUsed();
   };
 
   const wrappedHandleRespawn = () => {
     game.handleRespawn();
-    // achievements.trackDeath();
   };
 
   const wrappedHandleJobChange = (newJob: any) => {
     game.handleJobChange(newJob);
-    // achievements.trackJobChange();
   };
 
   return (
@@ -146,38 +132,6 @@ export function MiniLevelGame() {
       
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
-
-      {/* Achievement Popups - DISABLED */}
-      {/* {achievements.newlyUnlocked.map((achievement, index) => (
-        <AchievementPopup
-          key={`${achievement.id}-${index}`}
-          achievement={achievement}
-          onComplete={(achievementId) => {
-            achievements.removeUnlockedAchievement(achievementId);
-          }}
-        />
-      ))} */}
-
-      {/* Achievement Gallery - DISABLED */}
-      {/* {showAchievements && (
-        <AchievementList
-          unlockedIds={achievements.playerAchievements.unlocked}
-          progress={achievements.playerAchievements.progress}
-          onClose={() => setShowAchievements(false)}
-        />
-      )} */}
-
-      {/* DevTools hidden for MVP - Uncomment to enable during development */}
-      {/* <DevTools
-        character={game.char}
-        onAddBaseLevel={game.devAddBaseLevel}
-        onAddJobLevel={game.devAddJobLevel}
-        onAddGold={game.devAddGold}
-        onAddPotions={game.devAddPotions}
-        onFullHeal={game.devFullHeal}
-        onAddGear={game.devAddGear}
-        onUnlockAllZones={game.devUnlockAllZones}
-      /> */}
 
       <div
         style={{
@@ -226,38 +180,6 @@ export function MiniLevelGame() {
             <span>📖</span>
             <span>How to Play</span>
           </button>
-
-          {/* Achievement Button - DISABLED */}
-          {/* <button
-            onClick={() => setShowAchievements(true)}
-            style={{
-              padding: "8px 16px",
-              background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
-              color: "white",
-              border: "2px solid #fcd34d",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "14px",
-              boxShadow: "0 0 15px rgba(251, 191, 36, 0.4)",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <span>🏆</span>
-            <span>Achievements</span>
-            <span
-              style={{
-                background: "rgba(0, 0, 0, 0.3)",
-                padding: "2px 8px",
-                borderRadius: "12px",
-                fontSize: "12px",
-              }}
-            >
-              {achievements.playerAchievements.unlocked.size}
-            </span>
-          </button> */}
         </div>
 
         <div
@@ -275,7 +197,6 @@ export function MiniLevelGame() {
                 equipped={game.equipped}
                 onAddStat={game.addStat}
                 onOpenSkills={() => game.setShowSkillWindow(true)}
-                // selectedTitle={achievements.playerAchievements.selectedTitle} // DISABLED
               />
             </div>
             
@@ -305,27 +226,35 @@ export function MiniLevelGame() {
                   ? "🧙 Job Change!"
                   : "🧙 Job Master"}
               </button>
-              
-              {game.currentZoneId !== 0 && (
-                <button
-                  onClick={game.escapeToTown}
-                  disabled={game.char.hp <= 0}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    background: game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
-                    fontWeight: "bold",
-                    fontSize: "13px",
-                    boxShadow: game.char.hp > 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "none",
-                  }}
-                >
-                  🏛️ Escape to Town
-                </button>
-              )}
+
+              <button
+                onClick={() => {
+                  if (game.currentZoneId !== 0) {
+                    game.escapeToTown();
+                  } else {
+                    setShowRefineNPC(true);
+                  }
+                }}
+                disabled={game.char.hp <= 0}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  background: game.currentZoneId !== 0 
+                    ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
+                    : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
+                  fontWeight: "bold",
+                  fontSize: "13px",
+                  boxShadow: game.char.hp > 0 
+                    ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
+                    : "none",
+                }}
+              >
+                {game.currentZoneId !== 0 ? "🏛️ Escape to Town" : "🔨 Blacksmith"}
+              </button>
             </div>
 
             <EnemyDisplay 
@@ -404,6 +333,16 @@ export function MiniLevelGame() {
             currentJobLevel={game.char.jobLevel}
             onJobChange={wrappedHandleJobChange}
             onClose={() => game.setShowJobChangeNPC(false)}
+          />
+        )}
+
+        {showRefineNPC && (
+          <RefineNPC
+            character={game.char}
+            inventory={game.inventory}
+            equipped={game.equipped}
+            onRefine={game.refineItem}
+            onClose={() => setShowRefineNPC(false)}
           />
         )}
 

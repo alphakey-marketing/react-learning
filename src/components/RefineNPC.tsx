@@ -1,0 +1,263 @@
+import { Equipment, EquippedItems, getRarityColor } from "../types/equipment";
+import { Character } from "../types/character";
+import { useState } from "react";
+
+interface RefineNPCProps {
+  character: Character;
+  inventory: Equipment[];
+  equipped: EquippedItems;
+  onRefine: (item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) => void;
+  onClose: () => void;
+}
+
+export function RefineNPC({ character, inventory, equipped, onRefine, onClose }: RefineNPCProps) {
+  const [activeTab, setActiveTab] = useState<"equipped" | "inventory">("equipped");
+  const [selectedItem, setSelectedItem] = useState<{ item: Equipment; isEquipped: boolean; slotKey?: keyof EquippedItems } | null>(null);
+
+  const getRefineCost = (item: Equipment) => {
+    return 2000 * ((item.refinement || 0) + 1);
+  };
+
+  const getSuccessRate = (currentRefine: number) => {
+    if (currentRefine < 4) return 100;
+    const rates: Record<number, number> = { 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10 };
+    return rates[currentRefine] || 0;
+  };
+
+  const equippedList = Object.entries(equipped).filter(([_, item]) => item !== null && item.type !== "accessory") as [keyof EquippedItems, Equipment][];
+  const inventoryList = inventory.filter(i => i.type !== "accessory");
+
+  const renderItemCard = (item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) => {
+    const isSelected = selectedItem?.item.id === item.id;
+    const isWeapon = item.type === "weapon";
+    const currentRefine = item.refinement || 0;
+    
+    return (
+      <div
+        key={item.id}
+        onClick={() => setSelectedItem({ item, isEquipped, slotKey })}
+        style={{
+          border: `1px solid ${isSelected ? "#fbbf24" : "#444"}`,
+          borderRadius: "6px",
+          padding: "8px",
+          background: isSelected ? "rgba(251, 191, 36, 0.1)" : "rgba(0,0,0,0.3)",
+          cursor: "pointer",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "8px"
+        }}
+      >
+        <div>
+          <div style={{ color: getRarityColor(item.rarity), fontWeight: "bold" }}>
+            {currentRefine > 0 ? `+${currentRefine} ` : ""}{item.name}
+          </div>
+          <div style={{ fontSize: "12px", color: "#888" }}>
+            {isWeapon ? "Weapon" : "Armor"} | {isWeapon ? `ATK: ${item.atk || item.stat}` : `DEF: ${item.def || item.stat}`}
+          </div>
+        </div>
+        {currentRefine >= 10 && (
+          <div style={{ color: "#fbbf24", fontWeight: "bold", fontSize: "12px" }}>MAX</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{
+      position: "fixed",
+      top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(0, 0, 0, 0.8)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    }}>
+      <div style={{
+        background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
+        border: "2px solid #fbbf24",
+        borderRadius: "12px",
+        width: "600px",
+        maxWidth: "95%",
+        height: "80vh",
+        display: "flex",
+        flexDirection: "column",
+        boxShadow: "0 0 30px rgba(251, 191, 36, 0.2)",
+      }}>
+        
+        {/* Header */}
+        <div style={{
+          padding: "15px 20px",
+          borderBottom: "1px solid #374151",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <div>
+            <h2 style={{ margin: 0, color: "#fbbf24", fontSize: "20px" }}>🔨 The Blacksmith</h2>
+            <div style={{ fontSize: "13px", color: "#9ca3af", marginTop: "4px" }}>
+              "I can make your gear stronger... for a price."
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#9ca3af",
+              fontSize: "24px",
+              cursor: "pointer"
+            }}
+          >×</button>
+        </div>
+
+        {/* Resources */}
+        <div style={{
+          padding: "10px 20px",
+          background: "rgba(0,0,0,0.3)",
+          display: "flex",
+          justifyContent: "space-around",
+          borderBottom: "1px solid #374151",
+          fontSize: "14px"
+        }}>
+          <div style={{ color: "#fbbf24" }}>💰 {character.gold}g</div>
+          <div style={{ color: "#a78bfa" }}>💎 Elunium: {character.elunium}</div>
+          <div style={{ color: "#f87171" }}>🔥 Oridecon: {character.oridecon}</div>
+        </div>
+
+        {/* Main Content Area */}
+        <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+          
+          {/* List Section */}
+          <div style={{ width: "50%", borderRight: "1px solid #374151", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", padding: "10px" }}>
+              <button
+                onClick={() => { setActiveTab("equipped"); setSelectedItem(null); }}
+                style={{
+                  flex: 1, padding: "8px",
+                  background: activeTab === "equipped" ? "#374151" : "transparent",
+                  color: "white", border: "none", cursor: "pointer",
+                  borderRadius: "4px"
+                }}
+              >Equipped</button>
+              <button
+                onClick={() => { setActiveTab("inventory"); setSelectedItem(null); }}
+                style={{
+                  flex: 1, padding: "8px",
+                  background: activeTab === "inventory" ? "#374151" : "transparent",
+                  color: "white", border: "none", cursor: "pointer",
+                  borderRadius: "4px"
+                }}
+              >Inventory</button>
+            </div>
+            
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 10px 10px 10px" }}>
+              {activeTab === "equipped" && equippedList.map(([key, item]) => renderItemCard(item, true, key))}
+              {activeTab === "equipped" && equippedList.length === 0 && (
+                <div style={{ textAlign: "center", color: "#666", marginTop: "20px" }}>No equipped gear to refine.</div>
+              )}
+
+              {activeTab === "inventory" && inventoryList.map(item => renderItemCard(item, false))}
+              {activeTab === "inventory" && inventoryList.length === 0 && (
+                <div style={{ textAlign: "center", color: "#666", marginTop: "20px" }}>No inventory gear to refine.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Details Section */}
+          <div style={{ width: "50%", padding: "20px", display: "flex", flexDirection: "column" }}>
+            {selectedItem ? (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                  <div style={{ fontSize: "40px", marginBottom: "10px" }}>
+                    {selectedItem.item.type === "weapon" ? "⚔️" : "🛡️"}
+                  </div>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", color: getRarityColor(selectedItem.item.rarity) }}>
+                    {selectedItem.item.refinement ? `+${selectedItem.item.refinement} ` : ""}{selectedItem.item.name}
+                  </div>
+                </div>
+
+                <div style={{ background: "rgba(0,0,0,0.3)", padding: "15px", borderRadius: "8px", marginBottom: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span>Current Level:</span>
+                    <span style={{ color: "#fbbf24" }}>+{selectedItem.item.refinement || 0}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span>Next Level:</span>
+                    <span style={{ color: "#10b981" }}>+{(selectedItem.item.refinement || 0) + 1}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span>Success Rate:</span>
+                    <span style={{ color: getSuccessRate(selectedItem.item.refinement || 0) === 100 ? "#10b981" : "#ef4444", fontWeight: "bold" }}>
+                      {getSuccessRate(selectedItem.item.refinement || 0)}%
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Failure Penalty:</span>
+                    <span style={{ color: (selectedItem.item.refinement || 0) >= 4 ? "#ef4444" : "#10b981", fontWeight: "bold" }}>
+                      {(selectedItem.item.refinement || 0) >= 4 ? "Item Destroyed" : "Safe"}
+                    </span>
+                  </div>
+                </div>
+
+                {(selectedItem.item.refinement || 0) < 10 ? (
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                    <div style={{ marginBottom: "15px", fontSize: "14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                        <span>Required Gold:</span>
+                        <span style={{ color: character.gold >= getRefineCost(selectedItem.item) ? "#fff" : "#ef4444" }}>
+                          {getRefineCost(selectedItem.item)}g
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Required Material:</span>
+                        <span style={{ color: (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) >= 1 ? "#fff" : "#ef4444" }}>
+                          1x {selectedItem.item.type === "weapon" ? "Oridecon" : "Elunium"}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        onRefine(selectedItem.item, selectedItem.isEquipped, selectedItem.slotKey);
+                        setSelectedItem(null); // Deselect to allow state to refresh cleanly
+                      }}
+                      disabled={
+                        character.gold < getRefineCost(selectedItem.item) || 
+                        (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1
+                      }
+                      style={{
+                        padding: "12px",
+                        background: "linear-gradient(45deg, #fbbf24, #d97706)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        fontSize: "16px",
+                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1) ? 0.5 : 1
+                      }}
+                    >
+                      Refine Item
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                    <div style={{ textAlign: "center", padding: "15px", color: "#fbbf24", fontWeight: "bold", background: "rgba(251, 191, 36, 0.1)", borderRadius: "8px" }}>
+                      This item has reached its maximum potential!
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "#666", textAlign: "center", padding: "20px" }}>
+                Select an item from the left to view refinement details.
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
