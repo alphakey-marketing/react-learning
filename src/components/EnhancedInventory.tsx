@@ -95,7 +95,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
         justifyContent: "space-between",
         alignItems: "center",
       }}>
-        <span>🎪 Equipment & Inventory</span>
+        <span>🎒 Equipment & Inventory</span>
         <span style={{ fontSize: "11px", color: "#9ca3af" }}>({inventory.length})</span>
       </h3>
       
@@ -126,72 +126,77 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                 position: "relative",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {/* Combat Power Badge - Top Left */}
+              {item && (
+                <span style={{ 
+                  position: "absolute",
+                  top: "4px",
+                  left: "4px",
+                  background: "#333", 
+                  padding: "2px 6px", 
+                  borderRadius: "4px", 
+                  color: "#fbbf24",
+                  fontSize: "10px",
+                  fontWeight: "bold",
+                  border: "1px solid #444",
+                  zIndex: 1,
+                }}>
+                  ⭐ {gearScore}
+                </span>
+              )}
+              
+              {/* Unequip Button - Top Right */}
+              {item && onUnequip && (
+                <button
+                  onClick={(e) => handleUnequipClick(slot.key, e)}
+                  style={{
+                    position: "absolute",
+                    top: "4px",
+                    right: "4px",
+                    width: "20px",
+                    height: "20px",
+                    background: "transparent",
+                    border: "1px solid #dc2626",
+                    borderRadius: "4px",
+                    color: "#dc2626",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.2s",
+                    lineHeight: "1",
+                    padding: "0",
+                    zIndex: 2,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#dc2626";
+                    e.currentTarget.style.color = "white";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "#dc2626";
+                  }}
+                  title={`Unequip ${item.name}`}
+                >
+                  ×
+                </button>
+              )}
+              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px" }}>
                 <span style={{ color: "#9ca3af", fontSize: "10px", fontWeight: "bold" }}>
                   {slot.icon} {slot.label}
                 </span>
-                {item && (
-                  <span style={{ 
-                    background: "#333", 
-                    padding: "2px 6px", 
-                    borderRadius: "4px", 
-                    color: "#fbbf24",
-                    fontSize: "10px",
-                    fontWeight: "bold",
-                    border: "1px solid #444"
-                  }}>
-                    ⭐ {gearScore}
-                  </span>
-                )}
               </div>
               
               {item ? (
-                <>
-                  <div style={{ color: rarityColor, fontWeight: "500", fontSize: "11px" }}>
-                    {item.name}
-                    {item.refinement !== undefined && item.refinement > 0 && (
-                      <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
-                    )}
-                  </div>
-                  
-                  {/* Unequip Button - Top Right */}
-                  {onUnequip && (
-                    <button
-                      onClick={(e) => handleUnequipClick(slot.key, e)}
-                      style={{
-                        position: "absolute",
-                        top: "4px",
-                        right: "4px",
-                        width: "20px",
-                        height: "20px",
-                        background: "transparent",
-                        border: "1px solid #dc2626",
-                        borderRadius: "4px",
-                        color: "#dc2626",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        transition: "all 0.2s",
-                        lineHeight: "1",
-                        padding: "0",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#dc2626";
-                        e.currentTarget.style.color = "white";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#dc2626";
-                      }}
-                      title={`Unequip ${item.name}`}
-                    >
-                      ×
-                    </button>
+                <div style={{ color: rarityColor, fontWeight: "500", fontSize: "11px" }}>
+                  {item.name}
+                  {item.refinement !== undefined && item.refinement > 0 && (
+                    <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
                   )}
-                </>
+                </div>
               ) : (
                 <div style={{ color: "#666", fontStyle: "italic", fontSize: "11px" }}>Empty</div>
               )}
