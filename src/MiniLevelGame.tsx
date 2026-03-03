@@ -134,23 +134,23 @@ export function MiniLevelGame() {
     game.handleJobChange(newJob);
   };
 
-  // Determine background based on zone
+  // Determine background based on zone - MADE MORE VIBRANT
   const getZoneBackground = () => {
     if (game.currentZoneId === 0) {
-      // Town - Cozy warm gradient
-      return "radial-gradient(circle at 50% 30%, #2c3e50 0%, #000000 100%)";
+      // Town - Cozy blue/slate gradient (safe zone)
+      return "radial-gradient(circle at 50% 20%, #334155 0%, #1e293b 50%, #0f172a 100%)";
     } else if (game.bossAvailable) {
-      // Boss zone - Dark red menacing
-      return "radial-gradient(circle at 50% 30%, #3f0f0f 0%, #000000 100%)";
+      // Boss zone - Dramatic RED (danger!)
+      return "radial-gradient(circle at 50% 20%, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)";
     } else if (game.currentZoneId <= 2) {
-      // Forest - Greenish
-      return "radial-gradient(circle at 50% 30%, #1a3a2a 0%, #000000 100%)";
+      // Forest - Rich GREEN tones
+      return "radial-gradient(circle at 50% 20%, #14532d 0%, #052e16 50%, #021a0a 100%)";
     } else if (game.currentZoneId <= 4) {
-      // Desert - Oranges/Browns
-      return "radial-gradient(circle at 50% 30%, #4a2c10 0%, #000000 100%)";
+      // Desert - Sandy ORANGE/BROWN
+      return "radial-gradient(circle at 50% 20%, #78350f 0%, #451a03 50%, #1c0a03 100%)";
     } else {
-      // Deep dungeon - Purple/Black
-      return "radial-gradient(circle at 50% 30%, #1e102a 0%, #000000 100%)";
+      // Deep dungeon - Mystical PURPLE
+      return "radial-gradient(circle at 50% 20%, #4c1d95 0%, #2e1065 50%, #1a0a3d 100%)";
     }
   };
 
