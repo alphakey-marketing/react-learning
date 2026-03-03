@@ -27,4 +27,6 @@ export interface Character {
   skillPoints: number;
   learnedSkills: Record<string, number>;
   autoAttackSkillId: string; // Which skill to use for auto-attack
+  elunium: number; // Armor refine material
+  oridecon: number; // Weapon refine material
 }
