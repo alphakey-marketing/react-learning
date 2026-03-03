@@ -66,6 +66,16 @@ export function MiniLevelGame() {
     onItemDrop: (item) => {
       addDroppingItem(item);
     },
+    onMaterialDrop: (material: 'elunium' | 'oridecon', amount: number) => {
+      const materialText = material === 'elunium' ? `💎 +${amount} Elunium` : `🔥 +${amount} Oridecon`;
+      const materialColor = material === 'elunium' ? '#a78bfa' : '#f87171';
+      
+      addFloatingText(materialText, {
+        color: materialColor,
+        fontSize: 28,
+        isLevelUp: true, // Use level-up animation style for emphasis
+      });
+    },
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
       // achievements.trackKill(isBoss); // DISABLED
       // achievements.trackGoldEarned(goldEarned); // DISABLED
