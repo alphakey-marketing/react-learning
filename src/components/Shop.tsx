@@ -21,35 +21,66 @@ export function Shop({
   onBuyMpPotion,
 }: ShopProps) {
   const [showSellModal, setShowSellModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const calculateSellPrice = (item: Equipment) => {
-    return Math.floor(item.stat * 2);
+    return Math.floor((item.atk || item.def || item.stat || 1) * 2);
   };
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
+      case "legendary":
+        return "#ff6b35";
       case "epic":
         return "#a855f7";
       case "rare":
         return "#3b82f6";
+      case "uncommon":
+        return "#22c55e";
       case "common":
       default:
-        return "#666";
+        return "#9ca3af";
+    }
+  };
+
+  const getTotalSellValue = () => {
+    return inventory
+      .filter(item => selectedItems.has(item.id))
+      .reduce((total, item) => total + calculateSellPrice(item), 0);
+  };
+
+  const handleToggleItem = (itemId: string) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.size === inventory.length) {
+      // Deselect all
+      setSelectedItems(new Set());
+    } else {
+      // Select all
+      setSelectedItems(new Set(inventory.map(item => item.id)));
     }
   };
 
   const handleSellConfirm = () => {
-    if (selectedItem) {
-      onSellItem(selectedItem);
-      setShowSellModal(false);
-      setSelectedItem(null);
-    }
+    const itemsToSell = inventory.filter(item => selectedItems.has(item.id));
+    itemsToSell.forEach(item => onSellItem(item));
+    setShowSellModal(false);
+    setSelectedItems(new Set());
   };
 
   const handleSellCancel = () => {
     setShowSellModal(false);
-    setSelectedItem(null);
+    setSelectedItems(new Set());
   };
 
   return (
@@ -201,7 +232,7 @@ export function Shop({
         </div>
       </div>
 
-      {/* Sell Item Modal */}
+      {/* Sell Item Modal with Multi-Select */}
       {showSellModal && (
         <div
           style={{
@@ -223,64 +254,90 @@ export function Shop({
               background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
               border: "2px solid #f59e0b",
               borderRadius: "12px",
-              padding: "20px",
               maxWidth: "500px",
               width: "90%",
-              maxHeight: "70vh",
-              overflowY: "auto",
+              maxHeight: "80vh",
+              display: "flex",
+              flexDirection: "column",
               color: "white",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2
-              style={{
-                margin: "0 0 15px 0",
-                fontSize: "20px",
-                color: "#fbbf24",
-                textAlign: "center",
-                borderBottom: "2px solid #f59e0b",
-                paddingBottom: "10px",
-              }}
-            >
-              💰 Sell Items
-            </h2>
-
-            {inventory.length === 0 ? (
-              <div
+            {/* Header */}
+            <div style={{
+              padding: "20px 20px 15px 20px",
+              borderBottom: "2px solid #f59e0b",
+            }}>
+              <h2
                 style={{
+                  margin: "0 0 10px 0",
+                  fontSize: "20px",
+                  color: "#fbbf24",
                   textAlign: "center",
-                  padding: "20px",
-                  color: "#666",
-                  fontSize: "14px",
                 }}
               >
-                No items to sell
-              </div>
-            ) : (
-              <div style={{ marginBottom: "15px" }}>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#aaa",
-                    marginBottom: "10px",
-                  }}
-                >
-                  Select an item to sell:
+                💰 Sell Items
+              </h2>
+              
+              {inventory.length > 0 && (
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  fontSize: "12px",
+                }}>
+                  <button
+                    onClick={handleSelectAll}
+                    style={{
+                      padding: "6px 12px",
+                      background: selectedItems.size === inventory.length ? "#dc2626" : "#3b82f6",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontSize: "11px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {selectedItems.size === inventory.length ? "✕ Deselect All" : "✓ Select All"}
+                  </button>
+                  <div style={{ color: "#aaa" }}>
+                    {selectedItems.size} / {inventory.length} selected
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* Scrollable Items List */}
+            <div style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "15px 20px",
+            }}>
+              {inventory.length === 0 ? (
                 <div
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
+                    textAlign: "center",
+                    padding: "20px",
+                    color: "#666",
+                    fontSize: "14px",
                   }}
                 >
+                  No items to sell
+                </div>
+              ) : (
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}>
                   {inventory.map((item) => {
                     const sellPrice = calculateSellPrice(item);
-                    const isSelected = selectedItem?.id === item.id;
+                    const isSelected = selectedItems.has(item.id);
                     return (
                       <button
                         key={item.id}
-                        onClick={() => setSelectedItem(item)}
+                        onClick={() => handleToggleItem(item.id)}
                         style={{
                           padding: "12px",
                           background: isSelected
@@ -295,14 +352,38 @@ export function Shop({
                           color: "white",
                           fontSize: "13px",
                           transition: "all 0.2s",
+                          position: "relative",
                         }}
                       >
+                        {/* Selection Checkbox */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "8px",
+                            left: "8px",
+                            width: "20px",
+                            height: "20px",
+                            borderRadius: "4px",
+                            border: isSelected ? "2px solid #fbbf24" : "2px solid #666",
+                            background: isSelected ? "#fbbf24" : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                            color: "#000",
+                          }}
+                        >
+                          {isSelected && "✓"}
+                        </div>
+                        
                         <div
                           style={{
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
                             marginBottom: "6px",
+                            marginLeft: "28px",
                           }}
                         >
                           <span
@@ -311,7 +392,16 @@ export function Shop({
                               color: getRarityColor(item.rarity),
                             }}
                           >
-                            {item.type === "weapon" ? "⚔️" : "🛡️"} {item.name}
+                            {item.type === "weapon" && "⚔️"}
+                            {item.type === "armor" && "🛡️"}
+                            {item.type === "head" && "🎩"}
+                            {item.type === "garment" && "🧥"}
+                            {item.type === "footgear" && "👢"}
+                            {item.type === "accessory" && "💍"}
+                            {" "}{item.name}
+                            {item.refinement !== undefined && item.refinement > 0 && (
+                              <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
+                            )}
                           </span>
                           <span
                             style={{
@@ -328,11 +418,12 @@ export function Shop({
                             color: "#888",
                             display: "flex",
                             gap: "10px",
+                            marginLeft: "28px",
                           }}
                         >
-                          <span>
-                            {item.type === "weapon" ? "ATK" : "DEF"}: +{item.stat}
-                          </span>
+                          {item.atk && <span>ATK: +{item.atk}</span>}
+                          {item.def && <span>DEF: +{item.def}</span>}
+                          {item.stat && <span>STAT: +{item.stat}</span>}
                           <span
                             style={{
                               color: getRarityColor(item.rarity),
@@ -346,47 +437,85 @@ export function Shop({
                     );
                   })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Action Buttons */}
-            <div style={{ display: "flex", gap: "8px", marginTop: "15px" }}>
-              <button
-                onClick={handleSellConfirm}
-                disabled={!selectedItem}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  background: selectedItem
-                    ? "linear-gradient(to bottom, #22c55e, #16a34a)"
-                    : "#555",
-                  color: "white",
-                  border: "none",
+            {/* Sticky Footer with Total and Action Buttons */}
+            <div style={{
+              padding: "15px 20px 20px 20px",
+              borderTop: "2px solid #333",
+              background: "linear-gradient(to top, #1a1a1a, #252525)",
+              borderRadius: "0 0 10px 10px",
+            }}>
+              {/* Total Value Display */}
+              {selectedItems.size > 0 && (
+                <div style={{
+                  marginBottom: "12px",
+                  padding: "12px",
+                  background: "rgba(34, 197, 94, 0.15)",
+                  border: "2px solid #22c55e",
                   borderRadius: "6px",
-                  cursor: selectedItem ? "pointer" : "not-allowed",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  opacity: selectedItem ? 1 : 0.5,
-                }}
-              >
-                ✓ Confirm Sale
-              </button>
-              <button
-                onClick={handleSellCancel}
-                style={{
-                  flex: 1,
-                  padding: "10px",
-                  background: "linear-gradient(to bottom, #dc2626, #991b1b)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                }}
-              >
-                ✕ Cancel
-              </button>
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "4px" }}>
+                    Total Sale Value
+                  </div>
+                  <div style={{ 
+                    fontSize: "24px", 
+                    fontWeight: "bold", 
+                    color: "#22c55e",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                  }}>
+                    💰 {getTotalSellValue()}g
+                  </div>
+                  <div style={{ fontSize: "10px", color: "#888", marginTop: "4px" }}>
+                    Selling {selectedItems.size} item{selectedItems.size !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={handleSellConfirm}
+                  disabled={selectedItems.size === 0}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: selectedItems.size > 0
+                      ? "linear-gradient(to bottom, #22c55e, #16a34a)"
+                      : "#555",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: selectedItems.size > 0 ? "pointer" : "not-allowed",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    opacity: selectedItems.size > 0 ? 1 : 0.5,
+                  }}
+                >
+                  ✓ Confirm Sale
+                </button>
+                <button
+                  onClick={handleSellCancel}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: "linear-gradient(to bottom, #dc2626, #991b1b)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  ✕ Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
