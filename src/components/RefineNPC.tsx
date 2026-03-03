@@ -49,9 +49,12 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
     if (result) {
       setRefineResult(result);
       
-      // Clear selection if item broke
+      // If item broke, clear selection after showing message for 3 seconds
       if (result.broken) {
-        setSelectedItem(null);
+        setTimeout(() => {
+          setSelectedItem(null);
+          setRefineResult(null);
+        }, 3000);
       } else if (result.success) {
         // Update selected item to reflect new refinement level for UI continuity
         setSelectedItem(prev => {
@@ -64,6 +67,16 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
             }
           };
         });
+        
+        // Auto-dismiss success message after 2 seconds
+        setTimeout(() => {
+          setRefineResult(null);
+        }, 2000);
+      } else {
+        // Failed but not broken (safe fail) - keep item selected, dismiss message after 2 seconds
+        setTimeout(() => {
+          setRefineResult(null);
+        }, 2000);
       }
     }
   };
@@ -211,33 +224,39 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
           {/* Details Section */}
           <div style={{ width: "50%", padding: "20px", display: "flex", flexDirection: "column", position: "relative" }}>
             
-            {/* Feedback Message Overlay */}
+            {/* Feedback Message Overlay - Always visible when exists */}
             {refineResult && (
               <div style={{
                 position: "absolute",
                 top: "20px",
                 left: "20px",
                 right: "20px",
-                padding: "10px",
+                padding: "12px",
                 borderRadius: "8px",
                 textAlign: "center",
                 fontWeight: "bold",
+                fontSize: "15px",
                 zIndex: 10,
                 animation: "popIn 0.3s ease-out",
                 background: refineResult.success 
-                  ? "rgba(16, 185, 129, 0.9)" 
+                  ? "rgba(16, 185, 129, 0.95)" 
                   : refineResult.broken 
-                    ? "rgba(239, 68, 68, 0.9)" 
-                    : "rgba(245, 158, 11, 0.9)",
+                    ? "rgba(239, 68, 68, 0.95)" 
+                    : "rgba(245, 158, 11, 0.95)",
                 color: "white",
-                boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.5)",
+                border: refineResult.success 
+                  ? "2px solid #10b981" 
+                  : refineResult.broken 
+                    ? "2px solid #ef4444" 
+                    : "2px solid #f59e0b",
               }}>
                 {refineResult.message}
               </div>
             )}
 
             {selectedItem ? (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", marginTop: refineResult ? "50px" : "0", transition: "margin 0.3s" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", marginTop: refineResult ? "70px" : "0", transition: "margin 0.3s" }}>
                 <div style={{ textAlign: "center", marginBottom: "15px" }}>
                   <div style={{ fontSize: "40px", marginBottom: "10px" }}>
                     {selectedItem.item.type === "weapon" ? "⚔️" : "🛡️"}
@@ -295,7 +314,8 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                       onClick={handleRefine}
                       disabled={
                         character.gold < getRefineCost(selectedItem.item) || 
-                        (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1
+                        (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1 ||
+                        refineResult !== null  // Disable during refinement animation
                       }
                       style={{
                         padding: "12px",
@@ -306,14 +326,14 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                         cursor: "pointer",
                         fontWeight: "bold",
                         fontSize: "16px",
-                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1) ? 0.5 : 1,
+                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1 || refineResult !== null) ? 0.5 : 1,
                         transition: "transform 0.1s"
                       }}
                       onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
                       onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
                       onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                     >
-                      Refine Item
+                      {refineResult ? "Processing..." : "Refine Item"}
                     </button>
                   </div>
                 ) : (
@@ -325,8 +345,17 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                 )}
               </div>
             ) : (
-              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "#666", textAlign: "center", padding: "20px", marginTop: refineResult ? "40px" : "0" }}>
-                Select an item from the left to view refinement details.
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                {refineResult ? (
+                  // Show message even when no item selected (for destroyed items)
+                  <div style={{ color: "#666", textAlign: "center", padding: "20px", marginTop: "70px" }}>
+                    Item was removed from your equipment.
+                  </div>
+                ) : (
+                  <div style={{ color: "#666", textAlign: "center", padding: "20px" }}>
+                    Select an item from the left to view refinement details.
+                  </div>
+                )}
               </div>
             )}
           </div>
