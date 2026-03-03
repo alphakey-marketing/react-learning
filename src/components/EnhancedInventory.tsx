@@ -123,60 +123,34 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                 flexDirection: "column",
                 gap: "4px",
                 position: "relative",
+                cursor: item && onUnequip ? "pointer" : "default",
+              }}
+              title={item && onUnequip ? "Click to unequip" : ""}
+              onClick={() => {
+                if (item && onUnequip) {
+                  if (window.confirm(`Unequip ${item.name}?`)) {
+                    handleUnequipClick(slot.key);
+                  }
+                }
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ color: "#9ca3af", fontSize: "10px", fontWeight: "bold" }}>
                   {slot.icon} {slot.label}
                 </span>
-                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-                  {item && (
-                    <span style={{ 
-                      background: "#333", 
-                      padding: "2px 6px", 
-                      borderRadius: "4px", 
-                      color: "#fbbf24",
-                      fontSize: "10px",
-                      fontWeight: "bold",
-                      border: "1px solid #444"
-                    }}>
-                      ⭐ {gearScore}
-                    </span>
-                  )}
-                  {item && onUnequip && (
-                    <button
-                      onClick={() => handleUnequipClick(slot.key)}
-                      title={`Unequip ${item.name}`}
-                      style={{
-                        background: "rgba(220, 38, 38, 0.2)",
-                        color: "#ef4444",
-                        border: "1px solid #dc2626",
-                        borderRadius: "4px",
-                        width: "20px",
-                        height: "20px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        padding: 0,
-                        marginLeft: "2px",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#dc2626";
-                        e.currentTarget.style.color = "white";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "rgba(220, 38, 38, 0.2)";
-                        e.currentTarget.style.color = "#ef4444";
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
+                {item && (
+                  <span style={{ 
+                    background: "#333", 
+                    padding: "2px 6px", 
+                    borderRadius: "4px", 
+                    color: "#fbbf24",
+                    fontSize: "10px",
+                    fontWeight: "bold",
+                    border: "1px solid #444"
+                  }}>
+                    ⭐ {gearScore}
+                  </span>
+                )}
               </div>
               
               {item ? (
@@ -227,8 +201,8 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "8px", // slightly increased gap to make room for bigger badges
-        maxHeight: "220px", // slightly taller to fit bigger items
+        gap: "8px",
+        maxHeight: "220px",
         overflowY: "auto",
         padding: "6px",
         background: "#1a1a1a",
@@ -267,8 +241,8 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
                 style={{
-                  fontSize: "24px", // Bigger icon
-                  padding: "10px 8px 14px 8px", // More bottom padding for the badge
+                  fontSize: "24px",
+                  padding: "10px 8px 14px 8px",
                   background: "#2a2a2a",
                   border: `2px solid ${rarityColor}`,
                   borderRadius: "6px",
@@ -331,7 +305,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                   bottom: "-6px",
                   left: "50%",
                   transform: "translateX(-50%)",
-                  fontSize: "10px", // Much bigger font
+                  fontSize: "10px",
                   fontWeight: "bold",
                   background: "#111",
                   color: "#fbbf24",
@@ -349,7 +323,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
         )}
       </div>
       
-      {/* Accessory Slot Selection Modal */}
+      {/* Accessory Slot Selection Modal with Combat Power Comparison */}
       {selectedItem && selectedItem.type === "accessory" && !selectedEquippedSlot && equipped.accessory1 && equipped.accessory2 && (
         <div style={{
           position: "fixed",
@@ -364,46 +338,99 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
             background: "#1a1a1a",
             padding: "20px",
             borderRadius: "8px",
-            border: "1px solid #444",
-            maxWidth: "400px",
-            width: "100%",
+            border: "2px solid #fbbf24",
+            maxWidth: "500px",
+            width: "90%",
             textAlign: "center"
           }}>
-            <h3 style={{ color: "#fbbf24", margin: "0 0 15px 0" }}>Which slot to replace?</h3>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0" }}>💍 Replace Which Accessory?</h3>
+            <div style={{ fontSize: "12px", color: "#aaa", marginBottom: "15px" }}>
+              New: <span style={{ color: getRarityColor(selectedItem.rarity), fontWeight: "bold" }}>{selectedItem.name}</span> (⭐ {calculateGearScore(selectedItem)})
+            </div>
             <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "15px" }}>
               <button
                 onClick={() => setSelectedEquippedSlot("accessory1")}
                 style={{
-                  padding: "10px",
+                  padding: "15px",
                   background: "#2a2a2a",
-                  border: "1px solid #555",
-                  borderRadius: "6px",
+                  border: "2px solid #555",
+                  borderRadius: "8px",
                   color: "white",
                   cursor: "pointer",
-                  flex: 1
+                  flex: 1,
+                  position: "relative",
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#fbbf24";
+                  e.currentTarget.style.transform = "scale(1.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#555";
+                  e.currentTarget.style.transform = "scale(1)";
                 }}
               >
-                Slot 1:<br/>
-                <span style={{ color: getRarityColor(equipped.accessory1.rarity) }}>
+                <div style={{ fontSize: "10px", color: "#888", marginBottom: "5px" }}>Slot 1</div>
+                <div style={{ color: getRarityColor(equipped.accessory1.rarity), fontWeight: "bold", fontSize: "13px", marginBottom: "8px" }}>
                   {equipped.accessory1.name}
-                </span>
+                </div>
+                <div style={{
+                  background: calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory1) ? "#ef4444" : "#333",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  display: "inline-block"
+                }}>
+                  ⭐ {calculateGearScore(equipped.accessory1)}
+                </div>
+                {calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory1) && (
+                  <div style={{ fontSize: "10px", color: "#22c55e", marginTop: "5px" }}>
+                    ▲ +{calculateGearScore(selectedItem) - calculateGearScore(equipped.accessory1)} Power
+                  </div>
+                )}
               </button>
               <button
                 onClick={() => setSelectedEquippedSlot("accessory2")}
                 style={{
-                  padding: "10px",
+                  padding: "15px",
                   background: "#2a2a2a",
-                  border: "1px solid #555",
-                  borderRadius: "6px",
+                  border: "2px solid #555",
+                  borderRadius: "8px",
                   color: "white",
                   cursor: "pointer",
-                  flex: 1
+                  flex: 1,
+                  position: "relative",
+                  transition: "all 0.2s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#fbbf24";
+                  e.currentTarget.style.transform = "scale(1.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#555";
+                  e.currentTarget.style.transform = "scale(1)";
                 }}
               >
-                Slot 2:<br/>
-                <span style={{ color: getRarityColor(equipped.accessory2.rarity) }}>
+                <div style={{ fontSize: "10px", color: "#888", marginBottom: "5px" }}>Slot 2</div>
+                <div style={{ color: getRarityColor(equipped.accessory2.rarity), fontWeight: "bold", fontSize: "13px", marginBottom: "8px" }}>
                   {equipped.accessory2.name}
-                </span>
+                </div>
+                <div style={{
+                  background: calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory2) ? "#ef4444" : "#333",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                  display: "inline-block"
+                }}>
+                  ⭐ {calculateGearScore(equipped.accessory2)}
+                </div>
+                {calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory2) && (
+                  <div style={{ fontSize: "10px", color: "#22c55e", marginTop: "5px" }}>
+                    ▲ +{calculateGearScore(selectedItem) - calculateGearScore(equipped.accessory2)} Power
+                  </div>
+                )}
               </button>
             </div>
             <button
