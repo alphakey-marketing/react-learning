@@ -38,6 +38,7 @@ interface GameCallbacks {
   onDamageDealt?: (damage: number, isCrit: boolean) => void;
   onEnemyDamageDealt?: (damage: number) => void;
   onLevelUp?: (newLevel: number) => void;
+  onJobLevelUp?: (newJobLevel: number) => void;
   onItemDrop?: (item: Equipment) => void;
   onMaterialDrop?: (material: 'elunium' | 'oridecon', amount: number) => void;
   onEnemyKilled?: (isBoss: boolean, goldEarned: number) => void;
@@ -188,6 +189,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       skillPoints: jobLevelUpResult.newSkillPoints,
     }));
     
+    callbacks?.onJobLevelUp?.(jobLevelUpResult.newJobLevel);
     addLog(`🔧 [DEV] Job Level +1! Now Job Lv.${jobLevelUpResult.newJobLevel}`);
     
     if (canChangeJob(char.jobClass, jobLevelUpResult.newJobLevel) && jobLevelUpResult.newJobLevel === 10) {
@@ -593,6 +595,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         addLog(
           `📘 JOB LEVEL UP! Job Lv.${nextJobLevel} (Skill Points +1)`
         );
+        callbacks?.onJobLevelUp?.(nextJobLevel);
         
         if (canChangeJob(char.jobClass, nextJobLevel) && nextJobLevel === 10) {
           addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);

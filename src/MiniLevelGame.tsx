@@ -73,6 +73,13 @@ export function MiniLevelGame() {
         isLevelUp: true,
       });
     },
+    onJobLevelUp: (newJobLevel: number) => {
+      addFloatingText(`🌟 JOB LV ${newJobLevel}! 🌟`, {
+        color: '#10b981',
+        fontSize: 42,
+        isLevelUp: true,
+      });
+    },
     onItemDrop: (item) => {
       addDroppingItem(item);
     },
