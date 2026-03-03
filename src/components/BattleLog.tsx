@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { Log } from "../types/game";
 
 interface BattleLogProps {
@@ -7,80 +7,69 @@ interface BattleLogProps {
 
 type LogFilter = "all" | "combat" | "loot" | "system";
 
+function getLogColor(text: string): string {
+  if (text.includes("🎁") || text.includes("💰") || text.includes("💎") || text.includes("Looted") || text.includes("Drop")) {
+    return "#fbbf24";
+  }
+  if (text.includes("💥") || text.includes("attacks!") || text.includes("take")) {
+    return "#f87171";
+  }
+  if (text.includes("🍖") || text.includes("🧪") || text.includes("+") && (text.includes("HP") || text.includes("MP"))) {
+    return "#22c55e";
+  }
+  if (text.includes("🌟") || text.includes("LEVEL UP") || text.includes("JOB LEVEL")) {
+    return "#fbbf24";
+  }
+  if (text.includes("🏛️") || text.includes("🚀") || text.includes("Traveled") || text.includes("Escaped")) {
+    return "#60a5fa";
+  }
+  if (text.includes("🎯") || text.includes("Hit") || text.includes("dmg")) {
+    return "#fb923c";
+  }
+  if (text.includes("⚔️") || text.includes("BOSS") || text.includes("Boss")) {
+    return "#a78bfa";
+  }
+  return "#d1d5db";
+}
+
+function getLogCategory(text: string): LogFilter {
+  if (text.includes("🎁") || text.includes("💰") || text.includes("💎") || text.includes("Looted") || text.includes("Drop")) {
+    return "loot";
+  }
+  if (text.includes("🎯") || text.includes("💥") || text.includes("Hit") || text.includes("dmg") || text.includes("attacks")) {
+    return "combat";
+  }
+  if (text.includes("🏛️") || text.includes("🚀") || text.includes("🌟") || text.includes("Traveled") || text.includes("LEVEL")) {
+    return "system";
+  }
+  return "all";
+}
+
 export function BattleLog({ logs }: BattleLogProps) {
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<LogFilter>("all");
   const [autoScroll, setAutoScroll] = useState(true);
 
+  // Memoize filtered logs to prevent recalculation on every render
+  const filteredLogs = useMemo(() => {
+    if (filter === "all") return logs;
+    return logs.filter(log => getLogCategory(log.text) === filter);
+  }, [logs, filter]);
+
   useEffect(() => {
     const container = logContainerRef.current;
     if (!container || !autoScroll) return;
 
-    // Auto-scroll to bottom when new logs arrive and auto-scroll is enabled
     container.scrollTop = container.scrollHeight;
-  }, [logs, autoScroll]);
+  }, [filteredLogs, autoScroll]);
 
-  // Detect manual scroll to disable auto-scroll
   const handleScroll = () => {
     const container = logContainerRef.current;
     if (!container) return;
 
-    // Increased threshold to 50px to prevent false triggers when log container is not full
-    // This ensures auto-scroll stays enabled early in the game when there are few logs
     const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
     setAutoScroll(isAtBottom);
   };
-
-  const getLogColor = (text: string): string => {
-    // Loot messages (gold color)
-    if (text.includes("🎁") || text.includes("💰") || text.includes("💎") || text.includes("Looted") || text.includes("Drop")) {
-      return "#fbbf24";
-    }
-    // Damage taken (red)
-    if (text.includes("💥") || text.includes("attacks!") || text.includes("take")) {
-      return "#f87171";
-    }
-    // Healing/Potions (green)
-    if (text.includes("🍖") || text.includes("🧪") || text.includes("+") && (text.includes("HP") || text.includes("MP"))) {
-      return "#22c55e";
-    }
-    // Level up (gold)
-    if (text.includes("🌟") || text.includes("LEVEL UP") || text.includes("JOB LEVEL")) {
-      return "#fbbf24";
-    }
-    // System messages (cyan)
-    if (text.includes("🏛️") || text.includes("🚀") || text.includes("Traveled") || text.includes("Escaped")) {
-      return "#60a5fa";
-    }
-    // Combat messages (orange)
-    if (text.includes("🎯") || text.includes("Hit") || text.includes("dmg")) {
-      return "#fb923c";
-    }
-    // Boss/Challenge (purple)
-    if (text.includes("⚔️") || text.includes("BOSS") || text.includes("Boss")) {
-      return "#a78bfa";
-    }
-    // Default
-    return "#d1d5db";
-  };
-
-  const getLogCategory = (text: string): LogFilter => {
-    if (text.includes("🎁") || text.includes("💰") || text.includes("💎") || text.includes("Looted") || text.includes("Drop")) {
-      return "loot";
-    }
-    if (text.includes("🎯") || text.includes("💥") || text.includes("Hit") || text.includes("dmg") || text.includes("attacks")) {
-      return "combat";
-    }
-    if (text.includes("🏛️") || text.includes("🚀") || text.includes("🌟") || text.includes("Traveled") || text.includes("LEVEL")) {
-      return "system";
-    }
-    return "all";
-  };
-
-  const filteredLogs = logs.filter(log => {
-    if (filter === "all") return true;
-    return getLogCategory(log.text) === filter;
-  });
 
   return (
     <div style={{ marginBottom: "15px" }}>
