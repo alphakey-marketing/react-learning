@@ -14,6 +14,7 @@ import { CombatHUD } from "./components/CombatHUD";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
+import { CharacterCreationOverlay } from "./components/CharacterCreationOverlay";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
@@ -34,6 +35,15 @@ export function MiniLevelGame() {
     return true;
   });
   
+  // Character creation state - check if character name exists in localStorage
+  const [showCharacterCreation, setShowCharacterCreation] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !localStorage.getItem("characterName");
+    }
+    return true;
+  });
+  
+  // Game hooks initialize immediately - STABLE!
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
       addFloatingText(`-${damage}`, {
@@ -48,7 +58,6 @@ export function MiniLevelGame() {
           void gameContainer.offsetWidth;
           gameContainer.classList.add('crit-shake');
           
-          // Remove class after animation completes to ensure clean reset
           setTimeout(() => {
             gameContainer.classList.remove('crit-shake');
           }, 300);
@@ -97,7 +106,7 @@ export function MiniLevelGame() {
         return;
       }
       
-      if (showTutorial) return;
+      if (showTutorial || showCharacterCreation) return;
       
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
         e.preventDefault();
@@ -107,7 +116,7 @@ export function MiniLevelGame() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial]);
+  }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial, showCharacterCreation]);
 
   const wrappedSellItem = () => {
     game.sellItem();
@@ -128,6 +137,16 @@ export function MiniLevelGame() {
   const wrappedHandleJobChange = (newJob: any) => {
     game.handleJobChange(newJob);
   };
+  
+  const handleCharacterCreationComplete = (name: string, avatarSeed: string) => {
+    game.setCharacterIdentity(name, avatarSeed);
+    setShowCharacterCreation(false);
+    
+    // Auto-show tutorial after character creation if they haven't seen it
+    if (typeof window !== "undefined" && localStorage.getItem("hasSeenTutorial") !== "true") {
+      setShowTutorial(true);
+    }
+  };
 
   return (
     <div
@@ -144,7 +163,15 @@ export function MiniLevelGame() {
         paddingBottom: "120px",
       }}
     >
-      {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
+      {/* Character Creation Overlay - Highest Priority */}
+      {showCharacterCreation && (
+        <CharacterCreationOverlay onComplete={handleCharacterCreationComplete} />
+      )}
+      
+      {/* Tutorial Overlay */}
+      {showTutorial && !showCharacterCreation && (
+        <TutorialOverlay onClose={() => setShowTutorial(false)} />
+      )}
       
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
@@ -171,6 +198,9 @@ export function MiniLevelGame() {
           background: "rgba(34, 34, 34, 0.95)",
           boxShadow: "0 8px 32px rgba(255, 215, 0, 0.2)",
           backdropFilter: "blur(10px)",
+          opacity: showCharacterCreation ? 0.3 : 1,
+          pointerEvents: showCharacterCreation ? "none" : "auto",
+          transition: "opacity 0.3s ease",
         }}
       >
         <h1
