@@ -38,6 +38,7 @@ interface GameCallbacks {
   onEnemyDamageDealt?: (damage: number) => void;
   onLevelUp?: (newLevel: number) => void;
   onItemDrop?: (item: Equipment) => void;
+  onMaterialDrop?: (material: 'elunium' | 'oridecon', amount: number) => void;
   onEnemyKilled?: (isBoss: boolean, goldEarned: number) => void;
 }
 
@@ -399,7 +400,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
     
-    addLog("❤️‍🩹 Respawned in Town! Resting will recover HP/MP.");
+    addLog("❤️‍🩹 Respawned in Town!");
   }
 
   function escapeToTown() {
@@ -429,10 +430,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         const newHp = Math.min(prev.maxHp, prev.hp + healHp);
         const newMp = Math.min(prev.maxMp, prev.mp + healMp);
         
-        if (newHp > prev.hp || newMp > prev.mp) {
-          addLog(`✨ Town Healing: +${newHp - prev.hp} HP, +${newMp - prev.mp} MP`);
-        }
-        
+        // NO LOG - silent healing in town
         return { ...prev, hp: newHp, mp: newMp };
       });
     }
@@ -649,6 +647,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         nextCharElunium += numElu;
         nextCharOridecon += numOri;
         addLog(`💎 Boss Drop: ${numElu}x Elunium, ${numOri}x Oridecon!`);
+        callbacks?.onMaterialDrop?.('elunium', numElu);
+        callbacks?.onMaterialDrop?.('oridecon', numOri);
 
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
@@ -673,9 +673,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         if (matRoll < 0.05) {
           nextCharElunium += 1;
           addLog(`💎 Looted: 1x Elunium!`);
+          callbacks?.onMaterialDrop?.('elunium', 1);
         } else if (matRoll < 0.08) {
           nextCharOridecon += 1;
           addLog(`💎 Looted: 1x Oridecon!`);
+          callbacks?.onMaterialDrop?.('oridecon', 1);
         }
 
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
@@ -946,7 +948,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
 
-    const goldCost = 2000 * (currentRefine + 1);
+    const goldCost = 1000 * (currentRefine + 1);
     if (char.gold < goldCost) {
       addLog(`❌ Need ${goldCost}g to refine!`);
       return;
