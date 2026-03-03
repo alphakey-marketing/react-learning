@@ -21,7 +21,7 @@ export function Shop({
   onBuyMpPotion,
 }: ShopProps) {
   const [showSellModal, setShowSellModal] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
   const calculateSellPrice = (item: Equipment) => {
     return Math.floor((item.atk || item.def || item.stat || 1) * 2);
@@ -49,7 +49,7 @@ export function Shop({
       .reduce((total, item) => total + calculateSellPrice(item), 0);
   };
 
-  const handleToggleItem = (itemId: string) => {
+  const handleToggleItem = (itemId: number) => {
     setSelectedItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(itemId)) {
