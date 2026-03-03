@@ -147,9 +147,9 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
     count = Math.floor(Math.random() * (maxCount - 1)) + 2; // 2 to maxCount
   }
 
-  // If it's a group, scale HP proportionally but not linearly
-  // (groups are tougher but not count * HP)
-  const groupHpMultiplier = count > 1 ? Math.sqrt(count) : 1;
+  // Linear HP scaling: 3 enemies = 3x HP
+  // This makes groups proportionally harder but rewards are also proportional
+  const groupHpMultiplier = count;
   const finalHp = Math.floor(scaledHp * groupHpMultiplier);
 
   return {
