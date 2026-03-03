@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems, calculateGearScore } from "../types/equipment";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD } from "../logic/character";
+import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
 
 interface CharacterStatsProps {
   character: Character;
@@ -76,6 +76,41 @@ export function CharacterStats({
   const crit = calcCritChance(character);
   const aspd = calcASPD(character).toFixed(2);
 
+  // Calculate preview stats with pending changes
+  const previewStats = useMemo(() => {
+    if (!hasPendingChanges) return null;
+
+    const previewChar: Character = {
+      ...character,
+      stats: {
+        str: character.stats.str + pendingStats.str,
+        agi: character.stats.agi + pendingStats.agi,
+        vit: character.stats.vit + pendingStats.vit,
+        int: character.stats.int + pendingStats.int,
+        dex: character.stats.dex + pendingStats.dex,
+        luk: character.stats.luk + pendingStats.luk,
+      },
+    };
+
+    const previewAtk = calcPlayerAtk(previewChar, weaponBonus);
+    const previewMatk = calcPlayerMagicAtk(previewChar);
+    const previewDef = calcPlayerDef(previewChar, armorBonus);
+    const previewCrit = calcCritChance(previewChar);
+    const previewAspd = calcASPD(previewChar).toFixed(2);
+    const previewMaxHp = calcMaxHp(character.level, previewChar.stats.vit, character.jobClass);
+    const previewMaxMp = calcMaxMp(character.level, previewChar.stats.int, character.jobClass);
+
+    return {
+      atk: previewAtk,
+      matk: previewMatk,
+      def: previewDef,
+      crit: previewCrit,
+      aspd: previewAspd,
+      maxHp: previewMaxHp,
+      maxMp: previewMaxMp,
+    };
+  }, [hasPendingChanges, character, pendingStats, weaponBonus, armorBonus]);
+
   // Calculate Total Combat Power
   const totalEquipPower = Object.values(equipped)
     .filter(item => item !== null)
@@ -88,6 +123,26 @@ export function CharacterStats({
   const getPlayerAvatar = () => {
     const seed = character.jobClass + "Hero";
     return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=transparent`;
+  };
+
+  const renderStatWithPreview = (label: string, current: number | string, preview: number | string | null, color: string) => {
+    const currentNum = typeof current === 'string' ? parseFloat(current) : current;
+    const previewNum = preview !== null ? (typeof preview === 'string' ? parseFloat(preview) : preview) : null;
+    const diff = previewNum !== null ? previewNum - currentNum : 0;
+
+    return (
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+        <span style={{ color: "#bbb" }}>{label}</span>
+        <span style={{ fontWeight: "bold", color }}>
+          {current}
+          {preview !== null && diff !== 0 && (
+            <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+              → {preview} (+{diff > 0 ? diff.toFixed(label === "ASPD" ? 2 : 0) : 0})
+            </span>
+          )}
+        </span>
+      </div>
+    );
   };
 
   return (
@@ -187,11 +242,18 @@ export function CharacterStats({
           </div>
         </div>
 
-        {/* HP/MP Bars */}
+        {/* HP/MP Bars with Preview */}
         <div style={{ background: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "6px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
             <span style={{ color: "#f87171" }}>HP</span>
-            <span>{character.hp} / {character.maxHp}</span>
+            <span>
+              {character.hp} / {character.maxHp}
+              {previewStats && previewStats.maxHp !== character.maxHp && (
+                <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+                  → {previewStats.maxHp} (+{previewStats.maxHp - character.maxHp})
+                </span>
+              )}
+            </span>
           </div>
           <div style={{ width: "100%", height: "14px", background: "#333", borderRadius: "7px", overflow: "hidden", marginBottom: "10px", border: "1px solid #222" }}>
             <div style={{ width: `${hpPercent}%`, height: "100%", background: "linear-gradient(90deg, #ef4444, #f87171)", transition: "width 0.2s" }} />
@@ -199,7 +261,14 @@ export function CharacterStats({
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
             <span style={{ color: "#60a5fa" }}>MP</span>
-            <span>{character.mp} / {character.maxMp}</span>
+            <span>
+              {character.mp} / {character.maxMp}
+              {previewStats && previewStats.maxMp !== character.maxMp && (
+                <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+                  → {previewStats.maxMp} (+{previewStats.maxMp - character.maxMp})
+                </span>
+              )}
+            </span>
           </div>
           <div style={{ width: "100%", height: "10px", background: "#333", borderRadius: "5px", overflow: "hidden", marginBottom: "15px", border: "1px solid #222" }}>
             <div style={{ width: `${mpPercent}%`, height: "100%", background: "linear-gradient(90deg, #3b82f6, #60a5fa)", transition: "width 0.2s" }} />
@@ -367,7 +436,7 @@ export function CharacterStats({
           )}
         </div>
 
-        {/* Derived Stats Column */}
+        {/* Derived Stats Column with Preview */}
         <div
           style={{
             background: "#111",
@@ -386,30 +455,11 @@ export function CharacterStats({
             <span style={{ color: "#38bdf8", fontWeight: "bold" }}>⚔️ Combat Stats</span>
           </div>
           
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-            <span style={{ color: "#bbb" }}>ATK</span>
-            <span style={{ fontWeight: "bold", color: "#f87171" }}>{atk}</span>
-          </div>
-          
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-            <span style={{ color: "#bbb" }}>MATK</span>
-            <span style={{ fontWeight: "bold", color: "#c084fc" }}>{matk}</span>
-          </div>
-          
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-            <span style={{ color: "#bbb" }}>DEF</span>
-            <span style={{ fontWeight: "bold", color: "#60a5fa" }}>{def}</span>
-          </div>
-          
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-            <span style={{ color: "#bbb" }}>CRIT</span>
-            <span style={{ fontWeight: "bold", color: "#fbbf24" }}>{crit}%</span>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-            <span style={{ color: "#bbb" }}>ASPD</span>
-            <span style={{ fontWeight: "bold", color: "#2dd4bf" }}>{aspd} <span style={{fontSize: "9px", color: "#777"}}>/s</span></span>
-          </div>
+          {renderStatWithPreview("ATK", atk, previewStats?.atk || null, "#f87171")}
+          {renderStatWithPreview("MATK", matk, previewStats?.matk || null, "#c084fc")}
+          {renderStatWithPreview("DEF", def, previewStats?.def || null, "#60a5fa")}
+          {renderStatWithPreview("CRIT", crit + "%", previewStats ? previewStats.crit + "%" : null, "#fbbf24")}
+          {renderStatWithPreview("ASPD", aspd, previewStats?.aspd || null, "#2dd4bf")}
           
           <div style={{ marginTop: "8px", fontSize: "9px", color: "#666", fontStyle: "italic", borderTop: "1px solid #222", paddingTop: "4px" }}>
             {character.jobClass === "Swordsman" || character.jobClass === "Knight" ? "STR increases ATK greatly" : ""}
