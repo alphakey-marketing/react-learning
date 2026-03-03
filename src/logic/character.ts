@@ -1,6 +1,11 @@
 import { Character } from "../types/character";
 import { JobClass, JOB_DATA } from "../data/jobs";
 
+export interface PlayerDefense {
+  softDef: number;
+  hardDefPercent: number;
+}
+
 // Physical Attack - Class-specific stat scaling (Classic RO style)
 export function calcPlayerAtk(char: Character, weaponBonus: number): number {
   const { str, agi, dex, luk } = char.stats;
@@ -35,12 +40,22 @@ export function calcPlayerMagicAtk(char: Character): number {
   return Math.floor(int * 3 + dex * 0.5) + char.level + jobBonus;
 }
 
-// Defense - VIT primary, AGI secondary (all classes), plus job bonus
-export function calcPlayerDef(char: Character, armorBonus: number): number {
-  const { vit, agi } = char.stats;
+// Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
+export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefense {
+  const { vit } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.defBonus || 0;
-  const softDef = vit * 1.5 + agi * 0.5;
-  return Math.floor(softDef) + armorBonus + jobBonus;
+  
+  // Soft DEF: VIT*0.5 + random variance based on VIT (RO style approximation)
+  const baseSoft = Math.floor(vit * 0.5);
+  const variableSoft = Math.floor(vit * 0.3);
+  const maxVarSoft = Math.max(variableSoft, Math.floor((vit * vit) / 150) - 1);
+  const softDef = baseSoft + Math.floor(Math.random() * (Math.max(0, maxVarSoft - variableSoft) + 1)) + variableSoft;
+  
+  // Hard DEF %: From equipment armor + job bonus
+  // Assuming 1 point of armor = 1% damage reduction for now, cap at 90%
+  const hardDefPercent = Math.min(90, armorBonus + jobBonus);
+  
+  return { softDef, hardDefPercent };
 }
 
 // Critical Rate - LUK based (all physical classes)
