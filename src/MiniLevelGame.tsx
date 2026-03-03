@@ -11,27 +11,54 @@ import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
 import { RefineNPC } from "./components/RefineNPC";
 import { CombatHUD } from "./components/CombatHUD";
-// import { DevTools } from "./components/DevTools"; // Hidden for MVP
+import { CharacterCreation } from "./components/CharacterCreation";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
-// import { AchievementPopup } from "./components/AchievementPopup";
-// import { AchievementList } from "./components/AchievementList";
 import { TutorialOverlay } from "./components/TutorialOverlay";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
-// import { useAchievements } from "./hooks/useAchievements";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState } from "react";
 
 export function MiniLevelGame() {
+  const [characterCreated, setCharacterCreated] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("characterName") !== null;
+    }
+    return false;
+  });
+
+  const [characterName, setCharacterName] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("characterName");
+    }
+    return null;
+  });
+
+  const [characterAvatarSeed, setCharacterAvatarSeed] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("characterAvatarSeed");
+    }
+    return null;
+  });
+
+  const handleCharacterCreation = (name: string, avatarSeed: string) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("characterName", name);
+      localStorage.setItem("characterAvatarSeed", avatarSeed);
+      localStorage.setItem("hasSeenTutorial", "false"); // Reset tutorial for new character
+    }
+    setCharacterName(name);
+    setCharacterAvatarSeed(avatarSeed);
+    setCharacterCreated(true);
+  };
+
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
-  // const achievements = useAchievements(); // DISABLED - causing freeze
   
-  // const [showAchievements, setShowAchievements] = useState(false);
   const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
@@ -46,14 +73,12 @@ export function MiniLevelGame() {
         color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
       });
-      // achievements.trackDamage(damage); // DISABLED
       
-      // Screen shake effect on crit
       if (isCrit) {
         const gameContainer = document.getElementById('game-container');
         if (gameContainer) {
           gameContainer.classList.remove('crit-shake');
-          void gameContainer.offsetWidth; // trigger reflow
+          void gameContainer.offsetWidth;
           gameContainer.classList.add('crit-shake');
         }
       }
@@ -84,14 +109,13 @@ export function MiniLevelGame() {
       addFloatingText(materialText, {
         color: materialColor,
         fontSize: 28,
-        isLevelUp: true, // Use level-up animation style for emphasis
+        isLevelUp: true,
       });
     },
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
-      // achievements.trackKill(isBoss); // DISABLED
-      // achievements.trackGoldEarned(goldEarned); // DISABLED
+      // Future achievements tracking
     },
-  });
+  }, characterName || "Hero", characterAvatarSeed || "default");
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
@@ -101,7 +125,6 @@ export function MiniLevelGame() {
         return;
       }
       
-      // Disable hotkeys while tutorial is showing
       if (showTutorial) return;
       
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
@@ -134,6 +157,10 @@ export function MiniLevelGame() {
     game.handleJobChange(newJob);
   };
 
+  if (!characterCreated) {
+    return <CharacterCreation onComplete={handleCharacterCreation} />;
+  }
+
   return (
     <div
       style={{
@@ -154,7 +181,6 @@ export function MiniLevelGame() {
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
       
-      {/* Combat HUD - Floating Status Display */}
       <CombatHUD
         character={game.char}
         hpPotions={game.hpPotions}
@@ -194,7 +220,6 @@ export function MiniLevelGame() {
         </h1>
 
         <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "15px" }}>
-          {/* Tutorial Button */}
           <button
             onClick={() => setShowTutorial(true)}
             style={{
