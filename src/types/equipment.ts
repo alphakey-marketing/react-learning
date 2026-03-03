@@ -112,8 +112,17 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
   const items = Object.values(equipped).filter((item): item is Equipment => item !== null);
   
   return {
-    totalAtk: items.reduce((sum, item) => sum + (item.atk || item.stat || 0), 0),
-    totalDef: items.reduce((sum, item) => sum + (item.def || (item.type === 'armor' ? item.stat || 0 : 0)), 0),
+    totalAtk: items.reduce((sum, item) => {
+      const refineBonus = item.type === 'weapon' ? (item.refinement || 0) * 5 : 0;
+      const baseAtk = item.atk || (item.type === 'weapon' ? (item.stat || 0) : 0);
+      return sum + baseAtk + refineBonus;
+    }, 0),
+    totalDef: items.reduce((sum, item) => {
+      const armorTypes = ['armor', 'head', 'garment', 'footgear'];
+      const refineBonus = armorTypes.includes(item.type) ? (item.refinement || 0) * 2 : 0;
+      const baseDef = item.def || (item.type === 'armor' ? (item.stat || 0) : 0);
+      return sum + baseDef + refineBonus;
+    }, 0),
     bonusStr: items.reduce((sum, item) => sum + (item.str || 0), 0),
     bonusAgi: items.reduce((sum, item) => sum + (item.agi || 0), 0),
     bonusVit: items.reduce((sum, item) => sum + (item.vit || 0), 0),

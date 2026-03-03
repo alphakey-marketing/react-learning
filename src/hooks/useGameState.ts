@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Character, CharacterStats } from "../types/character";
 import { Enemy } from "../types/enemy";
-import { Equipment, EquippedItems } from "../types/equipment";
+import { Equipment, EquippedItems, calculateEquipmentStats } from "../types/equipment";
 import { getRandomEnemyForZone, ZONES } from "../data/zones";
 import { SKILLS_DB } from "../data/skills";
 import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
@@ -147,25 +147,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
-  // REBALANCE: Updated scaling values to match the new system
-  const weaponBonus = useMemo(() => {
-    if (!equipped.weapon) return 0;
-    const baseAtk = equipped.weapon.atk || equipped.weapon.stat || 0;
-    const refineBonus = (equipped.weapon.refinement || 0) * 5;
-    return baseAtk + refineBonus;
-  }, [equipped.weapon]);
-
-  const armorBonus = useMemo(() => {
-    let totalDef = 0;
-    const armorTypes = ['armor', 'head', 'garment', 'footgear'] as const;
-    armorTypes.forEach(type => {
-      const item = equipped[type];
-      if (item) {
-        totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2;
-      }
-    });
-    return totalDef;
-  }, [equipped]);
+  // Use the new shared helper to ensure stats are calculated consistently
+  const weaponBonus = useMemo(() => calculateEquipmentStats(equipped).totalAtk, [equipped]);
+  const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
   
   const attacksPerSecond = useMemo(() => 
     calcASPD(char), 
@@ -791,15 +775,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       if (currentChar.hp <= 0 || currentZone === 0) return;
 
-      let totalDef = 0;
-      const armorTypes = ['armor', 'head', 'garment', 'footgear'] as const;
-      armorTypes.forEach(type => {
-        const item = currentEquipped[type];
-        if (item) {
-          totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2;
-        }
-      });
-      const playerDef = calcPlayerDef(currentChar, totalDef);
+      const playerDef = calcPlayerDef(currentChar, armorBonus);
       const enemyDmg = calculateEnemyDamage(currentEnemy, playerDef);
 
       currentCallbacks?.onEnemyDamageDealt?.(enemyDmg);
@@ -827,7 +803,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy.attackSpeed, enemy.name, currentZoneId]);
+  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus]);
 
   useEffect(() => {
     const id = setInterval(() => {

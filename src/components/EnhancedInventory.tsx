@@ -123,34 +123,60 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                 flexDirection: "column",
                 gap: "4px",
                 position: "relative",
-                cursor: item && onUnequip ? "pointer" : "default",
-              }}
-              title={item && onUnequip ? "Click to unequip" : ""}
-              onClick={() => {
-                if (item && onUnequip) {
-                  if (window.confirm(`Unequip ${item.name}?`)) {
-                    handleUnequipClick(slot.key);
-                  }
-                }
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ color: "#9ca3af", fontSize: "10px", fontWeight: "bold" }}>
                   {slot.icon} {slot.label}
                 </span>
-                {item && (
-                  <span style={{ 
-                    background: "#333", 
-                    padding: "2px 6px", 
-                    borderRadius: "4px", 
-                    color: "#fbbf24",
-                    fontSize: "10px",
-                    fontWeight: "bold",
-                    border: "1px solid #444"
-                  }}>
-                    ⭐ {gearScore}
-                  </span>
-                )}
+                <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                  {item && (
+                    <span style={{ 
+                      background: "#333", 
+                      padding: "2px 6px", 
+                      borderRadius: "4px", 
+                      color: "#fbbf24",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      border: "1px solid #444"
+                    }}>
+                      ⭐ {gearScore}
+                    </span>
+                  )}
+                  {item && onUnequip && (
+                    <button
+                      onClick={() => handleUnequipClick(slot.key)}
+                      title={`Unequip ${item.name}`}
+                      style={{
+                        background: "rgba(220, 38, 38, 0.2)",
+                        color: "#ef4444",
+                        border: "1px solid #dc2626",
+                        borderRadius: "4px",
+                        width: "20px",
+                        height: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        padding: 0,
+                        marginLeft: "2px",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "#dc2626";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(220, 38, 38, 0.2)";
+                        e.currentTarget.style.color = "#ef4444";
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
               
               {item ? (

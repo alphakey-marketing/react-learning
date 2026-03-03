@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
-import { EquippedItems, calculateGearScore } from "../types/equipment";
+import { EquippedItems, calculateGearScore, calculateEquipmentStats } from "../types/equipment";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
 
 interface CharacterStatsProps {
@@ -67,8 +67,9 @@ export function CharacterStats({
   );
 
   // Calculate derived stats
-  const weaponBonus = equipped.weapon?.stat || 0;
-  const armorBonus = equipped.armor?.stat || 0;
+  const equipStats = calculateEquipmentStats(equipped);
+  const weaponBonus = equipStats.totalAtk;
+  const armorBonus = equipStats.totalDef;
   
   const atk = calcPlayerAtk(character, weaponBonus);
   const matk = calcPlayerMagicAtk(character);
