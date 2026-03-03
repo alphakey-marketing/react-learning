@@ -48,6 +48,7 @@ export function MiniLevelGame() {
           void gameContainer.offsetWidth;
           gameContainer.classList.add('crit-shake');
           
+          // Remove class after animation completes to ensure clean reset
           setTimeout(() => {
             gameContainer.classList.remove('crit-shake');
           }, 300);

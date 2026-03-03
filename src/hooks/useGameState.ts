@@ -147,10 +147,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
+  // REBALANCE: Updated scaling values to match the new system
   const weaponBonus = useMemo(() => {
     if (!equipped.weapon) return 0;
     const baseAtk = equipped.weapon.atk || equipped.weapon.stat || 0;
-    const refineBonus = (equipped.weapon.refinement || 0) * 5;
+    const refineBonus = (equipped.weapon.refinement || 0) * 5; // Rebalanced from 3 to 5
     return baseAtk + refineBonus;
   }, [equipped.weapon]);
 
@@ -160,7 +161,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     armorTypes.forEach(type => {
       const item = equipped[type];
       if (item) {
-        totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2;
+        totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2; // Rebalanced from 1 to 2
       }
     });
     return totalDef;
@@ -334,11 +335,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     const newJobSkills = SKILLS_DB[newJob];
     const initialSkills: Record<string, number> = { basic_attack: 1 };
     
+    // Learn the first job skill
     const firstJobSkill = newJobSkills.find(s => s.id !== "basic_attack");
     if (firstJobSkill) {
       initialSkills[firstJobSkill.id] = 1;
     }
 
+    // ONLY set default attack to a non-buff skill
     const firstAttackSkill = newJobSkills.find(s => s.id !== "basic_attack" && s.effect !== "buff");
 
     const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
@@ -428,6 +431,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       setChar(prev => {
         const newHp = Math.min(prev.maxHp, prev.hp + healHp);
         const newMp = Math.min(prev.maxMp, prev.mp + healMp);
+        
+        // NO LOG - silent healing in town
         return { ...prev, hp: newHp, mp: newMp };
       });
     }
@@ -465,12 +470,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     if (!isMountedRef.current) return;
     if (char.hp <= 0) return;
     if (currentZoneId === 0) return;
+    
     if (!canAttack) return;
 
+    // Use our fresh weaponBonus calculation
     let actualSkillId = skillId || char.autoAttackSkillId;
     let skillLevel = char.learnedSkills[actualSkillId] || 0;
     let skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
 
+    // If skill is invalid, not learned, or is a buff, fallback to basic attack
     if (!skill || skillLevel === 0 || skill.effect === "buff") {
       actualSkillId = "basic_attack";
       skillLevel = char.learnedSkills["basic_attack"] || 1;
@@ -480,6 +488,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     const now = Date.now();
     let isSkillOnCooldown = false;
     
+    // Check Cooldown
     if (skill.cooldown > 0) {
       const lastUsed = skillCooldowns[actualSkillId] || 0;
       const timePassed = (now - lastUsed) / 1000;
@@ -491,6 +500,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let mpCost = skill.mpCost(skillLevel);
     let isMpInsufficient = char.mp < mpCost;
 
+    // Intelligent Fallback: If primary skill is on cooldown OR MP is insufficient, use Basic Attack instead
     if ((isSkillOnCooldown || isMpInsufficient) && actualSkillId !== "basic_attack") {
       actualSkillId = "basic_attack";
       skillLevel = char.learnedSkills["basic_attack"] || 1;
@@ -499,11 +509,14 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       isMpInsufficient = char.mp < mpCost;
     }
 
+    // If even basic attack cannot be afforded (MP < 2)
     if (isMpInsufficient) {
+      // We MUST trigger the attack cooldown so the ASPD loop continues
       setLastAttackTime(now);
       setCanAttack(false);
       setAttackCooldownPercent(0);
       
+      // Give a tiny passive MP regen while "resting" in combat
       const mpRegen = Math.floor(char.maxMp * 0.05) + 1;
       const newMp = Math.min(char.maxMp, char.mp + mpRegen);
       if (newMp > char.mp) {
@@ -512,6 +525,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
 
+    // Now execute the confirmed skill
     if (skill.cooldown > 0 && actualSkillId !== "basic_attack") {
       setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
     }
@@ -527,8 +541,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextCharExpToNext = char.expToNext;
     let nextCharGold = char.gold;
     let nextStatPoints = char.statPoints;
+    
+    // Tracking materials
     let nextCharElunium = char.elunium;
     let nextCharOridecon = char.oridecon;
+    
     let didLevelUp = false;
 
     let nextEnemyHp = enemy.hp;
@@ -562,6 +579,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       nextCharGold += goldGain;
       addLog(`💰 Gained ${goldGain} Gold.`);
 
+      // ACHIEVEMENT TRACKING: Enemy killed
       callbacks?.onEnemyKilled?.(isBossFight, goldGain);
 
       const expGain = calculateExpGain(enemy);
@@ -625,6 +643,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         addLog(`🎁 Boss Drop: ${bossGear.name}!`);
         callbacks?.onItemDrop?.(bossGear);
 
+        // Boss drops refine materials
         const numElu = Math.floor(Math.random() * 2) + 1;
         const numOri = Math.floor(Math.random() * 2) + 1;
         nextCharElunium += numElu;
@@ -651,6 +670,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           callbacks?.onItemDrop?.(newGear);
         }
 
+        // Material drops from normal enemies
         const matRoll = Math.random();
         if (matRoll < 0.05) {
           nextCharElunium += 1;
@@ -729,11 +749,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId, char.hp]);
 
+  // Auto-attack effect - use ref to prevent stale closure
   useEffect(() => {
     if (!autoAttackEnabled || !canAttack || currentZoneId === 0) {
       return;
     }
     
+    // Double-check character is still alive using ref (prevents race conditions)
     if (charRef.current.hp <= 0) {
       return;
     }
@@ -792,7 +814,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       armorTypes.forEach(type => {
         const item = currentEquipped[type];
         if (item) {
-          totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2;
+          totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2; // Rebalanced to 2
         }
       });
       const playerDef = calcPlayerDef(currentChar, totalDef);
@@ -861,12 +883,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }
 
   function equipItem(item: Equipment) {
+    // Handle equipment swap - return old item to inventory
     if (item.type === "accessory") {
+      // For accessories, check both slots
       if (!equipped.accessory1) {
         setEquipped((prev) => ({ ...prev, accessory1: item }));
       } else if (!equipped.accessory2) {
         setEquipped((prev) => ({ ...prev, accessory2: item }));
       } else {
+        // Both slots filled, replace accessory1 and return it to inventory
         const oldItem = equipped.accessory1;
         setEquipped((prev) => ({ ...prev, accessory1: item }));
         if (oldItem) {
@@ -874,6 +899,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         }
       }
     } else {
+      // For other equipment types
       const oldItem = equipped[item.type as keyof EquippedItems];
       setEquipped((prev) => ({ ...prev, [item.type]: item }));
       if (oldItem) {
@@ -881,17 +907,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       }
     }
     
+    // Remove new item from inventory
     setInventory((prev) => prev.filter((i) => i.id !== item.id));
     addLog(`⚔️ Equipped ${item.name}!`);
-  }
-
-  function unequipItem(slotKey: keyof EquippedItems) {
-    const itemToUnequip = equipped[slotKey];
-    if (!itemToUnequip) return;
-    
-    setInventory(prev => [...prev, itemToUnequip]);
-    setEquipped(prev => ({ ...prev, [slotKey]: null }));
-    addLog(`🎒 Unequipped ${itemToUnequip.name}.`);
   }
 
   function sellItem() {
@@ -932,25 +950,28 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: false, broken: false, message: "Item is MAX level!" };
     }
 
+    // REBALANCE: Increased cost to act as better gold sink since items no longer break
     const goldCost = 750 * (currentRefine + 1);
     if (char.gold < goldCost) {
       addLog(`❌ Need ${goldCost}g to refine!`);
       return { success: false, broken: false, message: `Need ${goldCost}g!` };
     }
 
+    // REBALANCE: Adjusted success rates for level reduction penalty
     let successChance = 100;
     if (currentRefine >= 4) {
       const rates: Record<number, number> = {
-        4: 55,
-        5: 45,
-        6: 35,
-        7: 25,
-        8: 15,
-        9: 10
+        4: 55, // 60 -> 55
+        5: 45, // 50 -> 45
+        6: 35, // 40 -> 35
+        7: 25, // 30 -> 25
+        8: 15, // 20 -> 15
+        9: 10  // 10 -> 10
       };
       successChance = rates[currentRefine];
     }
 
+    // Pay costs
     setChar(prev => ({
       ...prev,
       gold: prev.gold - goldCost,
@@ -974,7 +995,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: true, broken: false, message: `✨ SUCCESS! ${item.name} is now +${currentRefine + 1}!` };
     } else {
       if (currentRefine >= 4) {
-        const penaltyLevels = 2;
+        // REBALANCE: Level Reduction instead of Destruction
+        const penaltyLevels = 2; // Always drop by 2 levels on failure
         const newRefinement = Math.max(0, currentRefine - penaltyLevels);
         const newItem = { ...item, refinement: newRefinement };
         
@@ -987,6 +1009,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         addLog(`💥 FAILED! ${item.name} dropped from +${currentRefine} to +${newRefinement}.`);
         return { success: false, broken: true, message: `💥 FAILED! Level reduced by ${penaltyLevels}!` };
       } else {
+        // Safe fail (shouldn't happen with 100% rate up to +4)
         addLog(`❌ FAILED! Refinement unsuccessful.`);
         return { success: false, broken: false, message: `❌ FAILED! Refinement unsuccessful.` };
       }
@@ -1105,7 +1128,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     travelToZone,
     challengeBoss,
     equipItem,
-    unequipItem,
     sellItem,
     refineItem,
     buyHpPotion,
