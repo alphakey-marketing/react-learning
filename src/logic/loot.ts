@@ -42,9 +42,11 @@ export function generateLoot(playerLevel: number): Equipment {
   const names = EQUIPMENT_NAMES[type];
   const baseName = names[Math.floor(Math.random() * names.length)];
   
-  // Calculate stats based on player level
-  const baseValue = Math.floor(Math.random() * 5) + 1 + Math.floor(playerLevel * 1.5);
-  const refinement = Math.random() > 0.7 ? Math.floor(Math.random() * 4) + 1 : 0;
+  // REBALANCE: Reduced base power scaling from 1.5 to 1.0 to make refinement more competitive
+  const baseValue = Math.floor(Math.random() * 5) + 1 + Math.floor(playerLevel * 1.0);
+  
+  // REBALANCE: Reduced chance of dropping pre-refined gear from 30% to 15%
+  const refinement = Math.random() > 0.85 ? Math.floor(Math.random() * 4) + 1 : 0;
   
   // Determine rarity
   let rarity: EquipmentRarity;
@@ -66,11 +68,11 @@ export function generateLoot(playerLevel: number): Equipment {
     weight: type === "weapon" ? 50 : type === "armor" ? 80 : 20,
   };
   
-  // Add appropriate stats
+  // REBALANCE: Match the new refinement stats (5 for weapon, 2 for armor)
   if (type === "weapon") {
-    equipment.atk = baseValue + refinement * 2;
+    equipment.atk = baseValue + refinement * 5;
   } else {
-    equipment.def = Math.floor(baseValue * 0.8) + refinement;
+    equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
   }
   
   // Random bonus stat (20% chance)
@@ -113,7 +115,7 @@ export function generateBossLoot(playerLevel: number): Equipment {
   };
   
   if (type === "weapon") {
-    equipment.atk = baseValue + refinement * 3;
+    equipment.atk = baseValue + refinement * 5;
   } else {
     equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
   }

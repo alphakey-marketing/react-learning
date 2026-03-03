@@ -27,18 +27,20 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
   }, [selectedItem?.item.id]);
 
   const getRefineCost = (item: Equipment) => {
-    return 500 * ((item.refinement || 0) + 1);
+    return 750 * ((item.refinement || 0) + 1); // REBALANCE: Cost increased to 750g per level
   };
 
   const getSuccessRate = (currentRefine: number) => {
     if (currentRefine < 4) return 100;
-    const rates: Record<number, number> = { 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10 };
+    // REBALANCE: Slightly lower success rates due to softer penalty
+    const rates: Record<number, number> = { 4: 55, 5: 45, 6: 35, 7: 25, 8: 15, 9: 10 };
     return rates[currentRefine] || 0;
   };
 
   const getRefineEffect = (item: Equipment) => {
-    if (item.type === "weapon") return "+3 ATK";
-    return "+1 DEF";
+    // REBALANCE: Stronger upgrade effects
+    if (item.type === "weapon") return "+5 ATK";
+    return "+2 DEF";
   };
 
   const handleRefine = () => {
@@ -49,10 +51,22 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
     if (result) {
       setRefineResult(result);
       
-      // If item broke, clear selection after showing message for 3 seconds
+      // If item failed and leveled down, keep selected but update refinement level
       if (result.broken) {
+        setSelectedItem(prev => {
+          if (!prev) return prev;
+          const currentRefine = prev.item.refinement || 0;
+          return {
+            ...prev,
+            item: {
+              ...prev.item,
+              refinement: Math.max(0, currentRefine - 2) // Level reduction penalty
+            }
+          };
+        });
+        
+        // Auto-dismiss failure message after 3 seconds
         setTimeout(() => {
-          setSelectedItem(null);
           setRefineResult(null);
         }, 3000);
       } else if (result.success) {
@@ -288,7 +302,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>Failure Penalty:</span>
                     <span style={{ color: (selectedItem.item.refinement || 0) >= 4 ? "#ef4444" : "#10b981", fontWeight: "bold" }}>
-                      {(selectedItem.item.refinement || 0) >= 4 ? "Item Destroyed" : "Safe"}
+                      {(selectedItem.item.refinement || 0) >= 4 ? "-2 Levels" : "Safe"}
                     </span>
                   </div>
                 </div>
@@ -346,16 +360,9 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
               </div>
             ) : (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-                {refineResult ? (
-                  // Show message even when no item selected (for destroyed items)
-                  <div style={{ color: "#666", textAlign: "center", padding: "20px", marginTop: "70px" }}>
-                    Item was removed from your equipment.
-                  </div>
-                ) : (
-                  <div style={{ color: "#666", textAlign: "center", padding: "20px" }}>
-                    Select an item from the left to view refinement details.
-                  </div>
-                )}
+                <div style={{ color: "#666", textAlign: "center", padding: "20px" }}>
+                  Select an item from the left to view refinement details.
+                </div>
               </div>
             )}
           </div>

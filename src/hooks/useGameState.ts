@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Character, CharacterStats } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Equipment, EquippedItems } from "../types/equipment";
@@ -147,10 +147,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
+  // REBALANCE: Updated scaling values to match the new system
   const weaponBonus = useMemo(() => {
     if (!equipped.weapon) return 0;
     const baseAtk = equipped.weapon.atk || equipped.weapon.stat || 0;
-    const refineBonus = (equipped.weapon.refinement || 0) * 3;
+    const refineBonus = (equipped.weapon.refinement || 0) * 5; // Rebalanced from 3 to 5
     return baseAtk + refineBonus;
   }, [equipped.weapon]);
 
@@ -160,96 +161,97 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     armorTypes.forEach(type => {
       const item = equipped[type];
       if (item) {
-        totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 1;
+        totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2; // Rebalanced from 1 to 2
       }
     });
     return totalDef;
-  }, [equipped.armor, equipped.head, equipped.garment, equipped.footgear]);
+  }, [equipped]);
   
   const attacksPerSecond = useMemo(() => 
     calcASPD(char), 
     [char.stats.agi, char.stats.dex, char.level]
   );
 
-  const devAddBaseLevel = useCallback(() => {
-    setChar(prev => {
-      const levelUpResult = processLevelUp(prev, prev.expToNext);
-      
-      callbacks?.onLevelUp?.(levelUpResult.newLevel);
-      addLog(`🔧 [DEV] Base Level +1! Now Lv.${levelUpResult.newLevel}`);
-      
-      return {
-        ...prev,
-        level: levelUpResult.newLevel,
-        exp: levelUpResult.newExp,
-        expToNext: levelUpResult.newExpToNext,
-        statPoints: levelUpResult.newStatPoints,
-        hp: levelUpResult.newHp,
-        maxHp: calcMaxHp(levelUpResult.newLevel, prev.stats.vit, prev.jobClass),
-        mp: levelUpResult.newMp,
-        maxMp: calcMaxMp(levelUpResult.newLevel, prev.stats.int, prev.jobClass),
-      };
-    });
-  }, [addLog, callbacks]);
+  function devAddBaseLevel() {
+    const currentExp = char.expToNext;
+    const levelUpResult = processLevelUp(char, currentExp);
+    
+    setChar(prev => ({
+      ...prev,
+      level: levelUpResult.newLevel,
+      exp: levelUpResult.newExp,
+      expToNext: levelUpResult.newExpToNext,
+      statPoints: levelUpResult.newStatPoints,
+      hp: levelUpResult.newHp,
+      maxHp: calcMaxHp(levelUpResult.newLevel, prev.stats.vit, prev.jobClass),
+      mp: levelUpResult.newMp,
+      maxMp: calcMaxMp(levelUpResult.newLevel, prev.stats.int, prev.jobClass),
+    }));
+    
+    callbacks?.onLevelUp?.(levelUpResult.newLevel);
+    addLog(`🔧 [DEV] Base Level +1! Now Lv.${levelUpResult.newLevel}`);
+  }
 
-  const devAddJobLevel = useCallback(() => {
-    setChar(prev => {
-      const jobLevelUpResult = processJobLevelUp(prev, prev.jobExpToNext);
-      
-      addLog(`🔧 [DEV] Job Level +1! Now Job Lv.${jobLevelUpResult.newJobLevel}`);
-      
-      if (canChangeJob(prev.jobClass, jobLevelUpResult.newJobLevel) && jobLevelUpResult.newJobLevel === 10) {
-        addLog(`🎊 You can now change your job!`);
-      }
-      
-      return {
-        ...prev,
-        jobLevel: jobLevelUpResult.newJobLevel,
-        jobExp: jobLevelUpResult.newJobExp,
-        jobExpToNext: jobLevelUpResult.newJobExpToNext,
-        skillPoints: jobLevelUpResult.newSkillPoints,
-      };
-    });
-  }, [addLog]);
+  function devAddJobLevel() {
+    const currentJobExp = char.jobExpToNext;
+    const jobLevelUpResult = processJobLevelUp(char, currentJobExp);
+    
+    setChar(prev => ({
+      ...prev,
+      jobLevel: jobLevelUpResult.newJobLevel,
+      jobExp: jobLevelUpResult.newJobExp,
+      jobExpToNext: jobLevelUpResult.newJobExpToNext,
+      skillPoints: jobLevelUpResult.newSkillPoints,
+    }));
+    
+    addLog(`🔧 [DEV] Job Level +1! Now Job Lv.${jobLevelUpResult.newJobLevel}`);
+    
+    if (canChangeJob(char.jobClass, jobLevelUpResult.newJobLevel) && jobLevelUpResult.newJobLevel === 10) {
+      addLog(`🎊 You can now change your job!`);
+    }
+  }
 
-  const devAddGold = useCallback((amount: number) => {
-    setChar(prev => ({ ...prev, gold: prev.gold + amount }));
+  function devAddGold(amount: number) {
+    setChar(prev => ({
+      ...prev,
+      gold: prev.gold + amount,
+    }));
     addLog(`🔧 [DEV] Added ${amount} gold!`);
-  }, [addLog]);
+  }
 
-  const devAddPotions = useCallback((hp: number, mp: number) => {
+  function devAddPotions(hp: number, mp: number) {
     setHpPotions(prev => prev + hp);
     setMpPotions(prev => prev + mp);
     addLog(`🔧 [DEV] Added ${hp} HP potions and ${mp} MP potions!`);
-  }, [addLog]);
+  }
 
-  const devFullHeal = useCallback(() => {
-    setChar(prev => ({ ...prev, hp: prev.maxHp, mp: prev.maxMp }));
+  function devFullHeal() {
+    setChar(prev => ({
+      ...prev,
+      hp: prev.maxHp,
+      mp: prev.maxMp,
+    }));
     addLog(`🔧 [DEV] Full heal!`);
-  }, [addLog]);
+  }
 
-  const devAddGear = useCallback(() => {
-    setChar(prev => {
-      const randomGear = generateLoot(prev.level + 10);
-      setInventory(inv => [...inv, randomGear]);
-      addLog(`🔧 [DEV] Added ${randomGear.name}!`);
-      return prev;
-    });
-  }, [addLog]);
+  function devAddGear() {
+    const randomGear = generateLoot(char.level + 10);
+    setInventory(prev => [...prev, randomGear]);
+    addLog(`🔧 [DEV] Added ${randomGear.name}!`);
+  }
 
-  const devUnlockAllZones = useCallback(() => {
+  function devUnlockAllZones() {
     const allZoneIds = ZONES.map(z => z.id);
     setUnlockedZoneIds(allZoneIds);
     addLog(`🔧 [DEV] Unlocked all zones!`);
-  }, [addLog]);
+  }
 
-  const addStat = useCallback((stat: keyof CharacterStats) => {
+  function addStat(stat: keyof CharacterStats) {
+    if (char.statPoints <= 0) {
+      addLog("❌ No stat points!");
+      return;
+    }
     setChar((prev) => {
-      if (prev.statPoints <= 0) {
-        addLog("❌ No stat points!");
-        return prev;
-      }
-      
       const newStats = { ...prev.stats, [stat]: prev.stats[stat] + 1 };
       return {
         ...prev,
@@ -259,104 +261,105 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         maxMp: stat === 'int' ? calcMaxMp(prev.level, newStats.int, prev.jobClass) : prev.maxMp,
       };
     });
-  }, [addLog]);
+  }
 
-  const learnSkill = useCallback((skillId: string) => {
-    setChar(prev => {
-      const currentLevel = prev.learnedSkills[skillId] || 0;
-      const skill = SKILLS_DB[prev.jobClass].find((s) => s.id === skillId);
+  function learnSkill(skillId: string) {
+    const currentLevel = char.learnedSkills[skillId] || 0;
+    const skill = SKILLS_DB[char.jobClass].find((s) => s.id === skillId);
 
-      if (!skill) {
-        addLog("❌ Skill not found!");
-        return prev;
-      }
+    if (!skill) {
+      addLog("❌ Skill not found!");
+      return;
+    }
 
-      if (currentLevel >= skill.maxLevel) {
-        addLog(`❌ ${skill.nameZh} already MAX!`);
-        return prev;
-      }
+    if (currentLevel >= skill.maxLevel) {
+      addLog(`❌ ${skill.nameZh} already MAX!`);
+      return;
+    }
 
-      if (prev.skillPoints <= 0) {
-        addLog("❌ No Skill Points!");
-        return prev;
-      }
+    if (char.skillPoints <= 0) {
+      addLog("❌ No Skill Points!");
+      return;
+    }
 
-      addLog(`📖 Learned ${skill.nameZh} Lv.${currentLevel + 1}!`);
-      
-      return {
-        ...prev,
-        learnedSkills: {
-          ...prev.learnedSkills,
-          [skillId]: currentLevel + 1,
-        },
-        skillPoints: prev.skillPoints - 1,
-      };
-    });
-  }, [addLog]);
+    setChar((prev) => ({
+      ...prev,
+      learnedSkills: {
+        ...prev.learnedSkills,
+        [skillId]: currentLevel + 1,
+      },
+      skillPoints: prev.skillPoints - 1,
+    }));
 
-  const setAutoAttackSkill = useCallback((skillId: string) => {
-    setChar(prev => {
-      const skillLevel = prev.learnedSkills[skillId] || 0;
-      if (skillLevel === 0) {
-        addLog("❌ You haven't learned this skill yet!");
-        return prev;
-      }
-      
-      const skill = SKILLS_DB[prev.jobClass].find((s) => s.id === skillId);
-      if (!skill) {
-        addLog("❌ Skill not found!");
-        return prev;
-      }
+    addLog(`📖 Learned ${skill.nameZh} Lv.${currentLevel + 1}!`);
+  }
 
-      if (skill.effect === "buff") {
-        addLog("❌ Cannot set passive/buff skill as default attack!");
-        return prev;
-      }
+  function setAutoAttackSkill(skillId: string) {
+    const skillLevel = char.learnedSkills[skillId] || 0;
+    if (skillLevel === 0) {
+      addLog("❌ You haven't learned this skill yet!");
+      return;
+    }
+    
+    const skill = SKILLS_DB[char.jobClass].find((s) => s.id === skillId);
+    if (!skill) {
+      addLog("❌ Skill not found!");
+      return;
+    }
 
-      addLog(`⭐ Default skill set to: ${skill.nameZh}`);
-      return { ...prev, autoAttackSkillId: skillId };
-    });
-  }, [addLog]);
+    if (skill.effect === "buff") {
+      addLog("❌ Cannot set passive/buff skill as default attack!");
+      return;
+    }
 
-  const toggleAutoAttack = useCallback(() => {
-    setAutoAttackEnabled(prev => {
-      const newValue = !prev;
-      addLog(newValue ? "🤖 Auto-Attack enabled!" : "✋ Auto-Attack disabled!");
-      return newValue;
-    });
-  }, [addLog]);
+    setChar((prev) => ({
+      ...prev,
+      autoAttackSkillId: skillId,
+    }));
 
-  const handleJobChange = useCallback((newJob: JobClass) => {
+    addLog(`⭐ Default skill set to: ${skill.nameZh}`);
+  }
+
+  function toggleAutoAttack() {
+    setAutoAttackEnabled(prev => !prev);
+    if (!autoAttackEnabled) {
+      addLog("🤖 Auto-Attack enabled!");
+    } else {
+      addLog("✋ Auto-Attack disabled!");
+    }
+  }
+
+  function handleJobChange(newJob: JobClass) {
     const jobBonuses = getJobBonuses(newJob);
     
     const newJobSkills = SKILLS_DB[newJob];
     const initialSkills: Record<string, number> = { basic_attack: 1 };
     
+    // Learn the first job skill
     const firstJobSkill = newJobSkills.find(s => s.id !== "basic_attack");
     if (firstJobSkill) {
       initialSkills[firstJobSkill.id] = 1;
     }
 
+    // ONLY set default attack to a non-buff skill
     const firstAttackSkill = newJobSkills.find(s => s.id !== "basic_attack" && s.effect !== "buff");
 
-    setChar(prev => {
-      const newMaxHp = calcMaxHp(prev.level, prev.stats.vit, newJob);
-      const newMaxMp = calcMaxMp(prev.level, prev.stats.int, newJob);
-      
-      return {
-        ...prev,
-        hp: newMaxHp,
-        maxHp: newMaxHp,
-        mp: newMaxMp,
-        maxMp: newMaxMp,
-        jobClass: newJob,
-        jobLevel: 1,
-        jobExp: 0,
-        jobExpToNext: 50,
-        skillPoints: 3,
-        learnedSkills: initialSkills,
-        autoAttackSkillId: firstAttackSkill ? firstAttackSkill.id : "basic_attack",
-      };
+    const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
+    const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
+
+    setChar({
+      ...char,
+      hp: newMaxHp,
+      maxHp: newMaxHp,
+      mp: newMaxMp,
+      maxMp: newMaxMp,
+      jobClass: newJob,
+      jobLevel: 1,
+      jobExp: 0,
+      jobExpToNext: 50,
+      skillPoints: 3,
+      learnedSkills: initialSkills,
+      autoAttackSkillId: firstAttackSkill ? firstAttackSkill.id : "basic_attack",
     });
 
     setCurrentZoneId(0);
@@ -376,17 +379,20 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }
     addLog(`🛡️ Job Bonuses: HP ${Math.floor((jobBonuses.hpMultiplier - 1) * 100)}%, MP ${Math.floor((jobBonuses.mpMultiplier - 1) * 100)}%, +${jobBonuses.atkBonus} ATK, +${jobBonuses.defBonus} DEF`);
     setShowJobChangeNPC(false);
-  }, [addLog, char.level]);
+  }
 
-  const openJobChangeNPC = useCallback(() => {
+  function openJobChangeNPC() {
     setShowJobChangeNPC(true);
-  }, []);
+  }
 
-  const handleRespawn = useCallback(() => {
+  function handleRespawn() {
+    const respawnHp = Math.floor(char.maxHp * 0.5);
+    const respawnMp = Math.floor(char.maxMp * 0.5);
+    
     setChar((prev) => ({
       ...prev,
-      hp: Math.floor(prev.maxHp * 0.5),
-      mp: Math.floor(prev.maxMp * 0.5),
+      hp: respawnHp,
+      mp: respawnMp,
     }));
     
     setKillCount(0);
@@ -397,9 +403,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setEnemy(getRandomEnemyForZone(0, char.level));
     
     addLog("❤️‍🩹 Respawned in Town!");
-  }, [addLog, char.level]);
+  }
 
-  const escapeToTown = useCallback(() => {
+  function escapeToTown() {
     if (currentZoneId === 0) {
       addLog("ℹ️ You are already in town!");
       return;
@@ -412,9 +418,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setEnemy(getRandomEnemyForZone(0, char.level));
     
     addLog("🏛️ Escaped to Town safely!");
-  }, [addLog, char.level, currentZoneId]);
+  }
 
-  const processTownHealing = useCallback(() => {
+  function processTownHealing() {
     const currentChar = charRef.current;
     const currentZone = currentZoneIdRef.current;
     
@@ -422,63 +428,19 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const healHp = Math.floor(currentChar.maxHp * 0.1);
       const healMp = Math.floor(currentChar.maxMp * 0.1);
       
-      setChar(prev => ({
-        ...prev,
-        hp: Math.min(prev.maxHp, prev.hp + healHp),
-        mp: Math.min(prev.maxMp, prev.mp + healMp),
-      }));
+      setChar(prev => {
+        const newHp = Math.min(prev.maxHp, prev.hp + healHp);
+        const newMp = Math.min(prev.maxMp, prev.mp + healMp);
+        
+        // NO LOG - silent healing in town
+        return { ...prev, hp: newHp, mp: newMp };
+      });
     }
-  }, []);
+  }
   
   townHealingRef.current = processTownHealing;
 
-  const useHpPotion = useCallback(() => {
-    setHpPotions((prevPotions) => {
-      if (prevPotions <= 0) {
-        addLog("❌ No HP Pots!");
-        return prevPotions;
-      }
-      
-      setChar((prevChar) => {
-        if (prevChar.hp >= prevChar.maxHp) {
-          addLog("❤️ HP Full!");
-          return prevChar;
-        }
-        
-        const heal = Math.floor(prevChar.maxHp * HP_POTION_HEAL_PERCENT);
-        const newHp = Math.min(prevChar.maxHp, prevChar.hp + heal);
-        addLog(`🍖 +${heal} HP.`);
-        return { ...prevChar, hp: newHp };
-      });
-      
-      return prevPotions - 1;
-    });
-  }, [addLog]);
-
-  const useMpPotion = useCallback(() => {
-    setMpPotions((prevPotions) => {
-      if (prevPotions <= 0) {
-        addLog("❌ No MP Pots!");
-        return prevPotions;
-      }
-      
-      setChar((prevChar) => {
-        if (prevChar.mp >= prevChar.maxMp) {
-          addLog("💙 MP Full!");
-          return prevChar;
-        }
-        
-        const recover = Math.floor(prevChar.maxMp * MP_POTION_RECOVER_PERCENT);
-        const newMp = Math.min(prevChar.maxMp, prevChar.mp + recover);
-        addLog(`🧪 +${recover} MP.`);
-        return { ...prevChar, mp: newMp };
-      });
-      
-      return prevPotions - 1;
-    });
-  }, [addLog]);
-
-  const processAutoPotion = useCallback(() => {
+  function processAutoPotion() {
     const currentChar = charRef.current;
     const currentHpPotions = hpPotionsRef.current;
     const currentMpPotions = mpPotionsRef.current;
@@ -500,78 +462,70 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         useMpPotion();
       }
     }
-  }, [useHpPotion, useMpPotion]);
+  }
   
   autoPotionRef.current = processAutoPotion;
 
-  const battleAction = useCallback((skillId?: string) => {
+  function battleAction(skillId?: string) {
     if (!isMountedRef.current) return;
+    if (char.hp <= 0) return;
+    if (currentZoneId === 0) return;
     
-    const currentChar = charRef.current;
-    const currentEnemy = enemyRef.current;
-    const currentZone = currentZoneIdRef.current;
-    const currentEquipped = equippedRef.current;
-    
-    if (currentChar.hp <= 0) return;
-    if (currentZone === 0) return;
     if (!canAttack) return;
 
-    // Calculate weapon bonus from refs
-    let currentWeaponBonus = 0;
-    if (currentEquipped.weapon) {
-      const baseAtk = currentEquipped.weapon.atk || currentEquipped.weapon.stat || 0;
-      const refineBonus = (currentEquipped.weapon.refinement || 0) * 3;
-      currentWeaponBonus = baseAtk + refineBonus;
-    }
+    // Use our fresh weaponBonus calculation
+    let actualSkillId = skillId || char.autoAttackSkillId;
+    let skillLevel = char.learnedSkills[actualSkillId] || 0;
+    let skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
 
-    let actualSkillId = skillId || currentChar.autoAttackSkillId;
-    let skillLevel = currentChar.learnedSkills[actualSkillId] || 0;
-    let skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === actualSkillId);
-
+    // If skill is invalid, not learned, or is a buff, fallback to basic attack
     if (!skill || skillLevel === 0 || skill.effect === "buff") {
       actualSkillId = "basic_attack";
-      skillLevel = currentChar.learnedSkills["basic_attack"] || 1;
-      skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === "basic_attack")!;
+      skillLevel = char.learnedSkills["basic_attack"] || 1;
+      skill = SKILLS_DB[char.jobClass].find((s) => s.id === "basic_attack")!;
     }
     
     const now = Date.now();
     let isSkillOnCooldown = false;
     
+    // Check Cooldown
     if (skill.cooldown > 0) {
-      setSkillCooldowns(prev => {
-        const lastUsed = prev[actualSkillId] || 0;
-        const timePassed = (now - lastUsed) / 1000;
-        if (timePassed < skill!.cooldown) {
-          isSkillOnCooldown = true;
-        }
-        return prev;
-      });
+      const lastUsed = skillCooldowns[actualSkillId] || 0;
+      const timePassed = (now - lastUsed) / 1000;
+      if (timePassed < skill.cooldown) {
+        isSkillOnCooldown = true;
+      }
     }
 
     let mpCost = skill.mpCost(skillLevel);
-    let isMpInsufficient = currentChar.mp < mpCost;
+    let isMpInsufficient = char.mp < mpCost;
 
+    // Intelligent Fallback: If primary skill is on cooldown OR MP is insufficient, use Basic Attack instead
     if ((isSkillOnCooldown || isMpInsufficient) && actualSkillId !== "basic_attack") {
       actualSkillId = "basic_attack";
-      skillLevel = currentChar.learnedSkills["basic_attack"] || 1;
-      skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === "basic_attack")!;
+      skillLevel = char.learnedSkills["basic_attack"] || 1;
+      skill = SKILLS_DB[char.jobClass].find((s) => s.id === "basic_attack")!;
       mpCost = skill.mpCost(skillLevel);
-      isMpInsufficient = currentChar.mp < mpCost;
+      isMpInsufficient = char.mp < mpCost;
     }
 
+    // If even basic attack cannot be afforded (MP < 2)
     if (isMpInsufficient) {
+      // We MUST trigger the attack cooldown so the ASPD loop continues
       setLastAttackTime(now);
       setCanAttack(false);
       setAttackCooldownPercent(0);
       
-      const mpRegen = Math.floor(currentChar.maxMp * 0.05) + 1;
-      const newMp = Math.min(currentChar.maxMp, currentChar.mp + mpRegen);
-      if (newMp > currentChar.mp) {
+      // Give a tiny passive MP regen while "resting" in combat
+      const mpRegen = Math.floor(char.maxMp * 0.05) + 1;
+      const newMp = Math.min(char.maxMp, char.mp + mpRegen);
+      if (newMp > char.mp) {
         setChar((prev) => ({ ...prev, mp: newMp }));
       }
       return;
     }
 
+    // Now execute the confirmed skill
     if (skill.cooldown > 0 && actualSkillId !== "basic_attack") {
       setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
     }
@@ -580,102 +534,89 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setCanAttack(false);
     setAttackCooldownPercent(0);
 
+    let nextCharHp = char.hp;
+    let nextCharMp = char.mp - mpCost;
+    let nextCharExp = char.exp;
+    let nextCharLevel = char.level;
+    let nextCharExpToNext = char.expToNext;
+    let nextCharGold = char.gold;
+    let nextStatPoints = char.statPoints;
+    
+    // Tracking materials
+    let nextCharElunium = char.elunium;
+    let nextCharOridecon = char.oridecon;
+    
+    let didLevelUp = false;
+
+    let nextEnemyHp = enemy.hp;
+    let nextEnemy = enemy;
+
     const { damage, isCrit } = calculateDamage(
-      currentChar,
-      currentEnemy,
+      char,
+      enemy,
       skill,
       skillLevel,
-      currentWeaponBonus
+      weaponBonus
     );
-    
-    const nextEnemyHp = currentEnemy.hp - damage;
+    nextEnemyHp = enemy.hp - damage;
 
-    callbacksRef.current?.onDamageDealt?.(damage, isCrit);
+    callbacks?.onDamageDealt?.(damage, isCrit);
 
     const critText = isCrit ? " ❗CRIT!" : "";
-    addLog(`🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${currentEnemy.name} for ${damage} dmg.${critText} (MP-${mpCost})`);
+    addLog(
+      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText} (MP-${mpCost})`
+    );
+
+    let nextJobLevel = char.jobLevel;
+    let nextJobExp = char.jobExp;
+    let nextJobExpToNext = char.jobExpToNext;
+    let nextSkillPoints = char.skillPoints;
 
     if (nextEnemyHp <= 0) {
-      addLog(`💀 ${currentEnemy.name} defeated!`);
+      addLog(`💀 ${enemy.name} defeated!`);
 
-      const goldGain = calculateGoldGain(currentEnemy);
+      const goldGain = calculateGoldGain(enemy);
+      nextCharGold += goldGain;
       addLog(`💰 Gained ${goldGain} Gold.`);
 
-      callbacksRef.current?.onEnemyKilled?.(isBossFight, goldGain);
+      // ACHIEVEMENT TRACKING: Enemy killed
+      callbacks?.onEnemyKilled?.(isBossFight, goldGain);
 
-      const expGain = calculateExpGain(currentEnemy);
+      const expGain = calculateExpGain(enemy);
+      const levelUpResult = processLevelUp(char, expGain);
+      nextCharExp = levelUpResult.newExp;
+      nextCharLevel = levelUpResult.newLevel;
+      nextCharExpToNext = levelUpResult.newExpToNext;
+      nextStatPoints = levelUpResult.newStatPoints;
+
       addLog(`✨ Gained ${expGain} Base EXP.`);
 
-      const jobExpGain = calculateJobExpGain(currentEnemy, currentChar.jobLevel);
+      if (levelUpResult.leveledUp) {
+        nextCharHp = levelUpResult.newHp;
+        nextCharMp = levelUpResult.newMp;
+        didLevelUp = true;
+        addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +3)`);
+        callbacks?.onLevelUp?.(nextCharLevel);
+      }
+
+      const jobExpGain = calculateJobExpGain(enemy, char.jobLevel);
+      const jobLevelUpResult = processJobLevelUp(char, jobExpGain);
+      nextJobExp = jobLevelUpResult.newJobExp;
+      nextJobLevel = jobLevelUpResult.newJobLevel;
+      nextJobExpToNext = jobLevelUpResult.newJobExpToNext;
+      nextSkillPoints = jobLevelUpResult.newSkillPoints;
+
       addLog(`✨ Gained ${jobExpGain} Job EXP.`);
 
-      setChar(prev => {
-        const levelUpResult = processLevelUp(prev, expGain);
-        const jobLevelUpResult = processJobLevelUp(prev, jobExpGain);
+      if (jobLevelUpResult.leveledUp) {
+        addLog(
+          `📘 JOB LEVEL UP! Job Lv.${nextJobLevel} (Skill Points +1)`
+        );
         
-        const finalMaxHp = levelUpResult.leveledUp 
-          ? calcMaxHp(levelUpResult.newLevel, prev.stats.vit, prev.jobClass)
-          : prev.maxHp;
-        const finalMaxMp = levelUpResult.leveledUp
-          ? calcMaxMp(levelUpResult.newLevel, prev.stats.int, prev.jobClass)
-          : prev.maxMp;
-        
-        if (levelUpResult.leveledUp) {
-          addLog(`🌟 LEVEL UP! Now Lv.${levelUpResult.newLevel} (Stat Points +3)`);
-          callbacksRef.current?.onLevelUp?.(levelUpResult.newLevel);
+        if (canChangeJob(char.jobClass, nextJobLevel) && nextJobLevel === 10) {
+          addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);
         }
-        
-        if (jobLevelUpResult.leveledUp) {
-          addLog(`📘 JOB LEVEL UP! Job Lv.${jobLevelUpResult.newJobLevel} (Skill Points +1)`);
-          
-          if (canChangeJob(prev.jobClass, jobLevelUpResult.newJobLevel) && jobLevelUpResult.newJobLevel === 10) {
-            addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);
-          }
-        }
-        
-        let newElunium = prev.elunium;
-        let newOridecon = prev.oridecon;
-        
-        if (isBossFight) {
-          const numElu = Math.floor(Math.random() * 2) + 1;
-          const numOri = Math.floor(Math.random() * 2) + 1;
-          newElunium += numElu;
-          newOridecon += numOri;
-          addLog(`💎 Boss Drop: ${numElu}x Elunium, ${numOri}x Oridecon!`);
-          callbacksRef.current?.onMaterialDrop?.('elunium', numElu);
-          callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
-        } else {
-          const matRoll = Math.random();
-          if (matRoll < 0.05) {
-            newElunium += 1;
-            addLog(`💎 Looted: 1x Elunium!`);
-            callbacksRef.current?.onMaterialDrop?.('elunium', 1);
-          } else if (matRoll < 0.08) {
-            newOridecon += 1;
-            addLog(`💎 Looted: 1x Oridecon!`);
-            callbacksRef.current?.onMaterialDrop?.('oridecon', 1);
-          }
-        }
-        
-        return {
-          ...prev,
-          hp: levelUpResult.leveledUp ? levelUpResult.newHp : prev.hp,
-          maxHp: finalMaxHp,
-          mp: levelUpResult.leveledUp ? (prev.mp - mpCost + levelUpResult.newMp - prev.mp) : prev.mp - mpCost,
-          maxMp: finalMaxMp,
-          level: levelUpResult.newLevel,
-          exp: levelUpResult.newExp,
-          expToNext: levelUpResult.newExpToNext,
-          gold: prev.gold + goldGain,
-          statPoints: levelUpResult.newStatPoints,
-          jobLevel: jobLevelUpResult.newJobLevel,
-          jobExp: jobLevelUpResult.newJobExp,
-          jobExpToNext: jobLevelUpResult.newJobExpToNext,
-          skillPoints: jobLevelUpResult.newSkillPoints,
-          elunium: newElunium,
-          oridecon: newOridecon,
-        };
-      });
+      }
 
       if (isBossFight) {
         addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
@@ -697,49 +638,97 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           addLog(`🏆 You cleared all zones!`);
         }
 
-        const bossGear = generateBossLoot(currentChar.level);
+        const bossGear = generateBossLoot(nextCharLevel);
         setInventory((prev) => [...prev, bossGear]);
         addLog(`🎁 Boss Drop: ${bossGear.name}!`);
-        callbacksRef.current?.onItemDrop?.(bossGear);
+        callbacks?.onItemDrop?.(bossGear);
 
-        const nextEnemy = getRandomEnemyForZone(currentZoneId, currentChar.level);
-        setEnemy(nextEnemy);
+        // Boss drops refine materials
+        const numElu = Math.floor(Math.random() * 2) + 1;
+        const numOri = Math.floor(Math.random() * 2) + 1;
+        nextCharElunium += numElu;
+        nextCharOridecon += numOri;
+        addLog(`💎 Boss Drop: ${numElu}x Elunium, ${numOri}x Oridecon!`);
+        callbacks?.onMaterialDrop?.('elunium', numElu);
+        callbacks?.onMaterialDrop?.('oridecon', numOri);
+
+        nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
       } else {
-        setKillCount(prev => {
-          const nextKillCount = prev + 1;
-          if (nextKillCount % KILLS_FOR_BOSS === 0) {
-            setBossAvailable(true);
-            addLog(`⚔️ Boss is ready! Click the button to challenge!`);
-          }
-          return nextKillCount;
-        });
+        const nextKillCount = killCount + 1;
+        setKillCount(nextKillCount);
 
-        if (shouldDropLoot()) {
-          const newGear = generateLoot(currentChar.level);
-          setInventory((prev) => [...prev, newGear]);
-          addLog(`🎁 Looted: ${newGear.name}!`);
-          callbacksRef.current?.onItemDrop?.(newGear);
+        if (nextKillCount % KILLS_FOR_BOSS === 0) {
+          setBossAvailable(true);
+          addLog(`⚔️ Boss is ready! Click the button to challenge!`);
         }
 
-        const nextEnemy = getRandomEnemyForZone(currentZoneId, currentChar.level);
-        setEnemy(nextEnemy);
+        if (shouldDropLoot()) {
+          const newGear = generateLoot(nextCharLevel);
+          setInventory((prev) => [...prev, newGear]);
+          addLog(`🎁 Looted: ${newGear.name}!`);
+          callbacks?.onItemDrop?.(newGear);
+        }
+
+        // Material drops from normal enemies
+        const matRoll = Math.random();
+        if (matRoll < 0.05) {
+          nextCharElunium += 1;
+          addLog(`💎 Looted: 1x Elunium!`);
+          callbacks?.onMaterialDrop?.('elunium', 1);
+        } else if (matRoll < 0.08) {
+          nextCharOridecon += 1;
+          addLog(`💎 Looted: 1x Oridecon!`);
+          callbacks?.onMaterialDrop?.('oridecon', 1);
+        }
+
+        nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
       }
     } else {
-      setEnemy({ ...currentEnemy, hp: nextEnemyHp });
-      setChar(prev => ({ ...prev, mp: prev.mp - mpCost }));
+      nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
-  }, [addLog, canAttack, currentZoneId, isBossFight]);
+
+    const finalMaxHp = didLevelUp 
+      ? calcMaxHp(nextCharLevel, char.stats.vit, char.jobClass)
+      : char.maxHp;
+    const finalMaxMp = didLevelUp
+      ? calcMaxMp(nextCharLevel, char.stats.int, char.jobClass)
+      : char.maxMp;
+
+    if (!isMountedRef.current) return;
+
+    setChar({
+      hp: nextCharHp,
+      maxHp: finalMaxHp,
+      mp: nextCharMp,
+      maxMp: finalMaxMp,
+      level: nextCharLevel,
+      exp: nextCharExp,
+      expToNext: nextCharExpToNext,
+      gold: nextCharGold,
+      stats: char.stats,
+      statPoints: nextStatPoints,
+      jobClass: char.jobClass,
+      jobLevel: nextJobLevel,
+      jobExp: nextJobExp,
+      jobExpToNext: nextJobExpToNext,
+      skillPoints: nextSkillPoints,
+      learnedSkills: char.learnedSkills,
+      autoAttackSkillId: char.autoAttackSkillId,
+      elunium: nextCharElunium,
+      oridecon: nextCharOridecon,
+    });
+
+    setEnemy(nextEnemy);
+  }
 
   const battleActionRef = useRef(battleAction);
   
-  // Reduced dependencies - only update when combat mechanics fundamentally change
   useEffect(() => {
     battleActionRef.current = battleAction;
-  }, [battleAction]);
+  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight, weaponBonus]);
 
-  // Optimized cooldown animation - reduced from 50ms to 100ms
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
 
@@ -755,16 +744,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       } else {
         setAttackCooldownPercent(Math.floor((timePassed / attackDelayMs) * 100));
       }
-    }, 100); // Reduced from 50ms to 100ms for better performance
+    }, 50);
 
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId, char.hp]);
 
+  // Auto-attack effect - use ref to prevent stale closure
   useEffect(() => {
     if (!autoAttackEnabled || !canAttack || currentZoneId === 0) {
       return;
     }
     
+    // Double-check character is still alive using ref (prevents race conditions)
     if (charRef.current.hp <= 0) {
       return;
     }
@@ -823,7 +814,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       armorTypes.forEach(type => {
         const item = currentEquipped[type];
         if (item) {
-          totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 1;
+          totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 2; // Rebalanced to 2
         }
       });
       const playerDef = calcPlayerDef(currentChar, totalDef);
@@ -854,7 +845,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy.attackSpeed, enemy.name, currentZoneId, addLog]);
+  }, [enemy.attackSpeed, enemy.name, currentZoneId]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -863,7 +854,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearInterval(id);
   }, []);
 
-  const travelToZone = useCallback((zoneId: number) => {
+  function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);
     if (!targetZone || !unlockedZoneIds.includes(zoneId)) {
       addLog("❌ Zone locked!");
@@ -872,9 +863,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setCurrentZoneId(zoneId);
     setEnemy(getRandomEnemyForZone(zoneId, char.level));
     addLog(`🚀 Traveled to: ${targetZone.name}!`);
-  }, [addLog, char.level, unlockedZoneIds]);
+  }
 
-  const challengeBoss = useCallback(() => {
+  function challengeBoss() {
     setIsBossFight(true);
     const bossTemplate = getRandomEnemyForZone(currentZoneId, char.level);
     const bossEnemy = {
@@ -889,84 +880,51 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setEnemy(bossEnemy);
     setBossAvailable(false);
     addLog(`⚔️ CHALLENGE: ${bossEnemy.name} appeared!`);
-  }, [addLog, char.level, currentZoneId]);
+  }
 
-  const equipItem = useCallback((item: Equipment & { targetSlot?: string }) => {
-    // Extract targetSlot and base item without targetSlot to avoid storing it in equipped state
-    const { targetSlot, ...baseItem } = item;
-    
-    if (baseItem.type === "accessory") {
-      setEquipped((prev) => {
-        // If a specific slot was targeted
-        if (targetSlot === "accessory1" || targetSlot === "accessory2") {
-          const oldItem = prev[targetSlot];
-          if (oldItem) {
-            setInventory(inv => [...inv.filter((i) => i.id !== baseItem.id), oldItem]);
-          } else {
-            setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
-          }
-          return { ...prev, [targetSlot]: baseItem };
-        }
-        
-        // Auto-equip logic if no slot specified
-        if (!prev.accessory1) {
-          setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
-          return { ...prev, accessory1: baseItem };
-        } else if (!prev.accessory2) {
-          setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
-          return { ...prev, accessory2: baseItem };
-        } else {
-          // Default to replacing accessory 1 if both are full and no slot specified
-          const oldItem = prev.accessory1;
-          setInventory(inv => [...inv.filter((i) => i.id !== baseItem.id), oldItem]);
-          return { ...prev, accessory1: baseItem };
-        }
-      });
-    } else {
-      setEquipped((prev) => {
-        const oldItem = prev[baseItem.type as keyof EquippedItems];
+  function equipItem(item: Equipment) {
+    // Handle equipment swap - return old item to inventory
+    if (item.type === "accessory") {
+      // For accessories, check both slots
+      if (!equipped.accessory1) {
+        setEquipped((prev) => ({ ...prev, accessory1: item }));
+      } else if (!equipped.accessory2) {
+        setEquipped((prev) => ({ ...prev, accessory2: item }));
+      } else {
+        // Both slots filled, replace accessory1 and return it to inventory
+        const oldItem = equipped.accessory1;
+        setEquipped((prev) => ({ ...prev, accessory1: item }));
         if (oldItem) {
-          setInventory(inv => [...inv.filter((i) => i.id !== baseItem.id), oldItem]);
-        } else {
-          setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
+          setInventory((prev) => [...prev, oldItem]);
         }
-        return { ...prev, [baseItem.type]: baseItem };
-      });
+      }
+    } else {
+      // For other equipment types
+      const oldItem = equipped[item.type as keyof EquippedItems];
+      setEquipped((prev) => ({ ...prev, [item.type]: item }));
+      if (oldItem) {
+        setInventory((prev) => [...prev, oldItem]);
+      }
     }
     
-    addLog(`⚔️ Equipped ${baseItem.name}!`);
-  }, [addLog]);
+    // Remove new item from inventory
+    setInventory((prev) => prev.filter((i) => i.id !== item.id));
+    addLog(`⚔️ Equipped ${item.name}!`);
+  }
 
-  const unequipItem = useCallback((slotKey: keyof EquippedItems) => {
-    setEquipped((prev) => {
-      const itemToUnequip = prev[slotKey];
-      if (!itemToUnequip) return prev;
-      
-      // Add the item back to inventory
-      setInventory(inv => [...inv, itemToUnequip]);
-      
-      addLog(`🎒 Unequipped ${itemToUnequip.name}.`);
-      
-      // Return new state with that slot cleared
-      return { ...prev, [slotKey]: null };
-    });
-  }, [addLog]);
+  function sellItem() {
+    if (inventory.length === 0) {
+      addLog("❌ Inventory empty!");
+      return;
+    }
+    const item = inventory[0];
+    const sellPrice = (item.atk || item.def || item.stat || 1) * 2;
+    setInventory((prev) => prev.slice(1));
+    setChar((prev) => ({ ...prev, gold: prev.gold + sellPrice }));
+    addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
+  }
 
-  const sellItem = useCallback(() => {
-    setInventory(prev => {
-      if (prev.length === 0) {
-        addLog("❌ Inventory empty!");
-        return prev;
-      }
-      const item = prev[0];
-      const sellPrice = (item.atk || item.def || item.stat || 1) * 2;
-      setChar(c => ({ ...c, gold: c.gold + sellPrice }));
-      addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
-      return prev.slice(1);
-    });
-  }, [addLog]);
-
-  const refineItem = useCallback((item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems): RefineResult | void => {
+  function refineItem(item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems): RefineResult | void {
     if (currentZoneId !== 0) {
       addLog("❌ You can only refine in Town!");
       return { success: false, broken: false, message: "Must be in town!" };
@@ -992,25 +950,28 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: false, broken: false, message: "Item is MAX level!" };
     }
 
-    const goldCost = 500 * (currentRefine + 1);
+    // REBALANCE: Increased cost to act as better gold sink since items no longer break
+    const goldCost = 750 * (currentRefine + 1);
     if (char.gold < goldCost) {
       addLog(`❌ Need ${goldCost}g to refine!`);
       return { success: false, broken: false, message: `Need ${goldCost}g!` };
     }
 
+    // REBALANCE: Adjusted success rates for level reduction penalty
     let successChance = 100;
     if (currentRefine >= 4) {
       const rates: Record<number, number> = {
-        4: 60,
-        5: 50,
-        6: 40,
-        7: 30,
-        8: 20,
-        9: 10
+        4: 55, // 60 -> 55
+        5: 45, // 50 -> 45
+        6: 35, // 40 -> 35
+        7: 25, // 30 -> 25
+        8: 15, // 20 -> 15
+        9: 10  // 10 -> 10
       };
       successChance = rates[currentRefine];
     }
 
+    // Pay costs
     setChar(prev => ({
       ...prev,
       gold: prev.gold - goldCost,
@@ -1034,57 +995,104 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: true, broken: false, message: `✨ SUCCESS! ${item.name} is now +${currentRefine + 1}!` };
     } else {
       if (currentRefine >= 4) {
+        // REBALANCE: Level Reduction instead of Destruction
+        const penaltyLevels = 2; // Always drop by 2 levels on failure
+        const newRefinement = Math.max(0, currentRefine - penaltyLevels);
+        const newItem = { ...item, refinement: newRefinement };
+        
         if (isEquipped && slotKey) {
-          setEquipped(prev => ({ ...prev, [slotKey]: null }));
+          setEquipped(prev => ({ ...prev, [slotKey]: newItem }));
         } else {
-          setInventory(prev => prev.filter(i => i.id !== item.id));
+          setInventory(prev => prev.map(i => i.id === item.id ? newItem : i));
         }
-        addLog(`💥 FAILED! ${item.name} broke into pieces...`);
-        return { success: false, broken: true, message: `💥 FAILED! ${item.name} was destroyed!` };
+        
+        addLog(`💥 FAILED! ${item.name} dropped from +${currentRefine} to +${newRefinement}.`);
+        return { success: false, broken: true, message: `💥 FAILED! Level reduced by ${penaltyLevels}!` };
       } else {
+        // Safe fail (shouldn't happen with 100% rate up to +4)
         addLog(`❌ FAILED! Refinement unsuccessful.`);
         return { success: false, broken: false, message: `❌ FAILED! Refinement unsuccessful.` };
       }
     }
-  }, [addLog, char.elunium, char.gold, char.oridecon, currentZoneId]);
+  }
 
-  const buyHpPotion = useCallback((amount: number = 1) => {
+  function buyHpPotion(amount: number = 1) {
     if (currentZoneId !== 0) {
       addLog("❌ You can only buy potions in Town!");
       return;
     }
     
     const totalCost = HP_POTION_COST * amount;
-    setChar(prev => {
-      if (prev.gold >= totalCost) {
-        setHpPotions(p => p + amount);
-        addLog(`🍖 +${amount} HP Pot${amount > 1 ? 's' : ''} (${totalCost}g)`);
-        return { ...prev, gold: prev.gold - totalCost };
-      } else {
-        addLog(`❌ Need ${totalCost}g!`);
-        return prev;
-      }
-    });
-  }, [addLog, currentZoneId]);
+    if (char.gold >= totalCost) {
+      setChar((prev) => ({ ...prev, gold: prev.gold - totalCost }));
+      setHpPotions((prev) => prev + amount);
+      addLog(`🍖 +${amount} HP Pot${amount > 1 ? 's' : ''} (${totalCost}g)`);
+    } else {
+      addLog(`❌ Need ${totalCost}g!`);
+    }
+  }
 
-  const buyMpPotion = useCallback((amount: number = 1) => {
+  function buyMpPotion(amount: number = 1) {
     if (currentZoneId !== 0) {
       addLog("❌ You can only buy potions in Town!");
       return;
     }
     
     const totalCost = MP_POTION_COST * amount;
-    setChar(prev => {
-      if (prev.gold >= totalCost) {
-        setMpPotions(p => p + amount);
-        addLog(`🧪 +${amount} MP Pot${amount > 1 ? 's' : ''} (${totalCost}g)`);
-        return { ...prev, gold: prev.gold - totalCost };
-      } else {
-        addLog(`❌ Need ${totalCost}g!`);
-        return prev;
+    if (char.gold >= totalCost) {
+      setChar((prev) => ({ ...prev, gold: prev.gold - totalCost }));
+      setMpPotions((prev) => prev + amount);
+      addLog(`🧪 +${amount} MP Pot${amount > 1 ? 's' : ''} (${totalCost}g)`);
+    } else {
+      addLog(`❌ Need ${totalCost}g!`);
+    }
+  }
+
+  function useHpPotion() {
+    setHpPotions((prevPotions) => {
+      if (prevPotions <= 0) {
+        addLog("❌ No HP Pots!");
+        return prevPotions;
       }
+      
+      setChar((prevChar) => {
+        if (prevChar.hp >= prevChar.maxHp) {
+          addLog("❤️ HP Full!");
+          return prevChar;
+        }
+        
+        const heal = Math.floor(prevChar.maxHp * HP_POTION_HEAL_PERCENT);
+        const newHp = Math.min(prevChar.maxHp, prevChar.hp + heal);
+        addLog(`🍖 +${heal} HP.`);
+        return { ...prevChar, hp: newHp };
+      });
+      
+      return prevPotions - 1;
     });
-  }, [addLog, currentZoneId]);
+  }
+
+  function useMpPotion() {
+    setMpPotions((prevPotions) => {
+      if (prevPotions <= 0) {
+        addLog("❌ No MP Pots!");
+        return prevPotions;
+      }
+      
+      setChar((prevChar) => {
+        if (prevChar.mp >= prevChar.maxMp) {
+          addLog("💙 MP Full!");
+          return prevChar;
+        }
+        
+        const recover = Math.floor(prevChar.maxMp * MP_POTION_RECOVER_PERCENT);
+        const newMp = Math.min(prevChar.maxMp, prevChar.mp + recover);
+        addLog(`🧪 +${recover} MP.`);
+        return { ...prevChar, mp: newMp };
+      });
+      
+      return prevPotions - 1;
+    });
+  }
 
   return {
     char,
@@ -1120,7 +1128,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     travelToZone,
     challengeBoss,
     equipItem,
-    unequipItem,
     sellItem,
     refineItem,
     buyHpPotion,
