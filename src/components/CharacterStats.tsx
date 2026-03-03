@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems, calculateGearScore } from "../types/equipment";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD } from "../logic/character";
@@ -17,6 +18,47 @@ export function CharacterStats({
   onOpenSkills,
   selectedTitle,
 }: CharacterStatsProps) {
+  // Pending stats system
+  const [pendingStats, setPendingStats] = useState<Record<keyof Stats, number>>({
+    str: 0,
+    agi: 0,
+    vit: 0,
+    int: 0,
+    dex: 0,
+    luk: 0,
+  });
+
+  const totalPendingPoints = Object.values(pendingStats).reduce((sum, val) => sum + val, 0);
+  const remainingPoints = character.statPoints - totalPendingPoints;
+  const hasPendingChanges = totalPendingPoints > 0;
+
+  const addPendingStat = (stat: keyof Stats) => {
+    if (remainingPoints > 0) {
+      setPendingStats(prev => ({ ...prev, [stat]: prev[stat] + 1 }));
+    }
+  };
+
+  const removePendingStat = (stat: keyof Stats) => {
+    if (pendingStats[stat] > 0) {
+      setPendingStats(prev => ({ ...prev, [stat]: prev[stat] - 1 }));
+    }
+  };
+
+  const confirmStats = () => {
+    // Apply all pending changes
+    Object.entries(pendingStats).forEach(([stat, amount]) => {
+      for (let i = 0; i < amount; i++) {
+        onAddStat(stat as keyof Stats);
+      }
+    });
+    // Reset pending
+    setPendingStats({ str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 });
+  };
+
+  const resetPending = () => {
+    setPendingStats({ str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 });
+  };
+
   const expProgress = Math.floor((character.exp / character.expToNext) * 100);
   const hpPercent = Math.floor((character.hp / character.maxHp) * 100);
   const mpPercent = Math.floor((character.mp / character.maxMp) * 100);
@@ -44,7 +86,6 @@ export function CharacterStats({
 
   // Get player avatar based on job class
   const getPlayerAvatar = () => {
-    // We use dicebear adventurers as placeholders for different classes
     const seed = character.jobClass + "Hero";
     return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=transparent`;
   };
@@ -59,10 +100,10 @@ export function CharacterStats({
           borderRadius: "8px",
           border: "1px solid #444",
           position: "relative",
-          marginTop: "10px", // Give room for the badge
+          marginTop: "10px",
         }}
       >
-        {/* Total Combat Power Badge - BIGGER */}
+        {/* Total Combat Power Badge */}
         <div style={{
           position: "absolute",
           top: "-16px",
@@ -73,7 +114,7 @@ export function CharacterStats({
           borderRadius: "24px",
           fontWeight: "900",
           color: "white",
-          fontSize: "16px", // Increased from 13px
+          fontSize: "16px",
           boxShadow: "0 6px 15px rgba(245, 158, 11, 0.5)",
           border: "2px solid #fcd34d",
           whiteSpace: "nowrap",
@@ -95,7 +136,6 @@ export function CharacterStats({
           borderRadius: "8px",
           border: "1px solid #333"
         }}>
-          {/* Avatar Container */}
           <div style={{
             width: "60px",
             height: "60px",
@@ -125,7 +165,6 @@ export function CharacterStats({
               </span>
             </div>
             
-            {/* Achievement Title Display */}
             {selectedTitle && (
               <div
                 style={{
@@ -150,7 +189,6 @@ export function CharacterStats({
 
         {/* HP/MP Bars */}
         <div style={{ background: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "6px" }}>
-          {/* HP */}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
             <span style={{ color: "#f87171" }}>HP</span>
             <span>{character.hp} / {character.maxHp}</span>
@@ -159,7 +197,6 @@ export function CharacterStats({
             <div style={{ width: `${hpPercent}%`, height: "100%", background: "linear-gradient(90deg, #ef4444, #f87171)", transition: "width 0.2s" }} />
           </div>
 
-          {/* MP */}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
             <span style={{ color: "#60a5fa" }}>MP</span>
             <span>{character.mp} / {character.maxMp}</span>
@@ -168,7 +205,6 @@ export function CharacterStats({
             <div style={{ width: `${mpPercent}%`, height: "100%", background: "linear-gradient(90deg, #3b82f6, #60a5fa)", transition: "width 0.2s" }} />
           </div>
 
-          {/* EXP Bars */}
           <div style={{ display: "flex", gap: "10px" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "9px", color: "#10b981", marginBottom: "2px", textAlign: "right" }}>Base EXP: {Math.floor(expProgress)}%</div>
@@ -209,7 +245,7 @@ export function CharacterStats({
           gap: "8px",
         }}
       >
-        {/* Base Stats Column */}
+        {/* Base Stats Column with Pending System */}
         <div
           style={{
             background: "#111",
@@ -228,8 +264,8 @@ export function CharacterStats({
             }}
           >
             <span style={{ color: "#a78bfa", fontWeight: "bold" }}>📊 Base Stats</span>
-            <span style={{ color: character.statPoints > 0 ? "#22c55e" : "#888", fontWeight: "bold" }}>
-              Pts: {character.statPoints}
+            <span style={{ color: remainingPoints > 0 ? "#22c55e" : "#888", fontWeight: "bold" }}>
+              Pts: {remainingPoints}
             </span>
           </div>
           {(["str", "agi", "vit", "int", "dex", "luk"] as const).map((key) => (
@@ -245,26 +281,90 @@ export function CharacterStats({
               <span style={{ width: "35px", textTransform: "uppercase", color: "#bbb" }}>
                 {key}
               </span>
-              <span style={{ width: "24px", fontWeight: "bold" }}>{character.stats[key]}</span>
-              <button
-                onClick={() => onAddStat(key)}
-                disabled={character.statPoints <= 0}
-                style={{
-                  padding: "0 6px",
-                  fontSize: "12px",
-                  borderRadius: "3px",
-                  border: "none",
-                  background: character.statPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
-                  color: "white",
-                  cursor: character.statPoints > 0 ? "pointer" : "not-allowed",
-                  opacity: character.statPoints > 0 ? 1 : 0.5,
-                  fontWeight: "bold"
-                }}
-              >
-                +
-              </button>
+              <span style={{ width: "auto", fontWeight: "bold", minWidth: "24px" }}>
+                {character.stats[key]}
+                {pendingStats[key] > 0 && (
+                  <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+                    +{pendingStats[key]}
+                  </span>
+                )}
+              </span>
+              <div style={{ marginLeft: "auto", display: "flex", gap: "2px" }}>
+                <button
+                  onClick={() => removePendingStat(key)}
+                  disabled={pendingStats[key] === 0}
+                  style={{
+                    padding: "0 6px",
+                    fontSize: "12px",
+                    borderRadius: "3px",
+                    border: "none",
+                    background: pendingStats[key] > 0 ? "linear-gradient(to bottom, #dc2626, #991b1b)" : "#333",
+                    color: "white",
+                    cursor: pendingStats[key] > 0 ? "pointer" : "not-allowed",
+                    opacity: pendingStats[key] > 0 ? 1 : 0.3,
+                    fontWeight: "bold"
+                  }}
+                >
+                  -
+                </button>
+                <button
+                  onClick={() => addPendingStat(key)}
+                  disabled={remainingPoints <= 0}
+                  style={{
+                    padding: "0 6px",
+                    fontSize: "12px",
+                    borderRadius: "3px",
+                    border: "none",
+                    background: remainingPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
+                    color: "white",
+                    cursor: remainingPoints > 0 ? "pointer" : "not-allowed",
+                    opacity: remainingPoints > 0 ? 1 : 0.3,
+                    fontWeight: "bold"
+                  }}
+                >
+                  +
+                </button>
+              </div>
             </div>
           ))}
+
+          {/* Confirmation Buttons */}
+          {hasPendingChanges && (
+            <div style={{ marginTop: "8px", display: "flex", gap: "4px" }}>
+              <button
+                onClick={confirmStats}
+                style={{
+                  flex: 1,
+                  padding: "6px",
+                  fontSize: "11px",
+                  background: "linear-gradient(to bottom, #22c55e, #16a34a)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
+              >
+                ✓ Confirm
+              </button>
+              <button
+                onClick={resetPending}
+                style={{
+                  flex: 1,
+                  padding: "6px",
+                  fontSize: "11px",
+                  background: "linear-gradient(to bottom, #dc2626, #991b1b)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
+              >
+                ✕ Reset
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Derived Stats Column */}
@@ -311,7 +411,6 @@ export function CharacterStats({
             <span style={{ fontWeight: "bold", color: "#2dd4bf" }}>{aspd} <span style={{fontSize: "9px", color: "#777"}}>/s</span></span>
           </div>
           
-          {/* Helpful tooltips for class scaling */}
           <div style={{ marginTop: "8px", fontSize: "9px", color: "#666", fontStyle: "italic", borderTop: "1px solid #222", paddingTop: "4px" }}>
             {character.jobClass === "Swordsman" || character.jobClass === "Knight" ? "STR increases ATK greatly" : ""}
             {character.jobClass === "Archer" || character.jobClass === "Hunter" ? "DEX & AGI increase ATK" : ""}
