@@ -1,7 +1,7 @@
 import { Character } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Skill } from "../types/skill";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance } from "./character";
+import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, PlayerDefense } from "./character";
 import { CRIT_MULTIPLIER } from "../data/constants";
 
 export interface DamageResult {
@@ -30,7 +30,12 @@ export function calculateDamage(
     : calcPlayerAtk(char, weaponBonus);
 
   const randomVar = Math.floor(Math.random() * 5);
-  let baseDmg = Math.max(1, baseAtk - enemy.def + randomVar);
+  let rawDmg = baseAtk + randomVar;
+
+  // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
+  // Apply Enemy Defense
+  const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
+  let baseDmg = Math.max(1, afterHardDef - enemy.softDef);
 
   const critChance = isMagic ? 0 : calcCritChance(char);
   const roll = Math.random() * 100;
@@ -61,8 +66,13 @@ export function calculateDamage(
 
 export function calculateEnemyDamage(
   enemy: Enemy,
-  playerDef: number
+  playerDef: PlayerDefense
 ): number {
   const enemyRawDmg = enemy.atk;
-  return Math.max(1, Math.floor(enemyRawDmg - playerDef * 0.7));
+  
+  // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
+  const afterHardDef = Math.floor(enemyRawDmg * (1 - playerDef.hardDefPercent / 100));
+  const finalDamage = Math.max(1, afterHardDef - playerDef.softDef);
+  
+  return finalDamage;
 }
