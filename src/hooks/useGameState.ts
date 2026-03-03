@@ -66,6 +66,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     skillPoints: 3,
     learnedSkills: { basic_attack: 1 },
     autoAttackSkillId: "basic_attack",
+    elunium: 0,
+    oridecon: 0,
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -143,8 +145,24 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
-  const weaponBonus = useMemo(() => equipped.weapon?.atk || equipped.weapon?.stat || 0, [equipped.weapon]);
-  const armorBonus = useMemo(() => equipped.armor?.def || equipped.armor?.stat || 0, [equipped.armor]);
+  const weaponBonus = useMemo(() => {
+    if (!equipped.weapon) return 0;
+    const baseAtk = equipped.weapon.atk || equipped.weapon.stat || 0;
+    const refineBonus = (equipped.weapon.refinement || 0) * 3;
+    return baseAtk + refineBonus;
+  }, [equipped.weapon]);
+
+  const armorBonus = useMemo(() => {
+    let totalDef = 0;
+    const armorTypes = ['armor', 'head', 'garment', 'footgear'] as const;
+    armorTypes.forEach(type => {
+      const item = equipped[type];
+      if (item) {
+        totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 1;
+      }
+    });
+    return totalDef;
+  }, [equipped]);
   
   const attacksPerSecond = useMemo(() => 
     calcASPD(char), 
@@ -455,8 +473,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     
     if (!canAttack) return;
 
-    const weaponBonus = equipped.weapon?.atk || equipped.weapon?.stat || 0;
-
+    // Use our fresh weaponBonus calculation
     let actualSkillId = skillId || char.autoAttackSkillId;
     let skillLevel = char.learnedSkills[actualSkillId] || 0;
     let skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
@@ -524,6 +541,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextCharExpToNext = char.expToNext;
     let nextCharGold = char.gold;
     let nextStatPoints = char.statPoints;
+    
+    // Tracking materials
+    let nextCharElunium = char.elunium;
+    let nextCharOridecon = char.oridecon;
+    
     let didLevelUp = false;
 
     let nextEnemyHp = enemy.hp;
@@ -621,6 +643,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         addLog(`🎁 Boss Drop: ${bossGear.name}!`);
         callbacks?.onItemDrop?.(bossGear);
 
+        // Boss drops refine materials
+        const numElu = Math.floor(Math.random() * 2) + 1;
+        const numOri = Math.floor(Math.random() * 2) + 1;
+        nextCharElunium += numElu;
+        nextCharOridecon += numOri;
+        addLog(`💎 Boss Drop: ${numElu}x Elunium, ${numOri}x Oridecon!`);
+
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
         addLog(`👾 A wild ${nextEnemy.name} appeared!`);
       } else {
@@ -637,6 +666,16 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           setInventory((prev) => [...prev, newGear]);
           addLog(`🎁 Looted: ${newGear.name}!`);
           callbacks?.onItemDrop?.(newGear);
+        }
+
+        // Material drops from normal enemies
+        const matRoll = Math.random();
+        if (matRoll < 0.05) {
+          nextCharElunium += 1;
+          addLog(`💎 Looted: 1x Elunium!`);
+        } else if (matRoll < 0.08) {
+          nextCharOridecon += 1;
+          addLog(`💎 Looted: 1x Oridecon!`);
         }
 
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
@@ -673,6 +712,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       skillPoints: nextSkillPoints,
       learnedSkills: char.learnedSkills,
       autoAttackSkillId: char.autoAttackSkillId,
+      elunium: nextCharElunium,
+      oridecon: nextCharOridecon,
     });
 
     setEnemy(nextEnemy);
@@ -682,7 +723,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   useEffect(() => {
     battleActionRef.current = battleAction;
-  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight]);
+  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight, weaponBonus]);
 
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
@@ -764,8 +805,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       if (currentChar.hp <= 0 || currentZone === 0) return;
 
-      const armorBonus = currentEquipped.armor?.def || currentEquipped.armor?.stat || 0;
-      const playerDef = calcPlayerDef(currentChar, armorBonus);
+      let totalDef = 0;
+      const armorTypes = ['armor', 'head', 'garment', 'footgear'] as const;
+      armorTypes.forEach(type => {
+        const item = currentEquipped[type];
+        if (item) {
+          totalDef += (item.def || (item.type === 'armor' ? item.stat || 0 : 0)) + (item.refinement || 0) * 1;
+        }
+      });
+      const playerDef = calcPlayerDef(currentChar, totalDef);
       const enemyDmg = calculateEnemyDamage(currentEnemy, playerDef);
 
       currentCallbacks?.onEnemyDamageDealt?.(enemyDmg);
@@ -870,6 +918,89 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setInventory((prev) => prev.slice(1));
     setChar((prev) => ({ ...prev, gold: prev.gold + sellPrice }));
     addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
+  }
+
+  function refineItem(item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) {
+    if (currentZoneId !== 0) {
+      addLog("❌ You can only refine in Town!");
+      return;
+    }
+    
+    if (item.type === "accessory") {
+      addLog("❌ Accessories cannot be refined.");
+      return;
+    }
+
+    const isWeapon = item.type === "weapon";
+    const materialCost = 1;
+    const hasMaterial = isWeapon ? char.oridecon >= materialCost : char.elunium >= materialCost;
+    
+    if (!hasMaterial) {
+      addLog(`❌ Not enough ${isWeapon ? "Oridecon" : "Elunium"}!`);
+      return;
+    }
+
+    const currentRefine = item.refinement || 0;
+    if (currentRefine >= 10) {
+      addLog("❌ Item is already at maximum refinement (+10)!");
+      return;
+    }
+
+    const goldCost = 2000 * (currentRefine + 1);
+    if (char.gold < goldCost) {
+      addLog(`❌ Need ${goldCost}g to refine!`);
+      return;
+    }
+
+    // Success rates
+    let successChance = 100;
+    if (currentRefine >= 4) {
+      const rates: Record<number, number> = {
+        4: 60,
+        5: 50,
+        6: 40,
+        7: 30,
+        8: 20,
+        9: 10
+      };
+      successChance = rates[currentRefine];
+    }
+
+    // Pay costs
+    setChar(prev => ({
+      ...prev,
+      gold: prev.gold - goldCost,
+      elunium: isWeapon ? prev.elunium : prev.elunium - materialCost,
+      oridecon: isWeapon ? prev.oridecon - materialCost : prev.oridecon,
+    }));
+
+    const roll = Math.random() * 100;
+    const success = roll < successChance;
+
+    if (success) {
+      const newItem = { ...item, refinement: currentRefine + 1 };
+      
+      if (isEquipped && slotKey) {
+        setEquipped(prev => ({ ...prev, [slotKey]: newItem }));
+      } else {
+        setInventory(prev => prev.map(i => i.id === item.id ? newItem : i));
+      }
+      
+      addLog(`✨ SUCCESS! ${item.name} is now +${currentRefine + 1}!`);
+    } else {
+      if (currentRefine >= 4) {
+        // Item breaks
+        if (isEquipped && slotKey) {
+          setEquipped(prev => ({ ...prev, [slotKey]: null }));
+        } else {
+          setInventory(prev => prev.filter(i => i.id !== item.id));
+        }
+        addLog(`💥 FAILED! ${item.name} broke into pieces...`);
+      } else {
+        // Safe fail (this shouldn't happen with 100% success rate up to +4)
+        addLog(`❌ FAILED! Refinement unsuccessful.`);
+      }
+    }
   }
 
   function buyHpPotion(amount: number = 1) {
@@ -985,6 +1116,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     challengeBoss,
     equipItem,
     sellItem,
+    refineItem,
     buyHpPotion,
     buyMpPotion,
     useHpPotion,
