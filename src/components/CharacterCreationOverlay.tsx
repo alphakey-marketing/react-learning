@@ -24,9 +24,14 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
   
   const handleComplete = () => {
     if (selectedAvatar && name.trim()) {
-      localStorage.setItem("characterName", name.trim());
-      localStorage.setItem("characterAvatar", selectedAvatar);
-      onComplete(name.trim(), selectedAvatar);
+      try {
+        localStorage.setItem("characterName", name.trim());
+        localStorage.setItem("characterAvatar", selectedAvatar);
+        onComplete(name.trim(), selectedAvatar);
+      } catch (err) {
+        console.error("Failed to save character data:", err);
+        onComplete(name.trim(), selectedAvatar);
+      }
     }
   };
   
@@ -38,24 +43,24 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
         left: 0,
         right: 0,
         bottom: 0,
-        background: "linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%)",
+        background: "rgba(26, 26, 46, 0.98)",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
         zIndex: 9999,
-        backdropFilter: "blur(10px)",
       }}
     >
       <div
         style={{
-          background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
+          position: "relative",
+          background: "#1a1a1a",
           border: "3px solid #fbbf24",
           borderRadius: "16px",
           padding: "40px",
           maxWidth: "600px",
           width: "90%",
           color: "white",
-          textAlign: "center",
+          textAlign: "center" as const,
           boxShadow: "0 0 50px rgba(251, 191, 36, 0.5)",
         }}
       >
@@ -68,9 +73,7 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
               style={{
                 margin: "0 0 10px 0",
                 fontSize: "36px",
-                background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                color: "#fbbf24",
                 fontWeight: "bold",
               }}
             >
@@ -86,7 +89,7 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
               Begin your adventure in the world of Mini RPG
             </p>
             
-            <div style={{ marginBottom: "30px", textAlign: "left" }}>
+            <div style={{ marginBottom: "30px", textAlign: "left" as const }}>
               <label
                 htmlFor="character-name"
                 style={{
@@ -114,12 +117,12 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
                   width: "100%",
                   padding: "12px",
                   fontSize: "16px",
-                  background: "#1a1a1a",
+                  background: "#0a0a0a",
                   border: "2px solid #444",
                   borderRadius: "8px",
                   color: "white",
                   outline: "none",
-                  boxSizing: "border-box",
+                  boxSizing: "border-box" as const,
                 }}
               />
               <div
@@ -127,7 +130,7 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
                   marginTop: "8px",
                   fontSize: "12px",
                   color: name.trim().length > 15 ? "#ef4444" : "#6b7280",
-                  textAlign: "right",
+                  textAlign: "right" as const,
                 }}
               >
                 {name.length}/15 characters
@@ -142,9 +145,9 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
                 padding: "15px",
                 background:
                   name.trim().length >= 1 && name.trim().length <= 15
-                    ? "linear-gradient(45deg, #fbbf24, #f59e0b)"
+                    ? "#fbbf24"
                     : "#555",
-                color: "white",
+                color: "#000",
                 border: "none",
                 borderRadius: "8px",
                 cursor:
@@ -153,25 +156,6 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
                     : "not-allowed",
                 fontSize: "18px",
                 fontWeight: "bold",
-                boxShadow:
-                  name.trim().length >= 1 && name.trim().length <= 15
-                    ? "0 4px 15px rgba(251, 191, 36, 0.4)"
-                    : "none",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                if (name.trim().length >= 1 && name.trim().length <= 15) {
-                  e.currentTarget.style.transform = "scale(1.02)";
-                  e.currentTarget.style.boxShadow =
-                    "0 6px 20px rgba(251, 191, 36, 0.6)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.boxShadow =
-                  name.trim().length >= 1 && name.trim().length <= 15
-                    ? "0 4px 15px rgba(251, 191, 36, 0.4)"
-                    : "none";
               }}
             >
               Next: Choose Avatar →
@@ -181,23 +165,22 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
         
         {step === "avatar" && (
           <>
-            <button
-              onClick={() => setStep("name")}
-              style={{
-                position: "absolute",
-                top: "20px",
-                left: "20px",
-                padding: "8px 16px",
-                background: "#444",
-                color: "white",
-                border: "none",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontSize: "14px",
-              }}
-            >
-              ← Back
-            </button>
+            <div style={{ marginBottom: "20px" }}>
+              <button
+                onClick={() => setStep("name")}
+                style={{
+                  padding: "8px 16px",
+                  background: "#444",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                }}
+              >
+                ← Back
+              </button>
+            </div>
             
             <div style={{ fontSize: "48px", marginBottom: "15px" }}>
               🎭
@@ -206,9 +189,7 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
               style={{
                 margin: "0 0 10px 0",
                 fontSize: "28px",
-                background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                color: "#fbbf24",
                 fontWeight: "bold",
               }}
             >
@@ -231,7 +212,7 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
                 gap: "12px",
                 marginBottom: "25px",
                 maxHeight: "400px",
-                overflowY: "auto",
+                overflowY: "auto" as const,
                 padding: "10px",
               }}
             >
@@ -245,23 +226,10 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
                     border: selectedAvatar === seed ? "3px solid #f59e0b" : "2px solid #444",
                     borderRadius: "12px",
                     cursor: "pointer",
-                    transition: "all 0.2s",
                     display: "flex",
-                    flexDirection: "column",
+                    flexDirection: "column" as const,
                     alignItems: "center",
                     justifyContent: "center",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedAvatar !== seed) {
-                      e.currentTarget.style.background = "#3a3a3a";
-                      e.currentTarget.style.transform = "scale(1.05)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedAvatar !== seed) {
-                      e.currentTarget.style.background = "#2a2a2a";
-                      e.currentTarget.style.transform = "scale(1)";
-                    }
                   }}
                 >
                   <img
@@ -283,29 +251,13 @@ export function CharacterCreationOverlay({ onComplete }: CharacterCreationOverla
               style={{
                 width: "100%",
                 padding: "15px",
-                background: selectedAvatar
-                  ? "linear-gradient(45deg, #10b981, #059669)"
-                  : "#555",
+                background: selectedAvatar ? "#10b981" : "#555",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
                 cursor: selectedAvatar ? "pointer" : "not-allowed",
                 fontSize: "18px",
                 fontWeight: "bold",
-                boxShadow: selectedAvatar ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "none",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                if (selectedAvatar) {
-                  e.currentTarget.style.transform = "scale(1.02)";
-                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(16, 185, 129, 0.6)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.boxShadow = selectedAvatar
-                  ? "0 4px 15px rgba(16, 185, 129, 0.4)"
-                  : "none";
               }}
             >
               🎮 Start Adventure!
