@@ -891,34 +891,65 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     addLog(`⚔️ CHALLENGE: ${bossEnemy.name} appeared!`);
   }, [addLog, char.level, currentZoneId]);
 
-  const equipItem = useCallback((item: Equipment) => {
-    if (item.type === "accessory") {
+  const equipItem = useCallback((item: Equipment & { targetSlot?: string }) => {
+    // Extract targetSlot and base item without targetSlot to avoid storing it in equipped state
+    const { targetSlot, ...baseItem } = item;
+    
+    if (baseItem.type === "accessory") {
       setEquipped((prev) => {
+        // If a specific slot was targeted
+        if (targetSlot === "accessory1" || targetSlot === "accessory2") {
+          const oldItem = prev[targetSlot];
+          if (oldItem) {
+            setInventory(inv => [...inv.filter((i) => i.id !== baseItem.id), oldItem]);
+          } else {
+            setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
+          }
+          return { ...prev, [targetSlot]: baseItem };
+        }
+        
+        // Auto-equip logic if no slot specified
         if (!prev.accessory1) {
-          setInventory(inv => inv.filter((i) => i.id !== item.id));
-          return { ...prev, accessory1: item };
+          setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
+          return { ...prev, accessory1: baseItem };
         } else if (!prev.accessory2) {
-          setInventory(inv => inv.filter((i) => i.id !== item.id));
-          return { ...prev, accessory2: item };
+          setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
+          return { ...prev, accessory2: baseItem };
         } else {
+          // Default to replacing accessory 1 if both are full and no slot specified
           const oldItem = prev.accessory1;
-          setInventory(inv => [...inv.filter((i) => i.id !== item.id), oldItem]);
-          return { ...prev, accessory1: item };
+          setInventory(inv => [...inv.filter((i) => i.id !== baseItem.id), oldItem]);
+          return { ...prev, accessory1: baseItem };
         }
       });
     } else {
       setEquipped((prev) => {
-        const oldItem = prev[item.type as keyof EquippedItems];
+        const oldItem = prev[baseItem.type as keyof EquippedItems];
         if (oldItem) {
-          setInventory(inv => [...inv.filter((i) => i.id !== item.id), oldItem]);
+          setInventory(inv => [...inv.filter((i) => i.id !== baseItem.id), oldItem]);
         } else {
-          setInventory(inv => inv.filter((i) => i.id !== item.id));
+          setInventory(inv => inv.filter((i) => i.id !== baseItem.id));
         }
-        return { ...prev, [item.type]: item };
+        return { ...prev, [baseItem.type]: baseItem };
       });
     }
     
-    addLog(`⚔️ Equipped ${item.name}!`);
+    addLog(`⚔️ Equipped ${baseItem.name}!`);
+  }, [addLog]);
+
+  const unequipItem = useCallback((slotKey: keyof EquippedItems) => {
+    setEquipped((prev) => {
+      const itemToUnequip = prev[slotKey];
+      if (!itemToUnequip) return prev;
+      
+      // Add the item back to inventory
+      setInventory(inv => [...inv, itemToUnequip]);
+      
+      addLog(`🎒 Unequipped ${itemToUnequip.name}.`);
+      
+      // Return new state with that slot cleared
+      return { ...prev, [slotKey]: null };
+    });
   }, [addLog]);
 
   const sellItem = useCallback(() => {
@@ -1089,6 +1120,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     travelToZone,
     challengeBoss,
     equipItem,
+    unequipItem,
     sellItem,
     refineItem,
     buyHpPotion,
