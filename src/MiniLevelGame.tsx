@@ -14,6 +14,7 @@ import { CombatHUD } from "./components/CombatHUD";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
+import { DevToolsPanel } from "./components/DevToolsPanel";
 import { Equipment } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
@@ -34,6 +35,7 @@ export function MiniLevelGame() {
     }
     return true;
   });
+  const [showDevTools, setShowDevTools] = useState(false);
   
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
@@ -97,6 +99,13 @@ export function MiniLevelGame() {
         return;
       }
       
+      // Ctrl+D to toggle dev tools
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        setShowDevTools(prev => !prev);
+        return;
+      }
+      
       if (showTutorial) return;
       
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
@@ -145,6 +154,18 @@ export function MiniLevelGame() {
       }}
     >
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
+      {showDevTools && (
+        <DevToolsPanel
+          character={game.char}
+          onAddBaseLevel={game.devAddBaseLevel}
+          onAddJobLevel={game.devAddJobLevel}
+          onAddGold={game.devAddGold}
+          onAddPotions={game.devAddPotions}
+          onFullHeal={game.devFullHeal}
+          onAddGear={game.devAddGear}
+          onUnlockAllZones={game.devUnlockAllZones}
+        />
+      )}
       
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />

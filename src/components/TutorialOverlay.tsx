@@ -42,24 +42,26 @@ const steps: TutorialStep[] = [
     position: 'right',
   },
   {
+    title: "Job Advancement System",
+    icon: "🧙",
+    description: (
+      <>
+        <b>1st Job Change</b>: At Job Level 10 as a Novice, become a Swordsman, Mage, or Archer!
+        <br/><br/>
+        <b>2nd Job Change</b>: At Job Level 10 in your 1st job, advance to Knight, Wizard, or Hunter for powerful skills and bonuses!
+        <br/><br/>
+        Visit the <b>Job Master</b> in Town when you're ready.
+      </>
+    ),
+    highlightSelector: '[data-tutorial="job-master"]',
+    position: 'bottom',
+  },
+  {
     title: "Loot & Equipment",
     icon: "🛡️",
     description: "Monsters have a chance to drop valuable equipment. Check your Inventory to equip Weapons and Armor to boost your combat stats. Unwanted items can be sold in Town for Gold.",
     highlightSelector: '[data-tutorial="inventory"]',
     position: 'left',
-  },
-  {
-    title: "Job Advancement",
-    icon: "🧙",
-    description: (
-      <>
-        When you reach <b>Job Level 10</b>, return to Town and speak to the <b>Job Master</b>. 
-        <br/><br/>
-        You can evolve from a Novice into advanced classes like <b>Swordsman, Mage, or Archer</b>!
-      </>
-    ),
-    highlightSelector: '[data-tutorial="job-master"]',
-    position: 'bottom',
   },
   {
     title: "Town & Survival",
