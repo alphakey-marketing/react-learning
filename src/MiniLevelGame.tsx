@@ -47,6 +47,16 @@ export function MiniLevelGame() {
         isCrit,
       });
       // achievements.trackDamage(damage); // DISABLED
+      
+      // Screen shake effect on crit
+      if (isCrit) {
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+          gameContainer.classList.remove('crit-shake');
+          void gameContainer.offsetWidth; // trigger reflow
+          gameContainer.classList.add('crit-shake');
+        }
+      }
     },
     onEnemyDamageDealt: (damage: number) => {
       const windowCenterX = window.innerWidth / 2;
@@ -124,11 +134,32 @@ export function MiniLevelGame() {
     game.handleJobChange(newJob);
   };
 
+  // Determine background based on zone
+  const getZoneBackground = () => {
+    if (game.currentZoneId === 0) {
+      // Town - Cozy warm gradient
+      return "radial-gradient(circle at 50% 30%, #2c3e50 0%, #000000 100%)";
+    } else if (game.bossAvailable) {
+      // Boss zone - Dark red menacing
+      return "radial-gradient(circle at 50% 30%, #3f0f0f 0%, #000000 100%)";
+    } else if (game.currentZoneId <= 2) {
+      // Forest - Greenish
+      return "radial-gradient(circle at 50% 30%, #1a3a2a 0%, #000000 100%)";
+    } else if (game.currentZoneId <= 4) {
+      // Desert - Oranges/Browns
+      return "radial-gradient(circle at 50% 30%, #4a2c10 0%, #000000 100%)";
+    } else {
+      // Deep dungeon - Purple/Black
+      return "radial-gradient(circle at 50% 30%, #1e102a 0%, #000000 100%)";
+    }
+  };
+
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+        background: getZoneBackground(),
+        transition: "background 1s ease",
         color: "white",
         display: "flex",
         justifyContent: "center",
@@ -137,8 +168,22 @@ export function MiniLevelGame() {
         padding: "20px",
         paddingTop: "40px",
         paddingBottom: "120px",
+        position: "relative",
       }}
     >
+      {/* Grid Pattern Overlay for Texture */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+        backgroundSize: "30px 30px",
+        pointerEvents: "none",
+        zIndex: 0
+      }} />
+
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
@@ -157,15 +202,18 @@ export function MiniLevelGame() {
       />
 
       <div
+        id="game-container"
         style={{
-          border: "2px solid gold",
+          border: "2px solid rgba(251, 191, 36, 0.5)",
           padding: "20px",
           borderRadius: "12px",
           width: "100%",
           maxWidth: "1200px",
-          background: "rgba(34, 34, 34, 0.95)",
-          boxShadow: "0 8px 32px rgba(255, 215, 0, 0.2)",
-          backdropFilter: "blur(10px)",
+          background: "rgba(20, 20, 20, 0.85)",
+          boxShadow: "0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(251, 191, 36, 0.1)",
+          backdropFilter: "blur(12px)",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <h1
@@ -173,10 +221,12 @@ export function MiniLevelGame() {
             textAlign: "center",
             margin: "0 0 20px 0",
             fontSize: "28px",
-            background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
+            background: "linear-gradient(45deg, #fbbf24, #f59e0b, #fef3c7)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
-            fontWeight: "bold",
+            fontWeight: "900",
+            letterSpacing: "1px",
+            textShadow: "0px 2px 4px rgba(0,0,0,0.5)",
           }}
         >
           ⚔️ Mini RPG - RO Style
@@ -198,6 +248,13 @@ export function MiniLevelGame() {
               display: "flex",
               alignItems: "center",
               gap: "6px",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(59, 130, 246, 0.3)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)";
             }}
           >
             <span>📖</span>
@@ -232,9 +289,9 @@ export function MiniLevelGame() {
                   padding: "10px",
                   background: canChangeJobNow
                     ? "linear-gradient(45deg, #f59e0b, #d97706)"
-                    : "#555",
+                    : "#333",
                   color: "white",
-                  border: canChangeJobNow ? "2px solid #fbbf24" : "none",
+                  border: canChangeJobNow ? "2px solid #fbbf24" : "1px solid #555",
                   borderRadius: "6px",
                   cursor: "pointer",
                   fontWeight: "bold",
@@ -243,10 +300,11 @@ export function MiniLevelGame() {
                     ? "0 0 15px rgba(251, 191, 36, 0.5)"
                     : "none",
                   animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
+                  transition: "all 0.2s",
                 }}
               >
                 {canChangeJobNow
-                  ? "🧙 Job Change!"
+                  ? "✨ Job Change!"
                   : "🧙 Job Master"}
               </button>
 
@@ -263,17 +321,24 @@ export function MiniLevelGame() {
                   flex: 1,
                   padding: "10px",
                   background: game.currentZoneId !== 0 
-                    ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
+                    ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#333")
                     : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
                   color: "white",
-                  border: "none",
+                  border: game.char.hp > 0 ? "1px solid rgba(255,255,255,0.2)" : "1px solid #555",
                   borderRadius: "6px",
                   cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
                   fontWeight: "bold",
                   fontSize: "13px",
                   boxShadow: game.char.hp > 0 
-                    ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
+                    ? (game.currentZoneId !== 0 ? "0 4px 10px rgba(16, 185, 129, 0.3)" : "0 4px 10px rgba(139, 92, 246, 0.3)")
                     : "none",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  if (game.char.hp > 0) e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  if (game.char.hp > 0) e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
                 {game.currentZoneId !== 0 ? "🏛️ Escape to Town" : "🔨 Blacksmith"}
@@ -476,6 +541,22 @@ export function MiniLevelGame() {
           50% {
             opacity: 0.8;
           }
+        }
+        @keyframes critShake {
+          0% { transform: translate(1px, 1px) rotate(0deg); }
+          10% { transform: translate(-1px, -2px) rotate(-1deg); }
+          20% { transform: translate(-3px, 0px) rotate(1deg); }
+          30% { transform: translate(3px, 2px) rotate(0deg); }
+          40% { transform: translate(1px, -1px) rotate(1deg); }
+          50% { transform: translate(-1px, 2px) rotate(-1deg); }
+          60% { transform: translate(-3px, 1px) rotate(0deg); }
+          70% { transform: translate(3px, 1px) rotate(-1deg); }
+          80% { transform: translate(-1px, -1px) rotate(1deg); }
+          90% { transform: translate(1px, 2px) rotate(0deg); }
+          100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .crit-shake {
+          animation: critShake 0.3s cubic-bezier(.36,.07,.19,.97) both;
         }
       `}</style>
     </div>

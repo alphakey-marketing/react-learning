@@ -42,6 +42,13 @@ export function CharacterStats({
   const basePower = (character.level * 10) + (character.jobLevel * 5);
   const totalPower = basePower + totalEquipPower;
 
+  // Get player avatar based on job class
+  const getPlayerAvatar = () => {
+    // We use dicebear adventurers as placeholders for different classes
+    const seed = character.jobClass + character.name;
+    return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=transparent`;
+  };
+
   return (
     <div>
       <div
@@ -76,148 +83,106 @@ export function CharacterStats({
           ⚔️ Combat Power: {totalPower}
         </div>
 
-        <div
-          style={{
+        {/* Character Header with Avatar */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "15px",
+          marginTop: "12px",
+          marginBottom: "15px",
+          padding: "10px",
+          background: "rgba(0,0,0,0.3)",
+          borderRadius: "8px",
+          border: "1px solid #333"
+        }}>
+          {/* Avatar Container */}
+          <div style={{
+            width: "60px",
+            height: "60px",
+            background: "#111",
+            borderRadius: "50%",
+            border: "2px solid #fcd34d",
+            overflow: "hidden",
             display: "flex",
-            justifyContent: "space-between",
-            marginBottom: "4px",
-            marginTop: "12px", // Added margin to clear the bigger badge
-          }}
-        >
-          <strong>
-            Lv.{character.level} {character.jobClass}
-          </strong>
-          <span>
-            HP: {character.hp}/{character.maxHp}
-          </span>
-        </div>
-
-        {/* Achievement Title Display */}
-        {selectedTitle && (
-          <div
-            style={{
-              fontSize: "11px",
-              color: "#fbbf24",
-              fontStyle: "italic",
-              marginBottom: "6px",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
-          >
-            <span>✨</span>
-            <span>"{selectedTitle}"</span>
+            justifyContent: "center",
+            alignItems: "center",
+            boxShadow: "0 0 10px rgba(251, 191, 36, 0.2)"
+          }}>
+            <img 
+              src={getPlayerAvatar()} 
+              alt="Player" 
+              style={{ width: "120%", height: "120%", objectFit: "cover", marginTop: "10px" }} 
+            />
           </div>
-        )}
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: "4px",
-            fontSize: "12px",
-          }}
-        >
-          <span>Job Lv.{character.jobLevel}</span>
-          <span>
-            Job EXP: {character.jobExp}/{character.jobExpToNext}
-          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
+              <span style={{ fontSize: "18px", fontWeight: "bold", color: "#fff" }}>
+                Lv.{character.level}
+              </span>
+              <span style={{ fontSize: "14px", color: "#a78bfa", fontWeight: "bold" }}>
+                {character.jobClass}
+              </span>
+            </div>
+            
+            {/* Achievement Title Display */}
+            {selectedTitle && (
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: "#fbbf24",
+                  fontStyle: "italic",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span>✨</span>
+                <span>"{selectedTitle}"</span>
+              </div>
+            )}
+            
+            <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
+              Job Lv.{character.jobLevel}
+            </div>
+          </div>
         </div>
 
-        <div
-          style={{
-            width: "100%",
-            height: "5px",
-            background: "#555",
-            borderRadius: "5px",
-            overflow: "hidden",
-            marginBottom: "6px",
-          }}
-        >
-          <div
-            style={{
-              width: `${jobExpPercent}%`,
-              height: "100%",
-              background: "#f97316",
-              transition: "width 0.2s",
-            }}
-          />
-        </div>
+        {/* HP/MP Bars */}
+        <div style={{ background: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "6px" }}>
+          {/* HP */}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
+            <span style={{ color: "#f87171" }}>HP</span>
+            <span>{character.hp} / {character.maxHp}</span>
+          </div>
+          <div style={{ width: "100%", height: "14px", background: "#333", borderRadius: "7px", overflow: "hidden", marginBottom: "10px", border: "1px solid #222" }}>
+            <div style={{ width: `${hpPercent}%`, height: "100%", background: "linear-gradient(90deg, #ef4444, #f87171)", transition: "width 0.2s" }} />
+          </div>
 
-        <div
-          style={{
-            width: "100%",
-            height: "12px",
-            background: "#555",
-            borderRadius: "6px",
-            overflow: "hidden",
-            marginBottom: "8px",
-          }}
-        >
-          <div
-            style={{
-              width: `${hpPercent}%`,
-              height: "100%",
-              background: "#ef4444",
-              transition: "width 0.2s",
-            }}
-          />
-        </div>
+          {/* MP */}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
+            <span style={{ color: "#60a5fa" }}>MP</span>
+            <span>{character.mp} / {character.maxMp}</span>
+          </div>
+          <div style={{ width: "100%", height: "10px", background: "#333", borderRadius: "5px", overflow: "hidden", marginBottom: "15px", border: "1px solid #222" }}>
+            <div style={{ width: `${mpPercent}%`, height: "100%", background: "linear-gradient(90deg, #3b82f6, #60a5fa)", transition: "width 0.2s" }} />
+          </div>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: "5px",
-            fontSize: "12px",
-          }}
-        >
-          <span>
-            MP: {character.mp}/{character.maxMp}
-          </span>
-          <span>
-            EXP: {character.exp}/{character.expToNext}
-          </span>
-        </div>
-
-        <div
-          style={{
-            width: "100%",
-            height: "6px",
-            background: "#555",
-            borderRadius: "5px",
-            overflow: "hidden",
-            marginBottom: "8px",
-          }}
-        >
-          <div
-            style={{
-              width: `${mpPercent}%`,
-              height: "100%",
-              background: "#3b82f6",
-              transition: "width 0.2s",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            width: "100%",
-            height: "5px",
-            background: "#555",
-            borderRadius: "5px",
-            overflow: "hidden",
-            marginBottom: "8px",
-          }}
-        >
-          <div
-            style={{
-              width: `${expProgress}%`,
-              height: "100%",
-              background: "#10b981",
-              transition: "width 0.2s",
-            }}
-          />
+          {/* EXP Bars */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "9px", color: "#10b981", marginBottom: "2px", textAlign: "right" }}>Base EXP: {Math.floor(expProgress)}%</div>
+              <div style={{ width: "100%", height: "4px", background: "#333", borderRadius: "2px", overflow: "hidden" }}>
+                <div style={{ width: `${expProgress}%`, height: "100%", background: "#10b981", transition: "width 0.2s" }} />
+              </div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "9px", color: "#f97316", marginBottom: "2px", textAlign: "right" }}>Job EXP: {Math.floor(jobExpPercent)}%</div>
+              <div style={{ width: "100%", height: "4px", background: "#333", borderRadius: "2px", overflow: "hidden" }}>
+                <div style={{ width: `${jobExpPercent}%`, height: "100%", background: "#f97316", transition: "width 0.2s" }} />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div
@@ -226,10 +191,14 @@ export function CharacterStats({
             color: "#fbbf24",
             fontWeight: "bold",
             fontSize: "15px",
-            marginTop: "10px",
+            marginTop: "12px",
+            padding: "8px",
+            background: "rgba(0,0,0,0.3)",
+            borderRadius: "6px",
+            border: "1px solid #444"
           }}
         >
-          💰 Gold: {character.gold}
+          💰 Gold: {character.gold.toLocaleString()}
         </div>
       </div>
 
@@ -259,7 +228,7 @@ export function CharacterStats({
             }}
           >
             <span style={{ color: "#a78bfa", fontWeight: "bold" }}>📊 Base Stats</span>
-            <span style={{ color: character.statPoints > 0 ? "#22c55e" : "#888" }}>
+            <span style={{ color: character.statPoints > 0 ? "#22c55e" : "#888", fontWeight: "bold" }}>
               Pts: {character.statPoints}
             </span>
           </div>
@@ -282,13 +251,14 @@ export function CharacterStats({
                 disabled={character.statPoints <= 0}
                 style={{
                   padding: "0 6px",
-                  fontSize: "10px",
+                  fontSize: "12px",
                   borderRadius: "3px",
                   border: "none",
-                  background: character.statPoints > 0 ? "#22c55e" : "#444",
+                  background: character.statPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
                   color: "white",
                   cursor: character.statPoints > 0 ? "pointer" : "not-allowed",
                   opacity: character.statPoints > 0 ? 1 : 0.5,
+                  fontWeight: "bold"
                 }}
               >
                 +
@@ -356,19 +326,20 @@ export function CharacterStats({
           onClick={onOpenSkills}
           style={{
             width: "100%",
-            padding: "8px",
-            background: "#7c3aed",
+            padding: "10px",
+            background: "linear-gradient(to right, #7c3aed, #6d28d9)",
             color: "white",
-            border: "none",
-            borderRadius: "4px",
+            border: "1px solid #8b5cf6",
+            borderRadius: "6px",
             cursor: "pointer",
             fontWeight: "bold",
-            fontSize: "12px",
-            boxShadow: character.skillPoints > 0 ? "0 0 10px rgba(124, 58, 237, 0.5)" : "none",
+            fontSize: "13px",
+            boxShadow: character.skillPoints > 0 ? "0 0 15px rgba(124, 58, 237, 0.6)" : "none",
             animation: character.skillPoints > 0 ? "pulse 2s infinite" : "none",
+            transition: "all 0.2s"
           }}
         >
-          📖 Skills {character.skillPoints > 0 ? `(Points: ${character.skillPoints}!)` : ""}
+          📖 Skill Tree {character.skillPoints > 0 ? `(Points: ${character.skillPoints}!)` : ""}
         </button>
       </div>
     </div>
