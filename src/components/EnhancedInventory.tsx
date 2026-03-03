@@ -59,7 +59,8 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
     }
   };
   
-  const handleUnequipClick = (slotKey: keyof EquippedItems) => {
+  const handleUnequipClick = (slotKey: keyof EquippedItems, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (onUnequip && equipped[slotKey]) {
       onUnequip(slotKey);
     }
@@ -94,7 +95,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
         justifyContent: "space-between",
         alignItems: "center",
       }}>
-        <span>🎒 Equipment & Inventory</span>
+        <span>🎪 Equipment & Inventory</span>
         <span style={{ fontSize: "11px", color: "#9ca3af" }}>({inventory.length})</span>
       </h3>
       
@@ -123,15 +124,6 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                 flexDirection: "column",
                 gap: "4px",
                 position: "relative",
-                cursor: item && onUnequip ? "pointer" : "default",
-              }}
-              title={item && onUnequip ? "Click to unequip" : ""}
-              onClick={() => {
-                if (item && onUnequip) {
-                  if (window.confirm(`Unequip ${item.name}?`)) {
-                    handleUnequipClick(slot.key);
-                  }
-                }
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -154,12 +146,52 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
               </div>
               
               {item ? (
-                <div style={{ color: rarityColor, fontWeight: "500", fontSize: "11px" }}>
-                  {item.name}
-                  {item.refinement !== undefined && item.refinement > 0 && (
-                    <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
+                <>
+                  <div style={{ color: rarityColor, fontWeight: "500", fontSize: "11px" }}>
+                    {item.name}
+                    {item.refinement !== undefined && item.refinement > 0 && (
+                      <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
+                    )}
+                  </div>
+                  
+                  {/* Unequip Button - Top Right */}
+                  {onUnequip && (
+                    <button
+                      onClick={(e) => handleUnequipClick(slot.key, e)}
+                      style={{
+                        position: "absolute",
+                        top: "4px",
+                        right: "4px",
+                        width: "20px",
+                        height: "20px",
+                        background: "transparent",
+                        border: "1px solid #dc2626",
+                        borderRadius: "4px",
+                        color: "#dc2626",
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "all 0.2s",
+                        lineHeight: "1",
+                        padding: "0",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "#dc2626";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "#dc2626";
+                      }}
+                      title={`Unequip ${item.name}`}
+                    >
+                      ×
+                    </button>
                   )}
-                </div>
+                </>
               ) : (
                 <div style={{ color: "#666", fontStyle: "italic", fontSize: "11px" }}>Empty</div>
               )}
