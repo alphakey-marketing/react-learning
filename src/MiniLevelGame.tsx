@@ -30,18 +30,18 @@ export function MiniLevelGame() {
     return false;
   });
 
-  const [characterName, setCharacterName] = useState<string | null>(() => {
+  const [characterName, setCharacterName] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("characterName");
+      return localStorage.getItem("characterName") || "Hero";
     }
-    return null;
+    return "Hero";
   });
 
-  const [characterAvatarSeed, setCharacterAvatarSeed] = useState<string | null>(() => {
+  const [characterAvatarSeed, setCharacterAvatarSeed] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("characterAvatarSeed");
+      return localStorage.getItem("characterAvatarSeed") || "default";
     }
-    return null;
+    return "default";
   });
 
   const handleCharacterCreation = (name: string, avatarSeed: string) => {
@@ -55,6 +55,15 @@ export function MiniLevelGame() {
     setCharacterCreated(true);
   };
 
+  // Show character creation screen if not created
+  if (!characterCreated) {
+    return <CharacterCreation onComplete={handleCharacterCreation} />;
+  }
+
+  return <GameContent characterName={characterName} characterAvatarSeed={characterAvatarSeed} />;
+}
+
+function GameContent({ characterName, characterAvatarSeed }: { characterName: string; characterAvatarSeed: string }) {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
@@ -115,7 +124,7 @@ export function MiniLevelGame() {
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
       // Future achievements tracking
     },
-  }, characterName || "Hero", characterAvatarSeed || "default");
+  }, characterName, characterAvatarSeed);
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
@@ -156,10 +165,6 @@ export function MiniLevelGame() {
   const wrappedHandleJobChange = (newJob: any) => {
     game.handleJobChange(newJob);
   };
-
-  if (!characterCreated) {
-    return <CharacterCreation onComplete={handleCharacterCreation} />;
-  }
 
   return (
     <div
