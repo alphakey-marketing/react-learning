@@ -23,37 +23,65 @@ import { canChangeJob } from "./data/jobs";
 import { useEffect, useState } from "react";
 
 export function MiniLevelGame() {
-  const [characterCreated, setCharacterCreated] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("characterName") !== null;
-    }
-    return false;
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [characterCreated, setCharacterCreated] = useState(false);
+  const [characterName, setCharacterName] = useState<string>("Hero");
+  const [characterAvatarSeed, setCharacterAvatarSeed] = useState<string>("default");
 
-  const [characterName, setCharacterName] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("characterName") || "Hero";
+  // Load character data from localStorage after component mounts
+  useEffect(() => {
+    const name = localStorage.getItem("characterName");
+    const avatarSeed = localStorage.getItem("characterAvatarSeed");
+    
+    if (name && avatarSeed) {
+      setCharacterName(name);
+      setCharacterAvatarSeed(avatarSeed);
+      setCharacterCreated(true);
     }
-    return "Hero";
-  });
-
-  const [characterAvatarSeed, setCharacterAvatarSeed] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("characterAvatarSeed") || "default";
-    }
-    return "default";
-  });
+    
+    setIsLoading(false);
+  }, []);
 
   const handleCharacterCreation = (name: string, avatarSeed: string) => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("characterName", name);
-      localStorage.setItem("characterAvatarSeed", avatarSeed);
-      localStorage.setItem("hasSeenTutorial", "false"); // Reset tutorial for new character
-    }
+    localStorage.setItem("characterName", name);
+    localStorage.setItem("characterAvatarSeed", avatarSeed);
+    localStorage.setItem("hasSeenTutorial", "false"); // Reset tutorial for new character
+    
     setCharacterName(name);
     setCharacterAvatarSeed(avatarSeed);
     setCharacterCreated(true);
   };
+
+  // Show loading screen while checking localStorage
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          color: "white",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "72px", marginBottom: "20px", animation: "pulse 2s infinite" }}>
+            ⚔️
+          </div>
+          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#fbbf24" }}>
+            Loading...
+          </div>
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   // Show character creation screen if not created
   if (!characterCreated) {
