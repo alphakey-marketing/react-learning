@@ -30,8 +30,8 @@ To prevent overwhelming new players, systems are introduced progressively. Playe
 
 ### 🚧 Phase 2: Power Up & Gamble (Levels 20-40) [CURRENT]
 *Focus: Easy-to-understand power boosts without complex math.*
-- 🔄 **Commit 3:** Equipment Enhancement (+1 to +10 & Breaking)
-- ⏳ **Commit 4:** Card System (Basic Edition - Flat Stats)
+- ✅ **Commit 3:** Equipment Enhancement (+1 to +10 & Breaking)
+- 🔄 **Commit 4:** Card System (Basic Edition - Flat Stats)
 
 ### ⏳ Phase 3: The Strategic Awakening (Levels 40-70)
 *Focus: Hitting a difficulty wall where strategy and knowledge become required.*
@@ -70,22 +70,17 @@ To prevent overwhelming new players, systems are introduced progressively. Playe
 - ✅ Title system for character display
 - ✅ Achievement tracker UI with progress hints
 
----
-
-### **🔄 Commit 3: Equipment Enhancement (+0 to +10)** 🔨 **[CURRENT]**
-**Why now:** Everyone understands upgrading. It creates a massive gold/material sink and introduces thrilling gambling risk before complex combat math is needed.
-
-**Features to Add:**
-- **The Blacksmith NPC** in town.
-- **Safe Upgrades:** +1 to +4 have a 100% success rate.
-- **Risk/Reward:** +5 to +10 have dropping success rates.
-- **The Penalty:** Failing an unsafe upgrade **destroys the equipment**.
-- **Visuals:** Gear +7 or higher gets a glowing aura in the UI.
-- **Materials:** Elunium (Armor) and Oridecon (Weapons) drop from bosses.
+### **✅ Commit 3: Equipment Enhancement (+0 to +10)** 🔨 **[COMPLETED]**
+**Features Implemented:**
+- ✅ **The Blacksmith NPC** in town UI.
+- ✅ **Safe Upgrades:** +1 to +4 have a 100% success rate.
+- ✅ **Risk/Reward:** +5 to +10 have dropping success rates (60% down to 10%).
+- ✅ **The Penalty:** Failing an unsafe upgrade destroys the equipment.
+- ✅ **Materials:** Elunium (Armor) and Oridecon (Weapons) drop from enemies and bosses.
 
 ---
 
-### **⏳ Commit 4: Card System (Basic Edition)** 🃏
+### **🔄 Commit 4: Card System (Basic Edition)** 🃏 **[CURRENT]**
 **Why now:** Introduces the RO 0.01% drop rate dopamine hit. Kept simple with flat stats first.
 
 **Features to Add:**
@@ -164,11 +159,12 @@ To prevent overwhelming new players, systems are introduced progressively. Playe
 - Basic combat system, auto-attack, Jobs (Novice -> 1st/2nd Jobs)
 - Skill trees, Equipment, Zone progression
 - HP/MP potions, Town healing
-- **Loot explosion visual effects**
-- **Achievement system & Title tracking**
+- Loot explosion visual effects
+- Achievement system & Title tracking
+- **Equipment Enhancement System (Refining & Breaking)**
 
 ### 🔄 Currently Implementing
-- Equipment Enhancement System (Commit 3)
+- Basic Card System (Commit 4)
 
 ### ⏳ Next Up
-- Basic Card System (Commit 4)
+- Bestiary & Daily Quests (Commit 5)
