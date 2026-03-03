@@ -45,7 +45,7 @@ export function CharacterStats({
   // Get player avatar based on job class
   const getPlayerAvatar = () => {
     // We use dicebear adventurers as placeholders for different classes
-    const seed = character.jobClass + character.name;
+    const seed = character.jobClass + "Hero";
     return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=transparent`;
   };
 
