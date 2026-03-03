@@ -867,7 +867,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       hp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
       maxHp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
-      def: bossTemplate.def * BOSS_DEF_MULTIPLIER,
+      softDef: bossTemplate.softDef * BOSS_DEF_MULTIPLIER,
+      hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)), // Bosses have higher hard def too
       attackSpeed: bossTemplate.attackSpeed * 1.5,
       count: 1, // Bosses are always single targets
     };
