@@ -25,7 +25,9 @@ export function BattleLog({ logs }: BattleLogProps) {
     const container = logContainerRef.current;
     if (!container) return;
 
-    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 10;
+    // Increased threshold to 50px to prevent false triggers when log container is not full
+    // This ensures auto-scroll stays enabled early in the game when there are few logs
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
     setAutoScroll(isAtBottom);
   };
 
