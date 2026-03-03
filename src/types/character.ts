@@ -10,8 +10,6 @@ export interface CharacterStats {
 }
 
 export interface Character {
-  name: string;
-  avatarSeed: string;
   level: number;
   exp: number;
   expToNext: number;
