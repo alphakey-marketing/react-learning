@@ -10,6 +10,7 @@ import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
 import { RefineNPC } from "./components/RefineNPC";
+import { CombatHUD } from "./components/CombatHUD";
 // import { DevTools } from "./components/DevTools"; // Hidden for MVP
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
@@ -142,6 +143,18 @@ export function MiniLevelGame() {
       
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
+      
+      {/* Combat HUD - Floating Status Display */}
+      <CombatHUD
+        character={game.char}
+        hpPotions={game.hpPotions}
+        mpPotions={game.mpPotions}
+        autoHpPercent={game.autoHpPercent}
+        autoMpPercent={game.autoMpPercent}
+        onUseHpPotion={wrappedUseHpPotion}
+        onUseMpPotion={wrappedUseMpPotion}
+        inTown={game.currentZoneId === 0}
+      />
 
       <div
         style={{
