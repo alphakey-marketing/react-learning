@@ -12,6 +12,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "基本攻擊",
       damageMultiplier: () => 1.0,
       cooldown: 0,
+      targetCount: 1,
     },
   ],
   Swordsman: [
@@ -24,6 +25,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "基本攻擊",
       damageMultiplier: () => 1.0,
       cooldown: 0,
+      targetCount: 1,
     },
     {
       id: "bash",
@@ -34,6 +36,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "單體物理重擊，傷害隨等級提升",
       damageMultiplier: (lv) => 1.3 + lv * 0.1,
       cooldown: 1,
+      targetCount: 1,
     },
     {
       id: "magnum_break",
@@ -41,9 +44,10 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       nameZh: "爆裂波動",
       maxLevel: 10,
       mpCost: (lv) => 12 + lv,
-      description: "範圍火屬性攻擊",
+      description: "範圍火屬性攻擊 (AOE)",
       damageMultiplier: (lv) => 1.5 + lv * 0.15,
       cooldown: 3,
+      targetCount: 3,
     },
     {
       id: "provoke",
@@ -55,6 +59,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       damageMultiplier: () => 0,
       cooldown: 2,
       effect: "buff",
+      targetCount: 1,
     },
   ],
   Mage: [
@@ -67,6 +72,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "基本攻擊",
       damageMultiplier: () => 1.0,
       cooldown: 0,
+      targetCount: 1,
     },
     {
       id: "fire_bolt",
@@ -77,6 +83,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "火屬性魔法攻擊",
       damageMultiplier: (lv) => 1.4 + lv * 0.2,
       cooldown: 1.5,
+      targetCount: 1,
     },
     {
       id: "cold_bolt",
@@ -87,6 +94,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "水屬性魔法攻擊",
       damageMultiplier: (lv) => 1.5 + lv * 0.2,
       cooldown: 1.5,
+      targetCount: 1,
     },
     {
       id: "lightning_bolt",
@@ -97,6 +105,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "風屬性魔法攻擊",
       damageMultiplier: (lv) => 1.6 + lv * 0.25,
       cooldown: 2,
+      targetCount: 1,
     },
   ],
   Archer: [
@@ -109,6 +118,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "基本攻擊",
       damageMultiplier: () => 1.0,
       cooldown: 0,
+      targetCount: 1,
     },
     {
       id: "double_strafe",
@@ -119,6 +129,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "連續射擊兩箭",
       damageMultiplier: (lv) => 1.2 + lv * 0.12,
       cooldown: 1,
+      targetCount: 1,
     },
     {
       id: "arrow_shower",
@@ -126,9 +137,10 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       nameZh: "箭雨",
       maxLevel: 10,
       mpCost: (lv) => 13 + lv,
-      description: "範圍攻擊",
+      description: "範圍攻擊 (AOE)",
       damageMultiplier: (lv) => 1.4 + lv * 0.15,
       cooldown: 2.5,
+      targetCount: 3,
     },
     {
       id: "owl_eye",
@@ -140,6 +152,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       damageMultiplier: () => 0,
       cooldown: 0,
       effect: "buff",
+      targetCount: 0,
     },
   ],
   Knight: [
@@ -152,6 +165,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "基本攻擊",
       damageMultiplier: () => 1.0,
       cooldown: 0,
+      targetCount: 1,
     },
     {
       id: "bowling_bash",
@@ -159,9 +173,10 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       nameZh: "怪物互擊",
       maxLevel: 10,
       mpCost: (lv) => 15 + lv,
-      description: "強力的範圍擊退攻擊",
+      description: "強力的範圍擊退攻擊 (AOE)",
       damageMultiplier: (lv) => 2.0 + lv * 0.2,
       cooldown: 2.5,
+      targetCount: 2,
     },
     {
       id: "peco_peco_ride",
@@ -173,6 +188,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       damageMultiplier: () => 0,
       cooldown: 0,
       effect: "buff",
+      targetCount: 0,
     },
   ],
   Wizard: [
@@ -185,6 +201,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "基本攻擊",
       damageMultiplier: () => 1.0,
       cooldown: 0,
+      targetCount: 1,
     },
     {
       id: "storm_gust",
@@ -192,9 +209,10 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       nameZh: "暴風雪",
       maxLevel: 10,
       mpCost: (lv) => 30 + lv * 2,
-      description: "強大的大範圍水屬性魔法",
+      description: "強大的大範圍水屬性魔法 (AOE)",
       damageMultiplier: (lv) => 2.5 + lv * 0.3,
       cooldown: 5.0,
+      targetCount: 5,
     },
     {
       id: "meteor_storm",
@@ -202,9 +220,10 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       nameZh: "隕石術",
       maxLevel: 10,
       mpCost: (lv) => 35 + lv * 2,
-      description: "毀滅性的大範圍火屬性魔法",
+      description: "毀滅性的大範圍火屬性魔法 (AOE)",
       damageMultiplier: (lv) => 2.8 + lv * 0.35,
       cooldown: 6.0,
+      targetCount: 5,
     },
   ],
   Hunter: [
@@ -217,6 +236,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "基本攻擊",
       damageMultiplier: () => 1.0,
       cooldown: 0,
+      targetCount: 1,
     },
     {
       id: "blitz_beat",
@@ -227,6 +247,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       description: "指揮獵鷹進行無視防禦的攻擊",
       damageMultiplier: (lv) => 1.8 + lv * 0.2,
       cooldown: 1.5,
+      targetCount: 1,
     },
     {
       id: "claymore_trap",
@@ -234,9 +255,10 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       nameZh: "爆炎陷阱",
       maxLevel: 5,
       mpCost: (lv) => 15 + lv * 2,
-      description: "設置強大的範圍火屬性陷阱",
+      description: "設置強大的範圍火屬性陷阱 (AOE)",
       damageMultiplier: (lv) => 2.2 + lv * 0.25,
       cooldown: 3.0,
+      targetCount: 4,
     },
   ]
 };

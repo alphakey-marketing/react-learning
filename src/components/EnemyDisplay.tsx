@@ -24,6 +24,7 @@ export function EnemyDisplay({
 }: EnemyDisplayProps) {
   const hpPercent = (enemy.hp / enemy.maxHp) * 100;
   const isBoss = enemy.name.includes("Boss");
+  const isGroup = (enemy.count || 1) > 1;
   const isLowHp = hpPercent < 30;
   
   const [enemyAttackProgress, setEnemyAttackProgress] = useState(0);
@@ -36,29 +37,34 @@ export function EnemyDisplay({
       return "linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)"; // Boss - Red
     }
     
-    switch(currentZoneId) {
-      case 0: // Town
-        return "linear-gradient(135deg, #334155 0%, #1e293b 70%, #0f172a 100%)"; // Blue-slate
-      case 1: // Beginner Plains
-        return "linear-gradient(135deg, #22c55e 0%, #15803d 50%, #14532d 100%)"; // Light green
-      case 2: // Dark Forest
-        return "linear-gradient(135deg, #166534 0%, #14532d 50%, #052e16 100%)"; // Dark green
-      case 3: // Mountain Path
-        return "linear-gradient(135deg, #57534e 0%, #44403c 50%, #292524 100%)"; // Gray-brown
-      case 4: // Desert Ruins
-        return "linear-gradient(135deg, #d97706 0%, #92400e 50%, #78350f 100%)"; // Orange-sandy
-      case 5: // Frozen Cavern
-        return "linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%)"; // Icy blue
-      case 6: // Volcanic Depths
-        return "linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%)"; // Red-orange
-      case 7: // Ancient Castle
-        return "linear-gradient(135deg, #7c3aed 0%, #581c87 50%, #3b0764 100%)"; // Purple
-      case 8: // Void Dimension
-        return "linear-gradient(135deg, #6366f1 0%, #4c1d95 50%, #2e1065 100%)"; // Deep purple
-      default:
-        return "linear-gradient(135deg, #374151 0%, #1f2937 70%, #111827 100%)"; // Default gray
+    if (isGroup) {
+      // Slightly darker/more intense for groups
+      switch(currentZoneId) {
+        case 1: return "linear-gradient(135deg, #15803d 0%, #14532d 50%, #052e16 100%)"; // Darker green
+        case 2: return "linear-gradient(135deg, #14532d 0%, #052e16 50%, #000000 100%)"; // Very dark green
+        case 3: return "linear-gradient(135deg, #44403c 0%, #292524 50%, #0c0a09 100%)"; // Darker gray
+        case 4: return "linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)"; // Darker orange
+        case 5: return "linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #0f172a 100%)"; // Darker blue
+        case 6: return "linear-gradient(135deg, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)"; // Darker red
+        case 7: return "linear-gradient(135deg, #581c87 0%, #3b0764 50%, #1e1b4b 100%)"; // Darker purple
+        case 8: return "linear-gradient(135deg, #4c1d95 0%, #2e1065 50%, #1e1b4b 100%)"; // Darker void
+        default: return "linear-gradient(135deg, #1f2937 0%, #111827 50%, #000000 100%)";
+      }
     }
-  }, [currentZoneId, isBoss]);
+    
+    switch(currentZoneId) {
+      case 0: return "linear-gradient(135deg, #334155 0%, #1e293b 70%, #0f172a 100%)"; // Blue-slate
+      case 1: return "linear-gradient(135deg, #22c55e 0%, #15803d 50%, #14532d 100%)"; // Light green
+      case 2: return "linear-gradient(135deg, #166534 0%, #14532d 50%, #052e16 100%)"; // Dark green
+      case 3: return "linear-gradient(135deg, #57534e 0%, #44403c 50%, #292524 100%)"; // Gray-brown
+      case 4: return "linear-gradient(135deg, #d97706 0%, #92400e 50%, #78350f 100%)"; // Orange-sandy
+      case 5: return "linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%)"; // Icy blue
+      case 6: return "linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%)"; // Red-orange
+      case 7: return "linear-gradient(135deg, #7c3aed 0%, #581c87 50%, #3b0764 100%)"; // Purple
+      case 8: return "linear-gradient(135deg, #6366f1 0%, #4c1d95 50%, #2e1065 100%)"; // Deep purple
+      default: return "linear-gradient(135deg, #374151 0%, #1f2937 70%, #111827 100%)"; // Default gray
+    }
+  }, [currentZoneId, isBoss, isGroup]);
 
   // Trigger hit animation when HP drops
   useEffect(() => {
@@ -119,7 +125,7 @@ export function EnemyDisplay({
         }}
       >
         <div style={{ fontSize: "48px", marginBottom: "10px", opacity: 0.8 }}>
-          🏕️
+          🏯️
         </div>
         <h2 style={{ margin: "0", color: "#e2e8f0", fontSize: "20px", fontWeight: "bold" }}>
           Safe in Town
@@ -140,10 +146,12 @@ export function EnemyDisplay({
         padding: "20px 15px",
         borderRadius: "8px",
         textAlign: "center",
-        border: isBoss ? "3px solid #fca5a5" : "2px solid rgba(255,255,255,0.2)",
+        border: isBoss ? "3px solid #fca5a5" : (isGroup ? "2px solid #fbbf24" : "2px solid rgba(255,255,255,0.2)"),
         position: "relative",
         overflow: "hidden",
-        boxShadow: isBoss ? "0 0 40px rgba(220, 38, 38, 0.5), inset 0 0 30px rgba(0,0,0,0.4)" : "inset 0 0 30px rgba(0,0,0,0.4)",
+        boxShadow: isBoss 
+          ? "0 0 40px rgba(220, 38, 38, 0.5), inset 0 0 30px rgba(0,0,0,0.4)" 
+          : (isGroup ? "0 0 20px rgba(251, 191, 36, 0.3), inset 0 0 30px rgba(0,0,0,0.4)" : "inset 0 0 30px rgba(0,0,0,0.4)"),
         transition: "background 1s ease, border 0.3s ease"
       }}
     >
@@ -207,11 +215,36 @@ export function EnemyDisplay({
           letterSpacing: "0.5px"
         }}
       >
-        {isBoss && "💀 "} {enemy.name}{" "}
+        {isBoss && "💀 "}
+        {isGroup && !isBoss && (
+          <span style={{ color: "#fbbf24", fontSize: "16px" }}>
+            {enemy.count}x{" "}
+          </span>
+        )}
+        {enemy.name}{" "}
         <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", fontWeight: "normal" }}>
           (Lv.{enemy.level})
         </span>
       </h2>
+      
+      {/* Group indicator badge */}
+      {isGroup && !isBoss && (
+        <div style={{
+          display: "inline-block",
+          background: "rgba(251, 191, 36, 0.2)",
+          border: "1px solid #fbbf24",
+          borderRadius: "4px",
+          padding: "2px 8px",
+          fontSize: "10px",
+          color: "#fbbf24",
+          fontWeight: "bold",
+          marginBottom: "8px",
+          position: "relative",
+          zIndex: 1,
+        }}>
+          👥 ENEMY GROUP
+        </div>
+      )}
       
       {/* Enemy Stats Row */}
       <div style={{ 
@@ -382,7 +415,8 @@ export function EnemyDisplay({
       </div>
       
       <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", marginTop: "12px", position: "relative", zIndex: 1 }}>
-        Tip: Press 'A' key to attack manually
+        {isGroup && "Tip: AOE skills deal bonus damage to groups!"}
+        {!isGroup && "Tip: Press 'A' key to attack manually"}
       </div>
 
       <style>{`
