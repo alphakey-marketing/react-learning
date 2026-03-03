@@ -5,6 +5,7 @@ import { Equipment, EquippedItems } from "../types/equipment";
 import { getRandomEnemyForZone, ZONES } from "../data/zones";
 import { SKILLS_DB } from "../data/skills";
 import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
+import { RefineResult } from "../components/RefineNPC";
 import {
   calculateDamage,
   calculateEnemyDamage,
@@ -922,15 +923,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
   }
 
-  function refineItem(item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) {
+  function refineItem(item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems): RefineResult | void {
     if (currentZoneId !== 0) {
       addLog("❌ You can only refine in Town!");
-      return;
+      return { success: false, broken: false, message: "Must be in town!" };
     }
     
     if (item.type === "accessory") {
       addLog("❌ Accessories cannot be refined.");
-      return;
+      return { success: false, broken: false, message: "Cannot refine accessories!" };
     }
 
     const isWeapon = item.type === "weapon";
@@ -939,19 +940,19 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     
     if (!hasMaterial) {
       addLog(`❌ Not enough ${isWeapon ? "Oridecon" : "Elunium"}!`);
-      return;
+      return { success: false, broken: false, message: `Need ${isWeapon ? "Oridecon" : "Elunium"}!` };
     }
 
     const currentRefine = item.refinement || 0;
     if (currentRefine >= 10) {
       addLog("❌ Item is already at maximum refinement (+10)!");
-      return;
+      return { success: false, broken: false, message: "Item is MAX level!" };
     }
 
     const goldCost = 500 * (currentRefine + 1);
     if (char.gold < goldCost) {
       addLog(`❌ Need ${goldCost}g to refine!`);
-      return;
+      return { success: false, broken: false, message: `Need ${goldCost}g!` };
     }
 
     // Success rates
@@ -989,6 +990,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       }
       
       addLog(`✨ SUCCESS! ${item.name} is now +${currentRefine + 1}!`);
+      return { success: true, broken: false, message: `✨ SUCCESS! ${item.name} is now +${currentRefine + 1}!` };
     } else {
       if (currentRefine >= 4) {
         // Item breaks
@@ -998,9 +1000,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           setInventory(prev => prev.filter(i => i.id !== item.id));
         }
         addLog(`💥 FAILED! ${item.name} broke into pieces...`);
+        return { success: false, broken: true, message: `💥 FAILED! ${item.name} was destroyed!` };
       } else {
         // Safe fail (this shouldn't happen with 100% success rate up to +4)
         addLog(`❌ FAILED! Refinement unsuccessful.`);
+        return { success: false, broken: false, message: `❌ FAILED! Refinement unsuccessful.` };
       }
     }
   }

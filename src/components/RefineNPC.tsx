@@ -1,18 +1,30 @@
 import { Equipment, EquippedItems, getRarityColor } from "../types/equipment";
 import { Character } from "../types/character";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+export interface RefineResult {
+  success: boolean;
+  broken: boolean;
+  message: string;
+}
 
 interface RefineNPCProps {
   character: Character;
   inventory: Equipment[];
   equipped: EquippedItems;
-  onRefine: (item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) => void;
+  onRefine: (item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) => RefineResult | void;
   onClose: () => void;
 }
 
 export function RefineNPC({ character, inventory, equipped, onRefine, onClose }: RefineNPCProps) {
   const [activeTab, setActiveTab] = useState<"equipped" | "inventory">("equipped");
   const [selectedItem, setSelectedItem] = useState<{ item: Equipment; isEquipped: boolean; slotKey?: keyof EquippedItems } | null>(null);
+  const [refineResult, setRefineResult] = useState<RefineResult | null>(null);
+
+  // Clear result when selecting a new item
+  useEffect(() => {
+    setRefineResult(null);
+  }, [selectedItem?.item.id]);
 
   const getRefineCost = (item: Equipment) => {
     return 500 * ((item.refinement || 0) + 1);
@@ -22,6 +34,38 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
     if (currentRefine < 4) return 100;
     const rates: Record<number, number> = { 4: 60, 5: 50, 6: 40, 7: 30, 8: 20, 9: 10 };
     return rates[currentRefine] || 0;
+  };
+
+  const getRefineEffect = (item: Equipment) => {
+    if (item.type === "weapon") return "+3 ATK";
+    return "+1 DEF";
+  };
+
+  const handleRefine = () => {
+    if (!selectedItem) return;
+    
+    const result = onRefine(selectedItem.item, selectedItem.isEquipped, selectedItem.slotKey);
+    
+    if (result) {
+      setRefineResult(result);
+      
+      // Clear selection if item broke
+      if (result.broken) {
+        setSelectedItem(null);
+      } else if (result.success) {
+        // Update selected item to reflect new refinement level for UI continuity
+        setSelectedItem(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            item: {
+              ...prev.item,
+              refinement: (prev.item.refinement || 0) + 1
+            }
+          };
+        });
+      }
+    }
   };
 
   const equippedList = Object.entries(equipped).filter(([_, item]) => item !== null && item.type !== "accessory") as [keyof EquippedItems, Equipment][];
@@ -132,7 +176,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
           <div style={{ width: "50%", borderRight: "1px solid #374151", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", padding: "10px" }}>
               <button
-                onClick={() => { setActiveTab("equipped"); setSelectedItem(null); }}
+                onClick={() => { setActiveTab("equipped"); setSelectedItem(null); setRefineResult(null); }}
                 style={{
                   flex: 1, padding: "8px",
                   background: activeTab === "equipped" ? "#374151" : "transparent",
@@ -141,7 +185,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                 }}
               >Equipped</button>
               <button
-                onClick={() => { setActiveTab("inventory"); setSelectedItem(null); }}
+                onClick={() => { setActiveTab("inventory"); setSelectedItem(null); setRefineResult(null); }}
                 style={{
                   flex: 1, padding: "8px",
                   background: activeTab === "inventory" ? "#374151" : "transparent",
@@ -165,10 +209,36 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
           </div>
 
           {/* Details Section */}
-          <div style={{ width: "50%", padding: "20px", display: "flex", flexDirection: "column" }}>
+          <div style={{ width: "50%", padding: "20px", display: "flex", flexDirection: "column", position: "relative" }}>
+            
+            {/* Feedback Message Overlay */}
+            {refineResult && (
+              <div style={{
+                position: "absolute",
+                top: "20px",
+                left: "20px",
+                right: "20px",
+                padding: "10px",
+                borderRadius: "8px",
+                textAlign: "center",
+                fontWeight: "bold",
+                zIndex: 10,
+                animation: "popIn 0.3s ease-out",
+                background: refineResult.success 
+                  ? "rgba(16, 185, 129, 0.9)" 
+                  : refineResult.broken 
+                    ? "rgba(239, 68, 68, 0.9)" 
+                    : "rgba(245, 158, 11, 0.9)",
+                color: "white",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+              }}>
+                {refineResult.message}
+              </div>
+            )}
+
             {selectedItem ? (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", marginTop: refineResult ? "50px" : "0", transition: "margin 0.3s" }}>
+                <div style={{ textAlign: "center", marginBottom: "15px" }}>
                   <div style={{ fontSize: "40px", marginBottom: "10px" }}>
                     {selectedItem.item.type === "weapon" ? "⚔️" : "🛡️"}
                   </div>
@@ -177,16 +247,20 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                   </div>
                 </div>
 
-                <div style={{ background: "rgba(0,0,0,0.3)", padding: "15px", borderRadius: "8px", marginBottom: "20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <div style={{ background: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: "8px", marginBottom: "15px", fontSize: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                     <span>Current Level:</span>
                     <span style={{ color: "#fbbf24" }}>+{selectedItem.item.refinement || 0}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                     <span>Next Level:</span>
                     <span style={{ color: "#10b981" }}>+{(selectedItem.item.refinement || 0) + 1}</span>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <span>Upgrade Effect:</span>
+                    <span style={{ color: "#60a5fa", fontWeight: "bold" }}>{getRefineEffect(selectedItem.item)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                     <span>Success Rate:</span>
                     <span style={{ color: getSuccessRate(selectedItem.item.refinement || 0) === 100 ? "#10b981" : "#ef4444", fontWeight: "bold" }}>
                       {getSuccessRate(selectedItem.item.refinement || 0)}%
@@ -202,26 +276,23 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
 
                 {(selectedItem.item.refinement || 0) < 10 ? (
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-                    <div style={{ marginBottom: "15px", fontSize: "14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                    <div style={{ marginBottom: "15px", fontSize: "14px", background: "rgba(0,0,0,0.3)", padding: "12px", borderRadius: "8px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
                         <span>Required Gold:</span>
-                        <span style={{ color: character.gold >= getRefineCost(selectedItem.item) ? "#fff" : "#ef4444" }}>
+                        <span style={{ color: character.gold >= getRefineCost(selectedItem.item) ? "#fbbf24" : "#ef4444" }}>
                           {getRefineCost(selectedItem.item)}g
                         </span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span>Required Material:</span>
-                        <span style={{ color: (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) >= 1 ? "#fff" : "#ef4444" }}>
+                        <span style={{ color: (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) >= 1 ? (selectedItem.item.type === "weapon" ? "#f87171" : "#a78bfa") : "#ef4444" }}>
                           1x {selectedItem.item.type === "weapon" ? "Oridecon" : "Elunium"}
                         </span>
                       </div>
                     </div>
                     
                     <button
-                      onClick={() => {
-                        onRefine(selectedItem.item, selectedItem.isEquipped, selectedItem.slotKey);
-                        setSelectedItem(null); // Deselect to allow state to refresh cleanly
-                      }}
+                      onClick={handleRefine}
                       disabled={
                         character.gold < getRefineCost(selectedItem.item) || 
                         (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1
@@ -235,8 +306,12 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                         cursor: "pointer",
                         fontWeight: "bold",
                         fontSize: "16px",
-                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1) ? 0.5 : 1
+                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1) ? 0.5 : 1,
+                        transition: "transform 0.1s"
                       }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
+                      onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                     >
                       Refine Item
                     </button>
@@ -250,7 +325,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                 )}
               </div>
             ) : (
-              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "#666", textAlign: "center", padding: "20px" }}>
+              <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", color: "#666", textAlign: "center", padding: "20px", marginTop: refineResult ? "40px" : "0" }}>
                 Select an item from the left to view refinement details.
               </div>
             )}
@@ -258,6 +333,12 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
 
         </div>
       </div>
+      <style>{`
+        @keyframes popIn {
+          0% { transform: scale(0.9); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
