@@ -968,17 +968,19 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     });
   }, [addLog]);
 
-  const sellItem = useCallback(() => {
+  const sellItem = useCallback((item: Equipment) => {
     setInventory(prev => {
-      if (prev.length === 0) {
-        addLog("❌ Inventory empty!");
+      const itemIndex = prev.findIndex(i => i.id === item.id);
+      if (itemIndex === -1) {
+        addLog("❌ Item not found!");
         return prev;
       }
-      const item = prev[0];
+      
       const sellPrice = (item.atk || item.def || item.stat || 1) * 2;
       setChar(c => ({ ...c, gold: c.gold + sellPrice }));
       addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
-      return prev.slice(1);
+      
+      return prev.filter(i => i.id !== item.id);
     });
   }, [addLog]);
 
