@@ -1,116 +1,165 @@
-import { Zone } from "../types/enemy";
+import { Zone, Enemy } from "../types/enemy";
+
+function createEnemy(
+  name: string,
+  level: number,
+  atk: number,
+  def: number,
+  hp: number,
+  attackSpeed: number = 0.5
+): Enemy {
+  return {
+    name,
+    level,
+    hp,
+    maxHp: hp,
+    atk,
+    def,
+    attackSpeed,
+    count: 1, // Default to single enemy
+  };
+}
 
 export const ZONES: Zone[] = [
   {
     id: 0,
-    name: "🏛️ Town",
+    name: "Town",
     minLevel: 1,
     enemies: [],
   },
   {
     id: 1,
-    name: "🌱 Beginner Plains",
+    name: "Beginner Plains",
     minLevel: 1,
     enemies: [
-      { name: "Slime", level: 1, hp: 30, maxHp: 30, atk: 5, def: 2, attackSpeed: 0.8 },
-      { name: "Poring", level: 1, hp: 35, maxHp: 35, atk: 4, def: 1, attackSpeed: 0.7 },
-      { name: "Lunatic", level: 2, hp: 45, maxHp: 45, atk: 6, def: 2, attackSpeed: 0.9 },
+      createEnemy("Poring", 1, 8, 2, 50, 0.4),
+      createEnemy("Lunatic", 2, 12, 3, 60, 0.45),
+      createEnemy("Fabre", 2, 10, 4, 55, 0.4),
+      createEnemy("Willow", 3, 15, 4, 70, 0.5),
     ],
   },
   {
     id: 2,
-    name: "🌲 Dark Forest",
+    name: "Dark Forest",
     minLevel: 5,
     enemies: [
-      { name: "Goblin", level: 5, hp: 100, maxHp: 100, atk: 12, def: 6, attackSpeed: 1.0 },
-      { name: "Wolf", level: 6, hp: 120, maxHp: 120, atk: 15, def: 5, attackSpeed: 1.2 },
-      { name: "Orc Warrior", level: 7, hp: 150, maxHp: 150, atk: 18, def: 8, attackSpeed: 0.9 },
+      createEnemy("Spore", 5, 25, 8, 120, 0.5),
+      createEnemy("Rocker", 6, 30, 10, 140, 0.55),
+      createEnemy("Wolf", 7, 35, 9, 150, 0.6),
+      createEnemy("Snake", 8, 40, 12, 160, 0.5),
     ],
   },
   {
     id: 3,
-    name: "⛰️ Mountain Path",
+    name: "Mountain Path",
     minLevel: 10,
     enemies: [
-      { name: "Golem", level: 10, hp: 250, maxHp: 250, atk: 25, def: 15, attackSpeed: 0.6 },
-      { name: "Giant Spider", level: 11, hp: 200, maxHp: 200, atk: 28, def: 10, attackSpeed: 1.1 },
-      { name: "Harpy", level: 12, hp: 220, maxHp: 220, atk: 30, def: 12, attackSpeed: 1.3 },
+      createEnemy("Orc Warrior", 10, 60, 20, 280, 0.6),
+      createEnemy("Golem", 12, 55, 30, 350, 0.5),
+      createEnemy("Hill Wind", 11, 65, 18, 250, 0.65),
+      createEnemy("Harpy", 13, 70, 22, 300, 0.7),
     ],
   },
   {
     id: 4,
-    name: "🏜️ Desert Ruins",
+    name: "Desert Ruins",
     minLevel: 15,
     enemies: [
-      { name: "Sand Worm", level: 15, hp: 350, maxHp: 350, atk: 35, def: 18, attackSpeed: 0.8 },
-      { name: "Mummy", level: 16, hp: 400, maxHp: 400, atk: 38, def: 20, attackSpeed: 0.7 },
-      { name: "Scorpion King", level: 17, hp: 450, maxHp: 450, atk: 42, def: 22, attackSpeed: 1.4 },
+      createEnemy("Sand Man", 15, 90, 35, 450, 0.65),
+      createEnemy("Scorpion", 16, 100, 30, 420, 0.7),
+      createEnemy("Mummy", 17, 95, 40, 500, 0.6),
+      createEnemy("Horus", 18, 110, 38, 480, 0.75),
     ],
   },
   {
     id: 5,
-    name: "❄️ Frozen Cavern",
+    name: "Frozen Cavern",
     minLevel: 20,
     enemies: [
-      { name: "Ice Elemental", level: 20, hp: 500, maxHp: 500, atk: 45, def: 25, attackSpeed: 1.0 },
-      { name: "Frost Giant", level: 21, hp: 600, maxHp: 600, atk: 50, def: 30, attackSpeed: 0.8 },
-      { name: "Yeti", level: 22, hp: 550, maxHp: 550, atk: 48, def: 28, attackSpeed: 1.1 },
+      createEnemy("Ice Titan", 20, 130, 50, 650, 0.65),
+      createEnemy("Frost Diver", 22, 140, 45, 620, 0.75),
+      createEnemy("Siroma", 21, 125, 48, 600, 0.7),
+      createEnemy("Gazeti", 23, 150, 52, 680, 0.7),
     ],
   },
   {
     id: 6,
-    name: "🌋 Volcanic Depths",
+    name: "Volcanic Depths",
     minLevel: 25,
     enemies: [
-      { name: "Fire Imp", level: 25, hp: 650, maxHp: 650, atk: 55, def: 32, attackSpeed: 1.3 },
-      { name: "Lava Golem", level: 26, hp: 800, maxHp: 800, atk: 60, def: 40, attackSpeed: 0.7 },
-      { name: "Magma Dragon", level: 27, hp: 750, maxHp: 750, atk: 58, def: 35, attackSpeed: 1.2 },
+      createEnemy("Lava Golem", 25, 180, 65, 850, 0.7),
+      createEnemy("Fire Imp", 27, 200, 60, 820, 0.8),
+      createEnemy("Kaho", 26, 190, 62, 800, 0.75),
+      createEnemy("Blazer", 28, 210, 68, 900, 0.75),
     ],
   },
   {
     id: 7,
-    name: "🏰 Ancient Castle",
+    name: "Ancient Castle",
     minLevel: 30,
     enemies: [
-      { name: "Death Knight", level: 30, hp: 900, maxHp: 900, atk: 65, def: 45, attackSpeed: 1.0 },
-      { name: "Vampire Lord", level: 31, hp: 850, maxHp: 850, atk: 70, def: 40, attackSpeed: 1.4 },
-      { name: "Lich", level: 32, hp: 800, maxHp: 800, atk: 68, def: 42, attackSpeed: 0.9 },
+      createEnemy("Dark Knight", 30, 250, 80, 1100, 0.75),
+      createEnemy("Evil Druid", 32, 270, 75, 1050, 0.85),
+      createEnemy("Wraith", 31, 260, 78, 1000, 0.8),
+      createEnemy("Chimera", 33, 280, 82, 1150, 0.8),
     ],
   },
   {
     id: 8,
-    name: "🌌 Void Dimension",
+    name: "Void Dimension",
     minLevel: 35,
     enemies: [
-      { name: "Shadow Demon", level: 35, hp: 1000, maxHp: 1000, atk: 75, def: 50, attackSpeed: 1.5 },
-      { name: "Void Walker", level: 36, hp: 1100, maxHp: 1100, atk: 80, def: 52, attackSpeed: 1.3 },
-      { name: "Chaos Beast", level: 37, hp: 1200, maxHp: 1200, atk: 85, def: 55, attackSpeed: 1.6 },
+      createEnemy("Void Stalker", 35, 320, 95, 1400, 0.8),
+      createEnemy("Dark Illusion", 37, 350, 90, 1350, 0.9),
+      createEnemy("Nightmare", 36, 330, 92, 1300, 0.85),
+      createEnemy("Thanatos", 38, 370, 100, 1500, 0.85),
     ],
   },
 ];
 
-export function getRandomEnemyForZone(zoneId: number, playerLevel: number) {
+export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enemy {
   const zone = ZONES.find((z) => z.id === zoneId);
   if (!zone || zone.enemies.length === 0) {
-    return {
-      name: "Practice Dummy",
-      level: 1,
-      hp: 50,
-      maxHp: 50,
-      atk: 0,
-      def: 0,
-      attackSpeed: 0,
-    };
+    return createEnemy("Training Dummy", 1, 5, 2, 30, 0.3);
   }
 
-  const randomEnemy = zone.enemies[Math.floor(Math.random() * zone.enemies.length)];
-  const scaledHp = Math.floor(randomEnemy.maxHp * (1 + playerLevel * 0.05));
-  const scaledAtk = Math.floor(randomEnemy.atk * (1 + playerLevel * 0.03));
+  const randomIndex = Math.floor(Math.random() * zone.enemies.length);
+  const baseEnemy = zone.enemies[randomIndex];
+
+  // Level scaling with slight randomness
+  const levelVariance = Math.floor(Math.random() * 3) - 1;
+  const scaledLevel = Math.max(1, playerLevel + levelVariance);
+
+  // Stat scaling based on level difference
+  const levelDiff = scaledLevel - baseEnemy.level;
+  const scalingFactor = 1 + levelDiff * 0.15;
+
+  const scaledHp = Math.floor(baseEnemy.maxHp * scalingFactor);
+  const scaledAtk = Math.floor(baseEnemy.atk * scalingFactor);
+  const scaledDef = Math.floor(baseEnemy.def * scalingFactor);
+
+  // Determine group size (30% chance for groups in combat zones)
+  let count = 1;
+  if (zoneId > 0 && Math.random() < 0.3) {
+    // 30% chance for enemy groups
+    // Early zones: 2-3 enemies, later zones: 2-4 enemies
+    const maxCount = zoneId < 4 ? 3 : 4;
+    count = Math.floor(Math.random() * (maxCount - 1)) + 2; // 2 to maxCount
+  }
+
+  // If it's a group, scale HP proportionally but not linearly
+  // (groups are tougher but not count * HP)
+  const groupHpMultiplier = count > 1 ? Math.sqrt(count) : 1;
+  const finalHp = Math.floor(scaledHp * groupHpMultiplier);
 
   return {
-    ...randomEnemy,
-    hp: scaledHp,
-    maxHp: scaledHp,
+    name: baseEnemy.name,
+    level: scaledLevel,
+    hp: finalHp,
+    maxHp: finalHp,
     atk: scaledAtk,
+    def: scaledDef,
+    attackSpeed: baseEnemy.attackSpeed,
+    count,
   };
 }

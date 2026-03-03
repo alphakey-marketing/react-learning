@@ -8,6 +8,7 @@ export interface DamageResult {
   damage: number;
   isCrit: boolean;
   isMagic: boolean;
+  isAOE: boolean;
 }
 
 const MAGIC_SKILLS = ["fire_bolt", "cold_bolt", "lightning_bolt", "storm_gust", "meteor_storm"];
@@ -41,9 +42,21 @@ export function calculateDamage(
   }
 
   const multiplier = skill.damageMultiplier(skillLevel);
-  const damage = Math.floor(baseDmg * multiplier);
+  let damage = Math.floor(baseDmg * multiplier);
 
-  return { damage, isCrit, isMagic };
+  // AOE Bonus: If skill can hit multiple targets AND enemy group has multiple enemies
+  const skillTargets = skill.targetCount || 1;
+  const enemyCount = enemy.count || 1;
+  const isAOE = skillTargets > 1 && enemyCount > 1;
+  
+  if (isAOE) {
+    // AOE bonus scales with both skill targets and enemy count
+    // Base 1.3x, up to 1.5x for large groups
+    const aoeMultiplier = 1.3 + Math.min(0.2, (enemyCount - 1) * 0.1);
+    damage = Math.floor(damage * aoeMultiplier);
+  }
+
+  return { damage, isCrit, isMagic, isAOE };
 }
 
 export function calculateEnemyDamage(
