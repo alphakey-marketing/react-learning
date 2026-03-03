@@ -11,7 +11,6 @@ import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
 import { RefineNPC } from "./components/RefineNPC";
 import { CombatHUD } from "./components/CombatHUD";
-import { CharacterCreation } from "./components/CharacterCreation";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
@@ -23,75 +22,6 @@ import { canChangeJob } from "./data/jobs";
 import { useEffect, useState } from "react";
 
 export function MiniLevelGame() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [characterCreated, setCharacterCreated] = useState(false);
-  const [characterName, setCharacterName] = useState<string>("Hero");
-  const [characterAvatarSeed, setCharacterAvatarSeed] = useState<string>("default");
-
-  // Load character data from localStorage after component mounts
-  useEffect(() => {
-    const name = localStorage.getItem("characterName");
-    const avatarSeed = localStorage.getItem("characterAvatarSeed");
-    
-    if (name && avatarSeed) {
-      setCharacterName(name);
-      setCharacterAvatarSeed(avatarSeed);
-      setCharacterCreated(true);
-    }
-    
-    setIsLoading(false);
-  }, []);
-
-  const handleCharacterCreation = (name: string, avatarSeed: string) => {
-    localStorage.setItem("characterName", name);
-    localStorage.setItem("characterAvatarSeed", avatarSeed);
-    localStorage.setItem("hasSeenTutorial", "false"); // Reset tutorial for new character
-    
-    setCharacterName(name);
-    setCharacterAvatarSeed(avatarSeed);
-    setCharacterCreated(true);
-  };
-
-  // Show loading screen while checking localStorage
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          color: "white",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "72px", marginBottom: "20px", animation: "pulse 2s infinite" }}>
-            ⚔️
-          </div>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#fbbf24" }}>
-            Loading...
-          </div>
-        </div>
-        <style>{`
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.1); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  // Show character creation screen if not created
-  if (!characterCreated) {
-    return <CharacterCreation onComplete={handleCharacterCreation} />;
-  }
-
-  return <GameContent characterName={characterName} characterAvatarSeed={characterAvatarSeed} />;
-}
-
-function GameContent({ characterName, characterAvatarSeed }: { characterName: string; characterAvatarSeed: string }) {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
@@ -152,7 +82,7 @@ function GameContent({ characterName, characterAvatarSeed }: { characterName: st
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
       // Future achievements tracking
     },
-  }, characterName, characterAvatarSeed);
+  });
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
