@@ -6,13 +6,15 @@ interface EnhancedInventoryProps {
   inventory: Equipment[];
   equipped: EquippedItems;
   onEquip: (item: Equipment) => void;
+  onUnequip?: (slotKey: keyof EquippedItems) => void;
 }
 
 type SortOption = "type" | "rarity" | "power" | "name";
 
-export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInventoryProps) {
+export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: EnhancedInventoryProps) {
   const [sortBy, setSortBy] = useState<SortOption>("type");
   const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
+  const [selectedEquippedSlot, setSelectedEquippedSlot] = useState<keyof EquippedItems | null>(null);
   
   // Sort inventory
   const sortedInventory = [...inventory].sort((a, b) => {
@@ -38,19 +40,38 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
     { key: "head" as keyof EquippedItems, label: "Head", icon: "🎩" },
     { key: "garment" as keyof EquippedItems, label: "Garment", icon: "🧥" },
     { key: "footgear" as keyof EquippedItems, label: "Footgear", icon: "👢" },
-    { key: "accessory1" as keyof EquippedItems, label: "Accessory", icon: "💍" },
-    { key: "accessory2" as keyof EquippedItems, label: "Accessory", icon: "💍" },
+    { key: "accessory1" as keyof EquippedItems, label: "Accessory 1", icon: "💍" },
+    { key: "accessory2" as keyof EquippedItems, label: "Accessory 2", icon: "💍" },
   ];
   
   const handleEquipClick = () => {
     if (selectedItem) {
-      onEquip(selectedItem);
+      // If we selected a specific accessory slot to replace
+      if (selectedItem.type === "accessory" && selectedEquippedSlot) {
+        // We pass a special flag or just rely on the onEquip logic in useGameState
+        // (We will update useGameState to handle a targetSlot parameter)
+        onEquip({ ...selectedItem, targetSlot: selectedEquippedSlot } as any);
+      } else {
+        onEquip(selectedItem);
+      }
       setSelectedItem(null);
+      setSelectedEquippedSlot(null);
+    }
+  };
+  
+  const handleUnequipClick = (slotKey: keyof EquippedItems) => {
+    if (onUnequip && equipped[slotKey]) {
+      onUnequip(slotKey);
     }
   };
   
   const getCurrentlyEquipped = (item: Equipment): Equipment | null => {
     if (item.type === "accessory") {
+      // If a specific slot is targeted, return that one
+      if (selectedEquippedSlot) {
+        return equipped[selectedEquippedSlot] || null;
+      }
+      // Otherwise default to checking accessory1 first, then 2
       return equipped.accessory1 || equipped.accessory2 || null;
     }
     return equipped[item.type as keyof EquippedItems];
@@ -102,6 +123,15 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
                 flexDirection: "column",
                 gap: "4px",
                 position: "relative",
+                cursor: item && onUnequip ? "pointer" : "default",
+              }}
+              title={item && onUnequip ? "Click to unequip" : ""}
+              onClick={() => {
+                if (item && onUnequip) {
+                  if (window.confirm(`Unequip ${item.name}?`)) {
+                    handleUnequipClick(slot.key);
+                  }
+                }
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -193,9 +223,18 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
             const icon = getEquipmentIcon(item.type);
             const rarityColor = getRarityColor(item.rarity);
             const gearScore = calculateGearScore(item);
-            const currentlyEquipped = getCurrentlyEquipped(item);
-            const equippedScore = currentlyEquipped ? calculateGearScore(currentlyEquipped) : 0;
-            const isUpgrade = gearScore > equippedScore;
+            
+            // For accessories, check if ANY equipped accessory is worse
+            let isUpgrade = false;
+            if (item.type === "accessory") {
+              const acc1Score = equipped.accessory1 ? calculateGearScore(equipped.accessory1) : 0;
+              const acc2Score = equipped.accessory2 ? calculateGearScore(equipped.accessory2) : 0;
+              isUpgrade = gearScore > acc1Score || gearScore > acc2Score;
+            } else {
+              const currentlyEquipped = equipped[item.type as keyof EquippedItems];
+              const equippedScore = currentlyEquipped ? calculateGearScore(currentlyEquipped) : 0;
+              isUpgrade = gearScore > equippedScore;
+            }
             
             return (
               <button
@@ -284,15 +323,97 @@ export function EnhancedInventory({ inventory, equipped, onEquip }: EnhancedInve
         )}
       </div>
       
+      {/* Accessory Slot Selection Modal */}
+      {selectedItem && selectedItem.type === "accessory" && !selectedEquippedSlot && equipped.accessory1 && equipped.accessory2 && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.8)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: "#1a1a1a",
+            padding: "20px",
+            borderRadius: "8px",
+            border: "1px solid #444",
+            maxWidth: "400px",
+            width: "100%",
+            textAlign: "center"
+          }}>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 15px 0" }}>Which slot to replace?</h3>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "15px" }}>
+              <button
+                onClick={() => setSelectedEquippedSlot("accessory1")}
+                style={{
+                  padding: "10px",
+                  background: "#2a2a2a",
+                  border: "1px solid #555",
+                  borderRadius: "6px",
+                  color: "white",
+                  cursor: "pointer",
+                  flex: 1
+                }}
+              >
+                Slot 1:<br/>
+                <span style={{ color: getRarityColor(equipped.accessory1.rarity) }}>
+                  {equipped.accessory1.name}
+                </span>
+              </button>
+              <button
+                onClick={() => setSelectedEquippedSlot("accessory2")}
+                style={{
+                  padding: "10px",
+                  background: "#2a2a2a",
+                  border: "1px solid #555",
+                  borderRadius: "6px",
+                  color: "white",
+                  cursor: "pointer",
+                  flex: 1
+                }}
+              >
+                Slot 2:<br/>
+                <span style={{ color: getRarityColor(equipped.accessory2.rarity) }}>
+                  {equipped.accessory2.name}
+                </span>
+              </button>
+            </div>
+            <button
+              onClick={() => setSelectedItem(null)}
+              style={{
+                padding: "8px 16px",
+                background: "#4b5563",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                width: "100%"
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Comparison Modal */}
       {selectedItem && (
+        (selectedItem.type !== "accessory" || 
+         !equipped.accessory1 || 
+         !equipped.accessory2 || 
+         selectedEquippedSlot) && (
         <EquipmentComparisonModal
           newItem={selectedItem}
           currentItem={getCurrentlyEquipped(selectedItem)}
           onEquip={handleEquipClick}
-          onCancel={() => setSelectedItem(null)}
+          onCancel={() => {
+            setSelectedItem(null);
+            setSelectedEquippedSlot(null);
+          }}
         />
-      )}
+      ))}
     </div>
   );
 }
