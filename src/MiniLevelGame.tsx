@@ -14,6 +14,7 @@ import { CombatHUD } from "./components/CombatHUD";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
+import { Equipment } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
@@ -48,7 +49,6 @@ export function MiniLevelGame() {
           void gameContainer.offsetWidth;
           gameContainer.classList.add('crit-shake');
           
-          // Remove class after animation completes to ensure clean reset
           setTimeout(() => {
             gameContainer.classList.remove('crit-shake');
           }, 300);
@@ -109,8 +109,8 @@ export function MiniLevelGame() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial]);
 
-  const wrappedSellItem = () => {
-    game.sellItem();
+  const wrappedSellItem = (item: Equipment) => {
+    game.sellItem(item);
   };
 
   const wrappedUseHpPotion = () => {
@@ -339,6 +339,7 @@ export function MiniLevelGame() {
               <Shop
                 character={game.char}
                 isInTown={game.currentZoneId === 0}
+                inventory={game.inventory}
                 onSellItem={wrappedSellItem}
                 onBuyHpPotion={game.buyHpPotion}
                 onBuyMpPotion={game.buyMpPotion}
