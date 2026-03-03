@@ -23,7 +23,7 @@ import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 // import { useAchievements } from "./hooks/useAchievements";
 import { canChangeJob } from "./data/jobs";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -95,6 +95,40 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
+  // Determine background based on zone - Using useMemo to ensure it updates
+  const zoneBackground = useMemo(() => {
+    console.log('Zone changed to:', game.currentZoneId, 'Boss available:', game.bossAvailable);
+    
+    // Boss fight takes priority
+    if (game.bossAvailable) {
+      return "radial-gradient(circle at 50% 20%, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)"; // Red
+    }
+    
+    // Check specific zones
+    switch(game.currentZoneId) {
+      case 0: // Town
+        return "radial-gradient(circle at 50% 20%, #334155 0%, #1e293b 50%, #0f172a 100%)"; // Blue-slate
+      case 1: // Beginner Plains - Light green
+        return "radial-gradient(circle at 50% 20%, #15803d 0%, #166534 50%, #14532d 100%)"; // Lighter green
+      case 2: // Dark Forest - Deep green
+        return "radial-gradient(circle at 50% 20%, #14532d 0%, #052e16 50%, #021a0a 100%)"; // Dark green
+      case 3: // Mountain Path - Gray/rocky
+        return "radial-gradient(circle at 50% 20%, #44403c 0%, #292524 50%, #1c1917 100%)"; // Gray-brown
+      case 4: // Desert Ruins - Orange/sandy
+        return "radial-gradient(circle at 50% 20%, #92400e 0%, #78350f 50%, #451a03 100%)"; // Orange-brown
+      case 5: // Frozen Cavern - Icy blue
+        return "radial-gradient(circle at 50% 20%, #1e3a8a 0%, #1e40af 50%, #1e293b 100%)"; // Blue
+      case 6: // Volcanic Depths - Red-orange
+        return "radial-gradient(circle at 50% 20%, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)"; // Red-orange
+      case 7: // Ancient Castle - Purple-gray
+        return "radial-gradient(circle at 50% 20%, #581c87 0%, #3b0764 50%, #2e1065 100%)"; // Purple
+      case 8: // Void Dimension - Deep purple/black
+        return "radial-gradient(circle at 50% 20%, #4c1d95 0%, #2e1065 50%, #1a0a3d 100%)"; // Dark purple
+      default:
+        return "radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 50%, #020617 100%)"; // Default dark
+    }
+  }, [game.currentZoneId, game.bossAvailable]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -134,32 +168,12 @@ export function MiniLevelGame() {
     game.handleJobChange(newJob);
   };
 
-  // Determine background based on zone - MADE MORE VIBRANT
-  const getZoneBackground = () => {
-    if (game.currentZoneId === 0) {
-      // Town - Cozy blue/slate gradient (safe zone)
-      return "radial-gradient(circle at 50% 20%, #334155 0%, #1e293b 50%, #0f172a 100%)";
-    } else if (game.bossAvailable) {
-      // Boss zone - Dramatic RED (danger!)
-      return "radial-gradient(circle at 50% 20%, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)";
-    } else if (game.currentZoneId <= 2) {
-      // Forest - Rich GREEN tones
-      return "radial-gradient(circle at 50% 20%, #14532d 0%, #052e16 50%, #021a0a 100%)";
-    } else if (game.currentZoneId <= 4) {
-      // Desert - Sandy ORANGE/BROWN
-      return "radial-gradient(circle at 50% 20%, #78350f 0%, #451a03 50%, #1c0a03 100%)";
-    } else {
-      // Deep dungeon - Mystical PURPLE
-      return "radial-gradient(circle at 50% 20%, #4c1d95 0%, #2e1065 50%, #1a0a3d 100%)";
-    }
-  };
-
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: getZoneBackground(),
-        transition: "background 1s ease",
+        background: zoneBackground,
+        transition: "background 1.5s ease",
         color: "white",
         display: "flex",
         justifyContent: "center",
