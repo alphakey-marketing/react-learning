@@ -1,8 +1,9 @@
 import { Enemy } from "../types/enemy";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface EnemyDisplayProps {
   enemy: Enemy;
+  currentZoneId: number;
   onAttack: () => void;
   canAttack: boolean;
   inTown: boolean;
@@ -12,7 +13,8 @@ interface EnemyDisplayProps {
 }
 
 export function EnemyDisplay({ 
-  enemy, 
+  enemy,
+  currentZoneId,
   onAttack, 
   canAttack, 
   inTown, 
@@ -27,6 +29,36 @@ export function EnemyDisplay({
   const [enemyAttackProgress, setEnemyAttackProgress] = useState(0);
   const [isHit, setIsHit] = useState(false);
   const [prevHp, setPrevHp] = useState(enemy.hp);
+
+  // Get zone-specific battle arena background
+  const battleArenaBackground = useMemo(() => {
+    if (isBoss) {
+      return "linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)"; // Boss - Red
+    }
+    
+    switch(currentZoneId) {
+      case 0: // Town
+        return "linear-gradient(135deg, #334155 0%, #1e293b 70%, #0f172a 100%)"; // Blue-slate
+      case 1: // Beginner Plains
+        return "linear-gradient(135deg, #22c55e 0%, #15803d 50%, #14532d 100%)"; // Light green
+      case 2: // Dark Forest
+        return "linear-gradient(135deg, #166534 0%, #14532d 50%, #052e16 100%)"; // Dark green
+      case 3: // Mountain Path
+        return "linear-gradient(135deg, #57534e 0%, #44403c 50%, #292524 100%)"; // Gray-brown
+      case 4: // Desert Ruins
+        return "linear-gradient(135deg, #d97706 0%, #92400e 50%, #78350f 100%)"; // Orange-sandy
+      case 5: // Frozen Cavern
+        return "linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%)"; // Icy blue
+      case 6: // Volcanic Depths
+        return "linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%)"; // Red-orange
+      case 7: // Ancient Castle
+        return "linear-gradient(135deg, #7c3aed 0%, #581c87 50%, #3b0764 100%)"; // Purple
+      case 8: // Void Dimension
+        return "linear-gradient(135deg, #6366f1 0%, #4c1d95 50%, #2e1065 100%)"; // Deep purple
+      default:
+        return "linear-gradient(135deg, #374151 0%, #1f2937 70%, #111827 100%)"; // Default gray
+    }
+  }, [currentZoneId, isBoss]);
 
   // Trigger hit animation when HP drops
   useEffect(() => {
@@ -77,21 +109,22 @@ export function EnemyDisplay({
         style={{
           marginTop: "15px",
           marginBottom: "15px",
-          background: "linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%)",
+          background: "linear-gradient(135deg, #475569 0%, #334155 50%, #1e293b 100%)",
           padding: "40px 20px",
           borderRadius: "8px",
           textAlign: "center",
-          border: "2px solid #444",
-          boxShadow: "inset 0 0 20px rgba(0,0,0,0.5)"
+          border: "2px solid #64748b",
+          boxShadow: "inset 0 0 30px rgba(0,0,0,0.5)",
+          transition: "background 1s ease"
         }}
       >
         <div style={{ fontSize: "48px", marginBottom: "10px", opacity: 0.8 }}>
           🏕️
         </div>
-        <h2 style={{ margin: "0", color: "#bbb", fontSize: "20px", fontWeight: "bold" }}>
+        <h2 style={{ margin: "0", color: "#e2e8f0", fontSize: "20px", fontWeight: "bold" }}>
           Safe in Town
         </h2>
-        <p style={{ fontSize: "13px", color: "#888", margin: "10px 0 0 0" }}>
+        <p style={{ fontSize: "13px", color: "#94a3b8", margin: "10px 0 0 0" }}>
           Resting at the inn. HP and MP are recovering...
         </p>
       </div>
@@ -103,26 +136,26 @@ export function EnemyDisplay({
       style={{
         marginTop: "15px",
         marginBottom: "15px",
-        background: isBoss ? "linear-gradient(180deg, #4c1d95 0%, #2e1065 100%)" : "linear-gradient(180deg, #374151 0%, #1f2937 100%)",
+        background: battleArenaBackground,
         padding: "20px 15px",
         borderRadius: "8px",
         textAlign: "center",
-        border: isBoss ? "2px solid #a78bfa" : "2px solid #4b5563",
+        border: isBoss ? "3px solid #fca5a5" : "2px solid rgba(255,255,255,0.2)",
         position: "relative",
         overflow: "hidden",
-        boxShadow: isBoss ? "0 0 30px rgba(139, 92, 246, 0.3)" : "inset 0 0 20px rgba(0,0,0,0.5)",
+        boxShadow: isBoss ? "0 0 40px rgba(220, 38, 38, 0.5), inset 0 0 30px rgba(0,0,0,0.4)" : "inset 0 0 30px rgba(0,0,0,0.4)",
+        transition: "background 1s ease, border 0.3s ease"
       }}
     >
-      {/* Background Effect for Enemy */}
+      {/* Animated light rays effect for depth */}
       <div style={{
         position: "absolute",
-        top: "20%",
-        left: "50%",
-        transform: "translateX(-50%)",
-        width: "120px",
-        height: "120px",
-        background: isBoss ? "radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, transparent 70%)" : "radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)",
-        borderRadius: "50%",
+        top: "0",
+        left: "0",
+        right: "0",
+        height: "100%",
+        background: "radial-gradient(ellipse at top, rgba(255,255,255,0.08) 0%, transparent 60%)",
+        pointerEvents: "none",
         zIndex: 0,
       }} />
 
@@ -141,7 +174,7 @@ export function EnemyDisplay({
           alt={enemy.name}
           style={{
             height: isBoss ? "120px" : "100px",
-            filter: isHit ? "brightness(2) sepia(1) hue-rotate(300deg) saturate(10000%)" : "drop-shadow(0 10px 10px rgba(0,0,0,0.5))",
+            filter: isHit ? "brightness(2) sepia(1) hue-rotate(300deg) saturate(10000%)" : "drop-shadow(0 10px 15px rgba(0,0,0,0.7))",
             transform: isHit ? "scale(0.95) translateX(5px)" : (isLowHp ? "scale(1)" : "scale(1) translateY(0)"),
             transition: "filter 0.1s, transform 0.1s",
             animation: isLowHp && !isHit ? "enemyShake 0.5s infinite" : (isBoss ? "bossFloat 3s ease-in-out infinite" : "float 4s ease-in-out infinite"),
@@ -152,12 +185,12 @@ export function EnemyDisplay({
         <div style={{
           position: "absolute",
           bottom: "-5px",
-          width: isBoss ? "80px" : "60px",
-          height: "10px",
-          background: "rgba(0,0,0,0.5)",
+          width: isBoss ? "90px" : "70px",
+          height: "12px",
+          background: "rgba(0,0,0,0.6)",
           borderRadius: "50%",
-          filter: "blur(2px)",
-          zIndex: -1,
+          filter: "blur(3px)",
+          zIndex: 0,
           animation: "shadowPulse 4s ease-in-out infinite",
         }} />
       </div>
@@ -166,8 +199,8 @@ export function EnemyDisplay({
         style={{
           margin: "0 0 8px 0",
           fontSize: "20px",
-          color: isBoss ? "#fca5a5" : "#fbbf24",
-          textShadow: "1px 2px 4px rgba(0,0,0,0.8)",
+          color: isBoss ? "#fef3c7" : "#fef3c7",
+          textShadow: "2px 2px 6px rgba(0,0,0,0.9)",
           position: "relative",
           zIndex: 1,
           fontWeight: "900",
@@ -175,7 +208,7 @@ export function EnemyDisplay({
         }}
       >
         {isBoss && "💀 "} {enemy.name}{" "}
-        <span style={{ fontSize: "14px", color: "#aaa", fontWeight: "normal" }}>
+        <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", fontWeight: "normal" }}>
           (Lv.{enemy.level})
         </span>
       </h2>
@@ -184,39 +217,38 @@ export function EnemyDisplay({
       <div style={{ 
         fontSize: "12px", 
         marginBottom: "15px", 
-        color: "#ccc",
-        display: "flex",
+        color: "#fff",
+        display: "inline-flex",
         justifyContent: "center",
         gap: "15px",
         position: "relative",
         zIndex: 1,
-        background: "rgba(0,0,0,0.4)",
-        padding: "4px 8px",
-        borderRadius: "4px",
-        display: "inline-flex",
-        border: "1px solid rgba(255,255,255,0.1)"
+        background: "rgba(0,0,0,0.5)",
+        padding: "5px 12px",
+        borderRadius: "6px",
+        border: "1px solid rgba(255,255,255,0.15)"
       }}>
-        <span><span style={{color: "#f87171"}}>⚔️</span> {enemy.atk}</span>
-        <span><span style={{color: "#60a5fa"}}>🛡️</span> {enemy.def}</span>
-        <span><span style={{color: "#fbbf24"}}>⚡</span> {enemy.attackSpeed.toFixed(1)}/s</span>
+        <span><span style={{color: "#fca5a5"}}>⚔️</span> {enemy.atk}</span>
+        <span><span style={{color: "#93c5fd"}}>🛡️</span> {enemy.def}</span>
+        <span><span style={{color: "#fde047"}}>⚡</span> {enemy.attackSpeed.toFixed(1)}/s</span>
       </div>
       
       {/* HP Bar Container */}
-      <div style={{ background: "rgba(0,0,0,0.6)", padding: "10px", borderRadius: "8px", marginBottom: "15px", position: "relative", zIndex: 1 }}>
+      <div style={{ background: "rgba(0,0,0,0.6)", padding: "10px", borderRadius: "8px", marginBottom: "15px", position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "6px", fontWeight: "bold" }}>
-          <span style={{ color: "#ef4444" }}>HP</span>
-          <span>{Math.floor(enemy.hp)} / {enemy.maxHp}</span>
+          <span style={{ color: "#fca5a5" }}>HP</span>
+          <span style={{ color: "#fff" }}>{Math.floor(enemy.hp)} / {enemy.maxHp}</span>
         </div>
         
         <div
           style={{
             width: "100%",
             height: "18px",
-            background: "#222",
+            background: "#000",
             borderRadius: "9px",
             overflow: "hidden",
             border: "2px solid #111",
-            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)",
+            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.7)",
             position: "relative",
           }}
         >
@@ -230,7 +262,7 @@ export function EnemyDisplay({
                 ? "linear-gradient(to bottom, #fbbf24, #d97706)" 
                 : "linear-gradient(to bottom, #f87171, #dc2626)",
               transition: "width 0.2s ease-out, background 0.3s",
-              boxShadow: "inset 0 2px 4px rgba(255, 255, 255, 0.3), 0 0 10px rgba(0,0,0,0.5)",
+              boxShadow: "inset 0 2px 4px rgba(255, 255, 255, 0.3)",
               position: "relative"
             }}
           >
@@ -253,13 +285,13 @@ export function EnemyDisplay({
           alignItems: "center", 
           justifyContent: "space-between", 
           fontSize: "11px",
-          color: "#999",
+          color: "#cbd5e1",
         }}>
           <span>Attack Cooldown</span>
           <div style={{ 
             width: "100px", 
             height: "6px", 
-            background: "#111", 
+            background: "#000", 
             borderRadius: "3px", 
             overflow: "hidden",
             border: "1px solid #333",
@@ -267,7 +299,7 @@ export function EnemyDisplay({
             <div style={{
               width: `${enemyAttackProgress}%`,
               height: "100%",
-              background: "linear-gradient(to right, #ef4444, #f87171)",
+              background: "linear-gradient(to right, #ef4444, #fca5a5)",
               transition: "width 0.05s linear",
             }} />
           </div>
@@ -349,7 +381,7 @@ export function EnemyDisplay({
         </div>
       </div>
       
-      <div style={{ fontSize: "10px", color: "#666", marginTop: "12px", position: "relative", zIndex: 1 }}>
+      <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", marginTop: "12px", position: "relative", zIndex: 1 }}>
         Tip: Press 'A' key to attack manually
       </div>
 
@@ -363,8 +395,8 @@ export function EnemyDisplay({
           50% { transform: translateY(-12px) scale(1.1); }
         }
         @keyframes shadowPulse {
-          0%, 100% { transform: scale(1); opacity: 0.5; }
-          50% { transform: scale(0.8); opacity: 0.2; }
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(0.8); opacity: 0.3; }
         }
         @keyframes enemyShake {
           0%, 100% { transform: translateX(0); }

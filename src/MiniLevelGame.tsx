@@ -23,7 +23,7 @@ import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 // import { useAchievements } from "./hooks/useAchievements";
 import { canChangeJob } from "./data/jobs";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -95,40 +95,6 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // Determine background based on zone - Using useMemo to ensure it updates
-  const zoneBackground = useMemo(() => {
-    console.log('Zone changed to:', game.currentZoneId, 'Boss available:', game.bossAvailable);
-    
-    // Boss fight takes priority
-    if (game.bossAvailable) {
-      return "radial-gradient(circle at 50% 20%, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)"; // Red
-    }
-    
-    // Check specific zones
-    switch(game.currentZoneId) {
-      case 0: // Town
-        return "radial-gradient(circle at 50% 20%, #334155 0%, #1e293b 50%, #0f172a 100%)"; // Blue-slate
-      case 1: // Beginner Plains - Light green
-        return "radial-gradient(circle at 50% 20%, #15803d 0%, #166534 50%, #14532d 100%)"; // Lighter green
-      case 2: // Dark Forest - Deep green
-        return "radial-gradient(circle at 50% 20%, #14532d 0%, #052e16 50%, #021a0a 100%)"; // Dark green
-      case 3: // Mountain Path - Gray/rocky
-        return "radial-gradient(circle at 50% 20%, #44403c 0%, #292524 50%, #1c1917 100%)"; // Gray-brown
-      case 4: // Desert Ruins - Orange/sandy
-        return "radial-gradient(circle at 50% 20%, #92400e 0%, #78350f 50%, #451a03 100%)"; // Orange-brown
-      case 5: // Frozen Cavern - Icy blue
-        return "radial-gradient(circle at 50% 20%, #1e3a8a 0%, #1e40af 50%, #1e293b 100%)"; // Blue
-      case 6: // Volcanic Depths - Red-orange
-        return "radial-gradient(circle at 50% 20%, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)"; // Red-orange
-      case 7: // Ancient Castle - Purple-gray
-        return "radial-gradient(circle at 50% 20%, #581c87 0%, #3b0764 50%, #2e1065 100%)"; // Purple
-      case 8: // Void Dimension - Deep purple/black
-        return "radial-gradient(circle at 50% 20%, #4c1d95 0%, #2e1065 50%, #1a0a3d 100%)"; // Dark purple
-      default:
-        return "radial-gradient(circle at 50% 20%, #1e293b 0%, #0f172a 50%, #020617 100%)"; // Default dark
-    }
-  }, [game.currentZoneId, game.bossAvailable]);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -172,8 +138,7 @@ export function MiniLevelGame() {
     <div
       style={{
         minHeight: "100vh",
-        background: zoneBackground,
-        transition: "background 1.5s ease",
+        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
         color: "white",
         display: "flex",
         justifyContent: "center",
@@ -182,22 +147,8 @@ export function MiniLevelGame() {
         padding: "20px",
         paddingTop: "40px",
         paddingBottom: "120px",
-        position: "relative",
       }}
     >
-      {/* Grid Pattern Overlay for Texture */}
-      <div style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundImage: "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-        backgroundSize: "30px 30px",
-        pointerEvents: "none",
-        zIndex: 0
-      }} />
-
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
@@ -218,16 +169,14 @@ export function MiniLevelGame() {
       <div
         id="game-container"
         style={{
-          border: "2px solid rgba(251, 191, 36, 0.5)",
+          border: "2px solid gold",
           padding: "20px",
           borderRadius: "12px",
           width: "100%",
           maxWidth: "1200px",
-          background: "rgba(20, 20, 20, 0.85)",
-          boxShadow: "0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(251, 191, 36, 0.1)",
-          backdropFilter: "blur(12px)",
-          position: "relative",
-          zIndex: 1,
+          background: "rgba(34, 34, 34, 0.95)",
+          boxShadow: "0 8px 32px rgba(255, 215, 0, 0.2)",
+          backdropFilter: "blur(10px)",
         }}
       >
         <h1
@@ -235,12 +184,10 @@ export function MiniLevelGame() {
             textAlign: "center",
             margin: "0 0 20px 0",
             fontSize: "28px",
-            background: "linear-gradient(45deg, #fbbf24, #f59e0b, #fef3c7)",
+            background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
-            fontWeight: "900",
-            letterSpacing: "1px",
-            textShadow: "0px 2px 4px rgba(0,0,0,0.5)",
+            fontWeight: "bold",
           }}
         >
           ⚔️ Mini RPG - RO Style
@@ -262,13 +209,6 @@ export function MiniLevelGame() {
               display: "flex",
               alignItems: "center",
               gap: "6px",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(59, 130, 246, 0.3)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(59, 130, 246, 0.2)";
             }}
           >
             <span>📖</span>
@@ -303,9 +243,9 @@ export function MiniLevelGame() {
                   padding: "10px",
                   background: canChangeJobNow
                     ? "linear-gradient(45deg, #f59e0b, #d97706)"
-                    : "#333",
+                    : "#555",
                   color: "white",
-                  border: canChangeJobNow ? "2px solid #fbbf24" : "1px solid #555",
+                  border: canChangeJobNow ? "2px solid #fbbf24" : "none",
                   borderRadius: "6px",
                   cursor: "pointer",
                   fontWeight: "bold",
@@ -314,11 +254,10 @@ export function MiniLevelGame() {
                     ? "0 0 15px rgba(251, 191, 36, 0.5)"
                     : "none",
                   animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
-                  transition: "all 0.2s",
                 }}
               >
                 {canChangeJobNow
-                  ? "✨ Job Change!"
+                  ? "🧙 Job Change!"
                   : "🧙 Job Master"}
               </button>
 
@@ -335,24 +274,17 @@ export function MiniLevelGame() {
                   flex: 1,
                   padding: "10px",
                   background: game.currentZoneId !== 0 
-                    ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#333")
+                    ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
                     : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
                   color: "white",
-                  border: game.char.hp > 0 ? "1px solid rgba(255,255,255,0.2)" : "1px solid #555",
+                  border: "none",
                   borderRadius: "6px",
                   cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
                   fontWeight: "bold",
                   fontSize: "13px",
                   boxShadow: game.char.hp > 0 
-                    ? (game.currentZoneId !== 0 ? "0 4px 10px rgba(16, 185, 129, 0.3)" : "0 4px 10px rgba(139, 92, 246, 0.3)")
+                    ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
                     : "none",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  if (game.char.hp > 0) e.currentTarget.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  if (game.char.hp > 0) e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
                 {game.currentZoneId !== 0 ? "🏛️ Escape to Town" : "🔨 Blacksmith"}
@@ -360,7 +292,8 @@ export function MiniLevelGame() {
             </div>
 
             <EnemyDisplay 
-              enemy={game.enemy} 
+              enemy={game.enemy}
+              currentZoneId={game.currentZoneId}
               onAttack={() => game.battleAction()}
               canAttack={game.canAttack}
               inTown={game.currentZoneId === 0}
