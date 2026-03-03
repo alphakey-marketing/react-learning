@@ -948,7 +948,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
 
-    const goldCost = 1000 * (currentRefine + 1);
+    const goldCost = 500 * (currentRefine + 1);
     if (char.gold < goldCost) {
       addLog(`❌ Need ${goldCost}g to refine!`);
       return;

@@ -15,7 +15,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
   const [selectedItem, setSelectedItem] = useState<{ item: Equipment; isEquipped: boolean; slotKey?: keyof EquippedItems } | null>(null);
 
   const getRefineCost = (item: Equipment) => {
-    return 2000 * ((item.refinement || 0) + 1);
+    return 500 * ((item.refinement || 0) + 1);
   };
 
   const getSuccessRate = (currentRefine: number) => {
