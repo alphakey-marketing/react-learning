@@ -11,13 +11,17 @@ import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
 import { RefineNPC } from "./components/RefineNPC";
 import { CombatHUD } from "./components/CombatHUD";
+// import { DevTools } from "./components/DevTools"; // Hidden for MVP
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
+// import { AchievementPopup } from "./components/AchievementPopup";
+// import { AchievementList } from "./components/AchievementList";
 import { TutorialOverlay } from "./components/TutorialOverlay";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
+// import { useAchievements } from "./hooks/useAchievements";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState } from "react";
 
@@ -25,7 +29,9 @@ export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
+  // const achievements = useAchievements(); // DISABLED - causing freeze
   
+  // const [showAchievements, setShowAchievements] = useState(false);
   const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
@@ -40,12 +46,14 @@ export function MiniLevelGame() {
         color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
       });
+      // achievements.trackDamage(damage); // DISABLED
       
+      // Screen shake effect on crit
       if (isCrit) {
         const gameContainer = document.getElementById('game-container');
         if (gameContainer) {
           gameContainer.classList.remove('crit-shake');
-          void gameContainer.offsetWidth;
+          void gameContainer.offsetWidth; // trigger reflow
           gameContainer.classList.add('crit-shake');
         }
       }
@@ -76,11 +84,12 @@ export function MiniLevelGame() {
       addFloatingText(materialText, {
         color: materialColor,
         fontSize: 28,
-        isLevelUp: true,
+        isLevelUp: true, // Use level-up animation style for emphasis
       });
     },
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
-      // Future achievements tracking
+      // achievements.trackKill(isBoss); // DISABLED
+      // achievements.trackGoldEarned(goldEarned); // DISABLED
     },
   });
 
@@ -92,6 +101,7 @@ export function MiniLevelGame() {
         return;
       }
       
+      // Disable hotkeys while tutorial is showing
       if (showTutorial) return;
       
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
@@ -144,6 +154,7 @@ export function MiniLevelGame() {
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
       
+      {/* Combat HUD - Floating Status Display */}
       <CombatHUD
         character={game.char}
         hpPotions={game.hpPotions}
@@ -183,6 +194,7 @@ export function MiniLevelGame() {
         </h1>
 
         <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "15px" }}>
+          {/* Tutorial Button */}
           <button
             onClick={() => setShowTutorial(true)}
             style={{

@@ -42,13 +42,11 @@ export function CharacterStats({
   const basePower = (character.level * 10) + (character.jobLevel * 5);
   const totalPower = basePower + totalEquipPower;
 
-  // Get player avatar using character's avatar seed
+  // Get player avatar based on job class
   const getPlayerAvatar = () => {
-    // Extract style and seed from avatarSeed
-    const parts = character.avatarSeed.split('-');
-    const style = parts[0] || 'adventurer';
-    const seed = parts.slice(1).join('-') || 'default';
-    return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}&backgroundColor=transparent`;
+    // We use dicebear adventurers as placeholders for different classes
+    const seed = character.jobClass + "Hero";
+    return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=transparent`;
   };
 
   return (
@@ -61,10 +59,10 @@ export function CharacterStats({
           borderRadius: "8px",
           border: "1px solid #444",
           position: "relative",
-          marginTop: "10px",
+          marginTop: "10px", // Give room for the badge
         }}
       >
-        {/* Total Combat Power Badge */}
+        {/* Total Combat Power Badge - BIGGER */}
         <div style={{
           position: "absolute",
           top: "-16px",
@@ -75,7 +73,7 @@ export function CharacterStats({
           borderRadius: "24px",
           fontWeight: "900",
           color: "white",
-          fontSize: "16px",
+          fontSize: "16px", // Increased from 13px
           boxShadow: "0 6px 15px rgba(245, 158, 11, 0.5)",
           border: "2px solid #fcd34d",
           whiteSpace: "nowrap",
@@ -118,11 +116,6 @@ export function CharacterStats({
           </div>
 
           <div style={{ flex: 1 }}>
-            {/* Character Name */}
-            <div style={{ fontSize: "16px", fontWeight: "bold", color: "#fbbf24", marginBottom: "4px" }}>
-              {character.name}
-            </div>
-            
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
               <span style={{ fontSize: "18px", fontWeight: "bold", color: "#fff" }}>
                 Lv.{character.level}

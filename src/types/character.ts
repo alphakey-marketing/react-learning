@@ -10,8 +10,6 @@ export interface CharacterStats {
 }
 
 export interface Character {
-  name: string; // Player's character name
-  avatarSeed: string; // Seed for DiceBear avatar generation
   level: number;
   exp: number;
   expToNext: number;
