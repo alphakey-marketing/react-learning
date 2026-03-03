@@ -142,14 +142,16 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
   let count = 1;
   if (zoneId > 0 && Math.random() < 0.3) {
     // 30% chance for enemy groups
-    // Early zones: 2-3 enemies, later zones: 2-4 enemies
-    const maxCount = zoneId < 4 ? 3 : 4;
+    // Zone 1: max 2 enemies
+    // Zone 2-3: max 3 enemies
+    // Zone 4+: max 4 enemies
+    const maxCount = zoneId === 1 ? 2 : (zoneId < 4 ? 3 : 4);
     count = Math.floor(Math.random() * (maxCount - 1)) + 2; // 2 to maxCount
   }
 
-  // Linear HP scaling: 3 enemies = 3x HP
-  // This makes groups proportionally harder but rewards are also proportional
-  const groupHpMultiplier = count;
+  // Revert back to Square Root HP scaling (e.g. 3 enemies = 1.73x HP)
+  // This makes mobs challenging but not overly punishing
+  const groupHpMultiplier = count > 1 ? Math.sqrt(count) : 1;
   const finalHp = Math.floor(scaledHp * groupHpMultiplier);
 
   return {
