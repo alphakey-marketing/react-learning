@@ -522,7 +522,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextEnemyHp = enemy.hp;
     let nextEnemy = enemy;
 
-    const { damage, isCrit } = calculateDamage(
+    const { damage, isCrit, isAOE } = calculateDamage(
       char,
       enemy,
       skill,
@@ -534,8 +534,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     callbacks?.onDamageDealt?.(damage, isCrit);
 
     const critText = isCrit ? " ❗CRIT!" : "";
+    const aoeText = isAOE ? " 🔥 AOE BONUS!" : "";
     addLog(
-      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText} (MP-${mpCost})`
+      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText}${aoeText} (MP-${mpCost})`
     );
 
     let nextJobLevel = char.jobLevel;
@@ -544,22 +545,31 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextSkillPoints = char.skillPoints;
 
     if (nextEnemyHp <= 0) {
-      addLog(`💀 ${enemy.name} defeated!`);
+      const enemyCount = enemy.count || 1;
+      const isGroup = enemyCount > 1;
+      
+      if (isGroup) {
+        addLog(`💀 Defeated ${enemyCount}x ${enemy.name}!`);
+      } else {
+        addLog(`💀 ${enemy.name} defeated!`);
+      }
 
-      const goldGain = calculateGoldGain(enemy);
+      const baseGoldGain = calculateGoldGain(enemy);
+      const goldGain = baseGoldGain * enemyCount;
       nextCharGold += goldGain;
-      addLog(`💰 Gained ${goldGain} Gold.`);
+      addLog(`💰 Gained ${goldGain} Gold${isGroup ? ` (${baseGoldGain} × ${enemyCount})` : ''}.`);
 
       callbacks?.onEnemyKilled?.(isBossFight, goldGain);
 
-      const expGain = calculateExpGain(enemy);
+      const baseExpGain = calculateExpGain(enemy);
+      const expGain = baseExpGain * enemyCount;
       const levelUpResult = processLevelUp(char, expGain);
       nextCharExp = levelUpResult.newExp;
       nextCharLevel = levelUpResult.newLevel;
       nextCharExpToNext = levelUpResult.newExpToNext;
       nextStatPoints = levelUpResult.newStatPoints;
 
-      addLog(`✨ Gained ${expGain} Base EXP.`);
+      addLog(`✨ Gained ${expGain} Base EXP${isGroup ? ` (${baseExpGain} × ${enemyCount})` : ''}.`);
 
       if (levelUpResult.leveledUp) {
         nextCharHp = levelUpResult.newHp;
@@ -569,14 +579,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         callbacks?.onLevelUp?.(nextCharLevel);
       }
 
-      const jobExpGain = calculateJobExpGain(enemy, char.jobLevel);
+      const baseJobExpGain = calculateJobExpGain(enemy, char.jobLevel);
+      const jobExpGain = baseJobExpGain * enemyCount;
       const jobLevelUpResult = processJobLevelUp(char, jobExpGain);
       nextJobExp = jobLevelUpResult.newJobExp;
       nextJobLevel = jobLevelUpResult.newJobLevel;
       nextJobExpToNext = jobLevelUpResult.newJobExpToNext;
       nextSkillPoints = jobLevelUpResult.newSkillPoints;
 
-      addLog(`✨ Gained ${jobExpGain} Job EXP.`);
+      addLog(`✨ Gained ${jobExpGain} Job EXP${isGroup ? ` (${baseJobExpGain} × ${enemyCount})` : ''}.`);
 
       if (jobLevelUpResult.leveledUp) {
         addLog(
@@ -632,26 +643,47 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           addLog(`⚔️ Boss is ready! Click the button to challenge!`);
         }
 
-        if (shouldDropLoot()) {
-          const newGear = generateLoot(nextCharLevel);
-          setInventory((prev) => [...prev, newGear]);
-          addLog(`🎁 Looted: ${newGear.name}!`);
-          callbacks?.onItemDrop?.(newGear);
+        // Loot drops scale with group size
+        if (isGroup) {
+          // Each enemy in the group has a chance to drop loot
+          for (let i = 0; i < enemyCount; i++) {
+            if (shouldDropLoot()) {
+              const newGear = generateLoot(nextCharLevel);
+              setInventory((prev) => [...prev, newGear]);
+              addLog(`🎁 Looted: ${newGear.name}!`);
+              callbacks?.onItemDrop?.(newGear);
+            }
+          }
+        } else {
+          if (shouldDropLoot()) {
+            const newGear = generateLoot(nextCharLevel);
+            setInventory((prev) => [...prev, newGear]);
+            addLog(`🎁 Looted: ${newGear.name}!`);
+            callbacks?.onItemDrop?.(newGear);
+          }
         }
 
-        const matRoll = Math.random();
-        if (matRoll < 0.05) {
-          nextCharElunium += 1;
-          addLog(`💎 Looted: 1x Elunium!`);
-          callbacks?.onMaterialDrop?.('elunium', 1);
-        } else if (matRoll < 0.08) {
-          nextCharOridecon += 1;
-          addLog(`💎 Looted: 1x Oridecon!`);
-          callbacks?.onMaterialDrop?.('oridecon', 1);
+        // Material drops also scale with group size
+        for (let i = 0; i < enemyCount; i++) {
+          const matRoll = Math.random();
+          if (matRoll < 0.05) {
+            nextCharElunium += 1;
+            addLog(`💎 Looted: 1x Elunium!`);
+            callbacks?.onMaterialDrop?.('elunium', 1);
+          } else if (matRoll < 0.08) {
+            nextCharOridecon += 1;
+            addLog(`💎 Looted: 1x Oridecon!`);
+            callbacks?.onMaterialDrop?.('oridecon', 1);
+          }
         }
 
         nextEnemy = getRandomEnemyForZone(currentZoneId, nextCharLevel);
-        addLog(`👾 A wild ${nextEnemy.name} appeared!`);
+        const nextEnemyCount = nextEnemy.count || 1;
+        if (nextEnemyCount > 1) {
+          addLog(`👾 A group of ${nextEnemyCount}x ${nextEnemy.name} appeared!`);
+        } else {
+          addLog(`👾 A wild ${nextEnemy.name} appeared!`);
+        }
       }
     } else {
       nextEnemy = { ...enemy, hp: nextEnemyHp };
@@ -834,6 +866,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
       def: bossTemplate.def * BOSS_DEF_MULTIPLIER,
       attackSpeed: bossTemplate.attackSpeed * 1.5,
+      count: 1, // Bosses are always single targets
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);
