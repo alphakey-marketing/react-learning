@@ -331,6 +331,7 @@ export function MiniLevelGame() {
                 inventory={game.inventory}
                 equipped={game.equipped}
                 onEquip={game.equipItem}
+                onUnequip={game.unequipItem}
               />
             </div>
             
