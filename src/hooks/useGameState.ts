@@ -149,7 +149,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
   // Use the new shared helper to ensure stats are calculated consistently
-  const weaponBonus = useMemo(() => calculateEquipmentStats(equipped).totalAtk, [equipped]);
   const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
   
   const attacksPerSecond = useMemo(() => 
@@ -529,7 +528,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       enemy,
       skill,
       skillLevel,
-      weaponBonus
+      equipped
     );
     nextEnemyHp = enemy.hp - damage;
 
@@ -730,7 +729,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   useEffect(() => {
     battleActionRef.current = battleAction;
-  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight, weaponBonus]);
+  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight]);
 
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
