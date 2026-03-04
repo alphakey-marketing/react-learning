@@ -38,10 +38,10 @@ export const ZONES: Zone[] = [
     name: "Beginner Plains",
     minLevel: 1,
     enemies: [
-      createEnemy("Poring", 1, 5, 1, 35, 0.4, 0, "Water", 1),
+      createEnemy("Poring", 1, 5, 1, 35, 0.4, 0, "Neutral", 1),
       createEnemy("Lunatic", 2, 7, 2, 40, 0.45, 0, "Neutral", 1),
-      createEnemy("Fabre", 2, 6, 3, 38, 0.4, 0, "Earth", 1),
-      createEnemy("Willow", 3, 9, 3, 48, 0.5, 0, "Earth", 1),
+      createEnemy("Fabre", 2, 6, 3, 38, 0.4, 0, "Neutral", 1),
+      createEnemy("Willow", 3, 9, 3, 48, 0.5, 0, "Neutral", 1),
     ],
   },
   {
@@ -49,10 +49,10 @@ export const ZONES: Zone[] = [
     name: "Dark Forest",
     minLevel: 5,
     enemies: [
-      createEnemy("Spore", 5, 15, 5, 80, 0.5, 3, "Water", 1),
-      createEnemy("Rocker", 6, 18, 7, 92, 0.55, 3, "Earth", 1),
-      createEnemy("Wolf", 7, 21, 6, 98, 0.6, 3, "Earth", 1),
-      createEnemy("Snake", 8, 24, 8, 105, 0.5, 3, "Poison", 1),
+      createEnemy("Spore", 5, 15, 5, 80, 0.5, 3, "Neutral", 1),
+      createEnemy("Rocker", 6, 18, 7, 92, 0.55, 3, "Neutral", 1),
+      createEnemy("Wolf", 7, 21, 6, 98, 0.6, 3, "Neutral", 1),
+      createEnemy("Snake", 8, 24, 8, 105, 0.5, 3, "Neutral", 1),
     ],
   },
   {
@@ -60,10 +60,10 @@ export const ZONES: Zone[] = [
     name: "Mountain Path",
     minLevel: 10,
     enemies: [
-      createEnemy("Orc Warrior", 10, 36, 13, 185, 0.6, 7, "Earth", 1),
+      createEnemy("Orc Warrior", 10, 36, 13, 185, 0.6, 7, "Neutral", 1),
       createEnemy("Golem", 12, 33, 20, 230, 0.5, 10, "Neutral", 3),
-      createEnemy("Hill Wind", 11, 39, 12, 165, 0.65, 7, "Wind", 2),
-      createEnemy("Harpy", 13, 42, 14, 198, 0.7, 7, "Wind", 2),
+      createEnemy("Hill Wind", 11, 39, 12, 165, 0.65, 7, "Neutral", 2),
+      createEnemy("Harpy", 13, 42, 14, 198, 0.7, 7, "Neutral", 2),
     ],
   },
   {
@@ -71,10 +71,10 @@ export const ZONES: Zone[] = [
     name: "Desert Ruins",
     minLevel: 15,
     enemies: [
-      createEnemy("Sand Man", 15, 54, 23, 295, 0.65, 10, "Earth", 2),
-      createEnemy("Scorpion", 16, 60, 20, 275, 0.7, 10, "Fire", 1),
-      createEnemy("Mummy", 17, 57, 26, 328, 0.6, 10, "Undead", 1),
-      createEnemy("Horus", 18, 66, 25, 315, 0.75, 10, "Holy", 2),
+      createEnemy("Sand Man", 15, 54, 23, 295, 0.65, 10, "Neutral", 2),
+      createEnemy("Scorpion", 16, 60, 20, 275, 0.7, 10, "Neutral", 1),
+      createEnemy("Mummy", 17, 57, 26, 328, 0.6, 10, "Neutral", 1),
+      createEnemy("Horus", 18, 66, 25, 315, 0.75, 10, "Neutral", 2),
     ],
   },
   {
@@ -83,9 +83,9 @@ export const ZONES: Zone[] = [
     minLevel: 20,
     enemies: [
       createEnemy("Ice Titan", 20, 78, 33, 425, 0.65, 15, "Water", 3),
-      createEnemy("Frost Diver", 22, 84, 29, 405, 0.75, 15, "Water", 2),
-      createEnemy("Siroma", 21, 75, 31, 393, 0.7, 15, "Water", 2),
-      createEnemy("Gazeti", 23, 90, 34, 445, 0.7, 15, "Water", 2),
+      createEnemy("Frost Diver", 22, 84, 29, 405, 0.75, 15, "Neutral", 2),
+      createEnemy("Siroma", 21, 75, 31, 393, 0.7, 15, "Neutral", 2),
+      createEnemy("Gazeti", 23, 90, 34, 445, 0.7, 15, "Neutral", 2),
     ],
   },
   {
@@ -94,9 +94,9 @@ export const ZONES: Zone[] = [
     minLevel: 25,
     enemies: [
       createEnemy("Lava Golem", 25, 138, 55, 685, 0.75, 20, "Fire", 3),
-      createEnemy("Fire Imp", 27, 156, 49, 640, 0.9, 20, "Fire", 2),
-      createEnemy("Kaho", 26, 147, 52, 653, 0.85, 20, "Fire", 2),
-      createEnemy("Blazer", 28, 165, 57, 718, 0.85, 20, "Fire", 2),
+      createEnemy("Fire Imp", 27, 156, 49, 640, 0.9, 20, "Neutral", 2),
+      createEnemy("Kaho", 26, 147, 52, 653, 0.85, 20, "Neutral", 2),
+      createEnemy("Blazer", 28, 165, 57, 718, 0.85, 20, "Neutral", 2),
     ],
   },
   {
@@ -104,9 +104,9 @@ export const ZONES: Zone[] = [
     name: "Ancient Castle",
     minLevel: 30,
     enemies: [
-      createEnemy("Dark Knight", 30, 210, 72, 980, 0.85, 25, "Shadow", 2),
-      createEnemy("Evil Druid", 32, 228, 65, 915, 0.95, 25, "Undead", 2),
-      createEnemy("Wraith", 31, 219, 68, 883, 0.9, 25, "Undead", 2),
+      createEnemy("Dark Knight", 30, 210, 72, 980, 0.85, 25, "Neutral", 2),
+      createEnemy("Evil Druid", 32, 228, 65, 915, 0.95, 25, "Neutral", 2),
+      createEnemy("Wraith", 31, 219, 68, 883, 0.9, 25, "Neutral", 2),
       createEnemy("Chimera", 33, 240, 75, 1045, 0.9, 25, "Fire", 3),
     ],
   },
@@ -115,10 +115,10 @@ export const ZONES: Zone[] = [
     name: "Void Dimension",
     minLevel: 35,
     enemies: [
-      createEnemy("Void Stalker", 35, 312, 91, 1435, 1.0, 35, "Ghost", 3),
-      createEnemy("Dark Illusion", 37, 336, 85, 1305, 1.2, 35, "Ghost", 3),
-      createEnemy("Nightmare", 36, 324, 88, 1370, 1.1, 35, "Ghost", 3),
-      createEnemy("Thanatos", 38, 360, 98, 1630, 1.1, 35, "Ghost", 4),
+      createEnemy("Void Stalker", 35, 312, 91, 1435, 1.0, 35, "Neutral", 3),
+      createEnemy("Dark Illusion", 37, 336, 85, 1305, 1.2, 35, "Neutral", 3),
+      createEnemy("Nightmare", 36, 324, 88, 1370, 1.1, 35, "Neutral", 3),
+      createEnemy("Thanatos", 38, 360, 98, 1630, 1.1, 35, "Wind", 4),
     ],
   },
 ];
