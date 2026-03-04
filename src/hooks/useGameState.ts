@@ -6,7 +6,13 @@ import { getRandomEnemyForZone, ZONES } from "../data/zones";
 import { SKILLS_DB } from "../data/skills";
 import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
 import { RefineResult } from "../components/RefineNPC";
-import { STARTING_STAT_POINTS, STAT_POINTS_PER_LEVEL } from "../logic/progression"; // Import both constants
+import { STARTING_STAT_POINTS, STAT_POINTS_PER_LEVEL } from "../logic/progression";
+import { 
+  STARTING_RESOURCES, 
+  STARTING_WEAPON, 
+  STARTING_ARMOR, 
+  STARTING_FOOTGEAR 
+} from "../data/startingEquipment";
 import {
   calculateDamage,
   calculateEnemyDamage,
@@ -60,9 +66,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     maxHp: initialMaxHp,
     mp: initialMaxMp,
     maxMp: initialMaxMp,
-    gold: 0,
+    gold: STARTING_RESOURCES.gold,
     stats: initialStats,
-    statPoints: STARTING_STAT_POINTS, // Phase 4 Rebalance: Now uses centralized constant (12)
+    statPoints: STARTING_STAT_POINTS,
     jobClass: initialJobClass,
     jobLevel: 1,
     jobExp: 0,
@@ -70,8 +76,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     skillPoints: 3,
     learnedSkills: { basic_attack: 1 },
     autoAttackSkillId: "basic_attack",
-    elunium: 0,
-    oridecon: 0,
+    elunium: STARTING_RESOURCES.elunium,
+    oridecon: STARTING_RESOURCES.oridecon,
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -79,12 +85,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   );
 
   const [inventory, setInventory] = useState<Equipment[]>([]);
+  
   const [equipped, setEquipped] = useState<EquippedItems>({
-    weapon: null,
-    armor: null,
+    weapon: STARTING_WEAPON,
+    armor: STARTING_ARMOR,
     head: null,
     garment: null,
-    footgear: null,
+    footgear: STARTING_FOOTGEAR,
     accessory1: null,
     accessory2: null,
   });
@@ -96,8 +103,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const [bossDefeated, setBossDefeated] = useState<boolean>(false);
   const [isBossFight, setIsBossFight] = useState<boolean>(false);
 
-  const [hpPotions, setHpPotions] = useState<number>(1);
-  const [mpPotions, setMpPotions] = useState<number>(1);
+  const [hpPotions, setHpPotions] = useState<number>(STARTING_RESOURCES.hpPotions);
+  const [mpPotions, setMpPotions] = useState<number>(STARTING_RESOURCES.mpPotions);
   const [autoHpPercent, setAutoHpPercent] = useState<number>(0);
   const [autoMpPercent, setAutoMpPercent] = useState<number>(0);
 
@@ -149,7 +156,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
-  // Use the new shared helper to ensure stats are calculated consistently
   const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
   
   const attacksPerSecond = useMemo(() => 
@@ -774,9 +780,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       autoPotionTimerRef.current = null;
     }
 
-    if (currentZoneId === 0) {
-      return;
-    }
+    if (autoHpPercent === 0 && autoMpPercent === 0) return;
+    if (currentZoneId === 0) return;
 
     autoPotionTimerRef.current = window.setInterval(() => {
       autoPotionRef.current();
@@ -787,7 +792,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(autoPotionTimerRef.current);
       }
     };
-  }, [currentZoneId]);
+  }, [currentZoneId, autoHpPercent, autoMpPercent]);
 
   useEffect(() => {
     if (enemyAttackTimerRef.current !== null) {
@@ -841,11 +846,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus]);
 
   useEffect(() => {
+    if (currentZoneId !== 0) return;
+    
     const id = setInterval(() => {
       townHealingRef.current();
     }, 3000);
     return () => clearInterval(id);
-  }, []);
+  }, [currentZoneId]);
 
   function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);
