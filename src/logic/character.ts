@@ -53,27 +53,6 @@ export function calcPlayerAtk(
     const lukBonus = Math.floor(luk / 5);
     statusAtk = strBonus + dexBonus + lukBonus;
   }
-  else if (char.jobClass === "Thief" || char.jobClass === "Assassin") {
-    // Thieves: Balanced STR/DEX hybrid for fast weapons
-    const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
-    const dexBonus = Math.floor(dex / 3); // Higher DEX contribution than Swordsman
-    const lukBonus = Math.floor(luk / 5);
-    statusAtk = strBonus + dexBonus + lukBonus;
-  }
-  else if (char.jobClass === "Acolyte" || char.jobClass === "Priest") {
-    // Support classes: Very weak physical attack
-    const strBonus = Math.floor(str / 5);
-    const dexBonus = Math.floor(dex / 5);
-    const lukBonus = Math.floor(luk / 5);
-    statusAtk = strBonus + dexBonus + lukBonus;
-  }
-  else if (char.jobClass === "Merchant" || char.jobClass === "Blacksmith") {
-    // Merchant classes: STR quadratic (they can wear heavy gear)
-    const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
-    const dexBonus = Math.floor(dex / 5);
-    const lukBonus = Math.floor(luk / 5);
-    statusAtk = strBonus + dexBonus + lukBonus;
-  }
   else {
     // Novice: Balanced scaling for all stats (linear only)
     const strBonus = Math.floor(str / 3);

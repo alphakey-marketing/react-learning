@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Character } from "../types/character";
 import { Enemy } from "../types/enemy";
+import { EquippedItems } from "../types/equipment";
 import { calculateDamage } from "../logic/combat";
 import { SKILLS_DB } from "../data/skills";
 
 interface TrainingHutProps {
   character: Character;
-  weaponBonus: number;
+  equipped: EquippedItems;
   onClose: () => void;
 }
 
@@ -17,7 +18,7 @@ interface CombatLog {
   timestamp: number;
 }
 
-export function TrainingHut({ character, weaponBonus, onClose }: TrainingHutProps) {
+export function TrainingHut({ character, equipped, onClose }: TrainingHutProps) {
   const [enemyLevel, setEnemyLevel] = useState(character.level);
   const [enemyHP, setEnemyHP] = useState(100);
   const [enemyMaxHP, setEnemyMaxHP] = useState(100);
@@ -48,7 +49,7 @@ export function TrainingHut({ character, weaponBonus, onClose }: TrainingHutProp
     if (!skill) return;
     
     const skillLevel = character.learnedSkills[selectedSkill] || 1;
-    const result = calculateDamage(character, testEnemy, skill, skillLevel, weaponBonus);
+    const result = calculateDamage(character, testEnemy, skill, skillLevel, equipped);
     
     const log: CombatLog = {
       skillName: `${skill.nameZh} Lv.${skillLevel}`,
