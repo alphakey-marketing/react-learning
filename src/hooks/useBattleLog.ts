@@ -1,18 +1,21 @@
-import { useState } from "react";
-import { Log } from "../types/game";
-import { MAX_LOGS } from "../data/constants";
+import { useState, useCallback } from "react";
+
+const MAX_LOG_ENTRIES = 100; // Limit log entries to prevent memory issues
 
 export function useBattleLog() {
-  const [logs, setLogs] = useState<Log[]>([]);
+  const [logs, setLogs] = useState<string[]>([]);
 
-  const addLog = (text: string) => {
+  const addLog = useCallback((text: string) => {
     setLogs((prev) => {
-      const newLog = { id: Date.now() + Math.random(), text };
-      const next = [...prev, newLog];
-      if (next.length > MAX_LOGS) next.shift();
-      return next;
+      const newLogs = [text, ...prev];
+      // Keep only the most recent MAX_LOG_ENTRIES
+      return newLogs.slice(0, MAX_LOG_ENTRIES);
     });
-  };
+  }, []);
 
-  return { logs, addLog };
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
+  return { logs, addLog, clearLogs };
 }
