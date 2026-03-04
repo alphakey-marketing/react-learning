@@ -35,44 +35,6 @@ export function getElementMultiplier(attackElement: ElementType, defendElement: 
   return 1.0; // Default if not defined
 }
 
-// Get elements that are effective against the target element
-export function getEffectiveElements(targetElement: ElementType): ElementType[] {
-  const effective: ElementType[] = [];
-  
-  // Check each element to see if it has advantage against target
-  const allElements: ElementType[] = [
-    "Neutral", "Fire", "Water", "Wind", "Earth", 
-    "Holy", "Shadow", "Ghost", "Undead", "Poison"
-  ];
-  
-  for (const element of allElements) {
-    const multiplier = getElementMultiplier(element, targetElement);
-    if (multiplier > 1.0) {
-      effective.push(element);
-    }
-  }
-  
-  return effective;
-}
-
-// Get skill names by element for hints
-export function getSkillNamesByElement(element: ElementType): string[] {
-  const skillMap: Record<ElementType, string[]> = {
-    Neutral: ["普通攻擊 (Basic Attack)", "強力攻擊 (Bash)"],
-    Fire: ["火焰彈 (Fire Bolt)", "隕石術 (Meteor Storm)", "爆裂波動 (Magnum Break)", "爆炎陷阱 (Claymore Trap)"],
-    Water: ["冰箭術 (Cold Bolt)", "暴風雪 (Storm Gust)"],
-    Wind: ["雷擊術 (Lightning Bolt)"],
-    Earth: [],
-    Holy: [],
-    Shadow: [],
-    Ghost: [],
-    Undead: [],
-    Poison: [],
-  };
-  
-  return skillMap[element] || [];
-}
-
 export function getElementColor(element: ElementType): string {
   const colors: Record<ElementType, string> = {
     Neutral: "#e5e7eb", // gray

@@ -40,7 +40,6 @@ import {
   HP_POTION_HEAL_PERCENT,
   MP_POTION_RECOVER_PERCENT,
 } from "../data/constants";
-import { ElementType, getEffectiveElements, getSkillNamesByElement } from "../types/element";
 
 interface GameCallbacks {
   onDamageDealt?: (damage: number, isCrit: boolean) => void;
@@ -120,10 +119,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
 
-  // Element hint system
-  const [resistedCount, setResistedCount] = useState<number>(0);
-  const [lastEnemyElement, setLastEnemyElement] = useState<ElementType | null>(null);
-
   const enemyAttackTimerRef = useRef<number | null>(null);
   const autoPotionTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef<boolean>(true);
@@ -160,15 +155,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoHpPercentRef.current = autoHpPercent; }, [autoHpPercent]);
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
-
-  // Reset hint counter when enemy changes
-  useEffect(() => {
-    const currentElement = enemy.element?.type || "Neutral";
-    if (lastEnemyElement !== currentElement) {
-      setResistedCount(0);
-      setLastEnemyElement(currentElement);
-    }
-  }, [enemy, lastEnemyElement]);
 
   const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
   
@@ -558,33 +544,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     const critText = isCrit ? " ❗CRIT!" : "";
     const aoeText = isAOE ? " 🔥 AOE BONUS!" : "";
     let elementText = "";
-    if (elementMultiplier > 1) {
-      elementText = " 🌟 Effective!";
-      setResistedCount(0); // Reset on effective hit
-    } else if (elementMultiplier < 1) {
-      elementText = " 🛡️ Resisted!";
-      const newResistedCount = resistedCount + 1;
-      setResistedCount(newResistedCount);
-      
-      // Show hint after 3 consecutive resisted attacks
-      if (newResistedCount === 3) {
-        const enemyElement = enemy.element?.type || "Neutral";
-        const effectiveElements = getEffectiveElements(enemyElement);
-        
-        if (effectiveElements.length > 0) {
-          addLog(`💡 HINT: ${enemy.name} is ${enemyElement}-type! Try using these for bonus damage:`);
-          
-          effectiveElements.forEach(elem => {
-            const skills = getSkillNamesByElement(elem);
-            if (skills.length > 0) {
-              addLog(`   • ${elem}: ${skills.join(", ")}`);
-            }
-          });
-        }
-      }
-    } else {
-      setResistedCount(0); // Reset on neutral hit
-    }
+    if (elementMultiplier > 1) elementText = " 🌟 Effective!";
+    else if (elementMultiplier < 1) elementText = " 🛡️ Resisted!";
     
     addLog(
       `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText}${aoeText}${elementText} (MP-${mpCost})`
@@ -596,9 +557,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextSkillPoints = char.skillPoints;
 
     if (nextEnemyHp <= 0) {
-      // Reset hint counter when enemy is defeated
-      setResistedCount(0);
-      
       const enemyCount = enemy.count || 1;
       const isGroup = enemyCount > 1;
       
@@ -781,7 +739,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   useEffect(() => {
     battleActionRef.current = battleAction;
-  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight, resistedCount]);
+  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, killCount, isBossFight]);
 
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
@@ -908,9 +866,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setCurrentZoneId(zoneId);
     setEnemy(getRandomEnemyForZone(zoneId, char.level));
     addLog(`🚀 Traveled to: ${targetZone.name}!`);
-    
-    // Reset hint counter when traveling to new zone
-    setResistedCount(0);
   }
 
   function challengeBoss() {
@@ -923,16 +878,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       maxHp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
       softDef: bossTemplate.softDef * BOSS_DEF_MULTIPLIER,
-      hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)),
+      hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)), // Bosses have higher hard def too
       attackSpeed: bossTemplate.attackSpeed * 1.5,
-      count: 1,
+      count: 1, // Bosses are always single targets
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);
     addLog(`⚔️ CHALLENGE: ${bossEnemy.name} appeared!`);
-    
-    // Reset hint counter for boss fight
-    setResistedCount(0);
   }
 
   function equipItem(item: Equipment) {
