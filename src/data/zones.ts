@@ -88,33 +88,36 @@ export const ZONES: Zone[] = [
     id: 6,
     name: "Volcanic Depths",
     minLevel: 25,
+    // BUFF: Increased ATK by ~30%, HP by ~20%, Hard DEF to 35%
     enemies: [
-      createEnemy("Lava Golem", 25, 180, 65, 850, 0.7, 25),
-      createEnemy("Fire Imp", 27, 200, 60, 820, 0.8, 25),
-      createEnemy("Kaho", 26, 190, 62, 800, 0.75, 25),
-      createEnemy("Blazer", 28, 210, 68, 900, 0.75, 25),
+      createEnemy("Lava Golem", 25, 230, 85, 1050, 0.75, 35),
+      createEnemy("Fire Imp", 27, 260, 75, 980, 0.9, 35),
+      createEnemy("Kaho", 26, 245, 80, 1000, 0.85, 35),
+      createEnemy("Blazer", 28, 275, 88, 1100, 0.85, 35),
     ],
   },
   {
     id: 7,
     name: "Ancient Castle",
     minLevel: 30,
+    // BUFF: Increased ATK by ~40%, HP by ~35%, Hard DEF to 45%
     enemies: [
-      createEnemy("Dark Knight", 30, 250, 80, 1100, 0.75, 30),
-      createEnemy("Evil Druid", 32, 270, 75, 1050, 0.85, 30),
-      createEnemy("Wraith", 31, 260, 78, 1000, 0.8, 30),
-      createEnemy("Chimera", 33, 280, 82, 1150, 0.8, 30),
+      createEnemy("Dark Knight", 30, 350, 110, 1500, 0.85, 45),
+      createEnemy("Evil Druid", 32, 380, 100, 1400, 0.95, 45),
+      createEnemy("Wraith", 31, 365, 105, 1350, 0.9, 45),
+      createEnemy("Chimera", 33, 400, 115, 1600, 0.9, 45),
     ],
   },
   {
     id: 8,
     name: "Void Dimension",
     minLevel: 35,
+    // BUFF: Massive endgame spike. ATK +60%, HP +50%, Hard DEF to 55-60%, much faster attacks
     enemies: [
-      createEnemy("Void Stalker", 35, 320, 95, 1400, 0.8, 35),
-      createEnemy("Dark Illusion", 37, 350, 90, 1350, 0.9, 35),
-      createEnemy("Nightmare", 36, 330, 92, 1300, 0.85, 35),
-      createEnemy("Thanatos", 38, 370, 100, 1500, 0.85, 35),
+      createEnemy("Void Stalker", 35, 520, 140, 2200, 1.0, 55),
+      createEnemy("Dark Illusion", 37, 560, 130, 2000, 1.2, 55),
+      createEnemy("Nightmare", 36, 540, 135, 2100, 1.1, 55),
+      createEnemy("Thanatos", 38, 600, 150, 2500, 1.1, 60),
     ],
   },
 ];
@@ -134,7 +137,11 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
 
   // Stat scaling based on level difference
   const levelDiff = scaledLevel - baseEnemy.level;
-  const scalingFactor = 1 + levelDiff * 0.15;
+  
+  // REBALANCE: Harder scaling for higher zones
+  // Zone 6+ gets steeper scaling per level to maintain difficulty
+  const baseScalingFactor = zoneId >= 6 ? 0.20 : 0.15;
+  const scalingFactor = 1 + levelDiff * baseScalingFactor;
 
   const scaledHp = Math.floor(baseEnemy.maxHp * scalingFactor);
   const scaledAtk = Math.floor(baseEnemy.atk * scalingFactor);
@@ -152,17 +159,20 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
     count = Math.floor(Math.random() * (maxCount - 1)) + 2; // 2 to maxCount
   }
 
-  // Revert back to Square Root HP scaling (e.g. 3 enemies = 1.73x HP)
-  // This makes mobs challenging but not overly punishing
+  // HP scaling for groups
   const groupHpMultiplier = count > 1 ? Math.sqrt(count) : 1;
   const finalHp = Math.floor(scaledHp * groupHpMultiplier);
+
+  // ATK scaling for groups (New: slight ATK bump for groups to make them dangerous)
+  const groupAtkMultiplier = count > 1 ? 1 + (count * 0.1) : 1;
+  const finalAtk = Math.floor(scaledAtk * groupAtkMultiplier);
 
   return {
     name: baseEnemy.name,
     level: scaledLevel,
     hp: finalHp,
     maxHp: finalHp,
-    atk: scaledAtk,
+    atk: finalAtk,
     softDef: scaledSoftDef,
     hardDefPercent: scaledHardDefPercent,
     attackSpeed: baseEnemy.attackSpeed,
