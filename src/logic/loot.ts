@@ -33,6 +33,18 @@ export function shouldDropLoot(): boolean {
   return Math.random() < DROP_CHANCE;
 }
 
+// Helper to determine weapon level based on rarity
+function getWeaponLevel(rarity: EquipmentRarity): number {
+  switch (rarity) {
+    case "legendary": return 4;
+    case "epic": return 4;
+    case "rare": return 3;
+    case "uncommon": return 2;
+    case "common":
+    default: return 1;
+  }
+}
+
 export function generateLoot(playerLevel: number): Equipment {
   // Random equipment type
   const types: EquipmentType[] = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
@@ -68,9 +80,12 @@ export function generateLoot(playerLevel: number): Equipment {
     weight: type === "weapon" ? 50 : type === "armor" ? 80 : 20,
   };
   
-  // REBALANCE: Match the new refinement stats (5 for weapon, 2 for armor)
+  // Set weapon level and ATK based on type
   if (type === "weapon") {
-    equipment.atk = baseValue + refinement * 5;
+    equipment.weaponLevel = getWeaponLevel(rarity);
+    // Base value is increased by weapon level slightly to give higher tier weapons more base punch
+    const weaponBaseValue = baseValue + (equipment.weaponLevel * 2);
+    equipment.atk = weaponBaseValue + refinement * 5;
   } else {
     equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
   }
@@ -115,7 +130,9 @@ export function generateBossLoot(playerLevel: number): Equipment {
   };
   
   if (type === "weapon") {
-    equipment.atk = baseValue + refinement * 5;
+    equipment.weaponLevel = getWeaponLevel(rarity);
+    const weaponBaseValue = baseValue + (equipment.weaponLevel * 2);
+    equipment.atk = weaponBaseValue + refinement * 5;
   } else {
     equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
   }
