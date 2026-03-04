@@ -68,10 +68,11 @@ export function CharacterStats({
 
   // Calculate derived stats
   const equipStats = calculateEquipmentStats(equipped);
-  const weaponBonus = equipStats.totalAtk;
   const armorBonus = equipStats.totalDef;
   
-  const atk = calcPlayerAtk(character, weaponBonus);
+  const atkRange = calcPlayerAtk(character, equipStats.weaponAtk, equipStats.weaponLevel, equipStats.weaponRefine, equipStats.equipBonusAtk);
+  const atkDisplay = atkRange.min === atkRange.max ? `${atkRange.max}` : `${atkRange.min} ~ ${atkRange.max}`;
+  
   const matk = calcPlayerMagicAtk(character);
   const def = calcPlayerDef(character, armorBonus);
   const crit = calcCritChance(character);
@@ -96,7 +97,9 @@ export function CharacterStats({
       },
     };
 
-    const previewAtk = calcPlayerAtk(previewChar, weaponBonus);
+    const previewAtkRange = calcPlayerAtk(previewChar, equipStats.weaponAtk, equipStats.weaponLevel, equipStats.weaponRefine, equipStats.equipBonusAtk);
+    const previewAtkDisplay = previewAtkRange.min === previewAtkRange.max ? `${previewAtkRange.max}` : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
+    
     const previewMatk = calcPlayerMagicAtk(previewChar);
     const previewDef = calcPlayerDef(previewChar, armorBonus);
     const previewCrit = calcCritChance(previewChar);
@@ -105,7 +108,7 @@ export function CharacterStats({
     const previewMaxMp = calcMaxMp(character.level, previewChar.stats.int, character.jobClass);
 
     return {
-      atk: previewAtk,
+      atk: previewAtkDisplay,
       matk: previewMatk,
       def: previewDef,
       crit: previewCrit,
@@ -113,7 +116,7 @@ export function CharacterStats({
       maxHp: previewMaxHp,
       maxMp: previewMaxMp,
     };
-  }, [hasPendingChanges, character, pendingStats, weaponBonus, armorBonus]);
+  }, [hasPendingChanges, character, pendingStats, equipStats, armorBonus]);
 
   const previewDefDisplay = previewStats ? `${previewStats.def.softDef} + ${previewStats.def.hardDefPercent}%` : null;
 
@@ -478,7 +481,7 @@ export function CharacterStats({
             <span style={{ color: "#38bdf8", fontWeight: "bold" }}>⚔️ Combat Stats</span>
           </div>
           
-          {renderStatWithPreview("ATK", atk, previewStats?.atk || null, "#f87171")}
+          {renderStatWithPreview("ATK", atkDisplay, previewStats?.atk || null, "#f87171")}
           {renderStatWithPreview("MATK", matk, previewStats?.matk || null, "#c084fc")}
           {renderStatWithPreview("DEF", defDisplay, previewDefDisplay, "#60a5fa")}
           {renderStatWithPreview("CRIT", crit + "%", previewStats ? previewStats.crit + "%" : null, "#fbbf24")}
