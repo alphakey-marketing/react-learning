@@ -25,6 +25,7 @@ export interface Equipment {
   slots?: number;      // Card slots (0-4)
   weight?: number;     // Weight in RO style
   refinement?: number; // +0 to +10 refine level
+  weaponLevel?: number; // Weapon level (1-4), affects variance
   
   // Bonus stats
   str?: number;
@@ -94,13 +95,21 @@ export function calculateGearScore(item: Equipment): number {
   if (item.refinement) {
     score += item.refinement * 3;
   }
+
+  // Weapon level bonus
+  if (item.weaponLevel) {
+    score += item.weaponLevel * 5;
+  }
   
   return Math.floor(score);
 }
 
 // Helper to calculate total stats from equipment
 export function calculateEquipmentStats(equipped: EquippedItems): {
-  totalAtk: number;
+  weaponAtk: number;
+  weaponLevel: number;
+  weaponRefine: number;
+  equipBonusAtk: number;
   totalDef: number;
   bonusStr: number;
   bonusAgi: number;
@@ -111,12 +120,23 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
 } {
   const items = Object.values(equipped).filter((item): item is Equipment => item !== null);
   
+  // Get weapon specifically
+  const weapon = equipped.weapon;
+  const weaponAtk = weapon ? (weapon.atk || weapon.stat || 0) : 0;
+  const weaponLevel = weapon?.weaponLevel || 1; // Default to 1 if not specified
+  const weaponRefine = weapon?.refinement || 0;
+  
+  // Bonus ATK from non-weapon items
+  const equipBonusAtk = items.reduce((sum, item) => {
+    if (item.type === 'weapon') return sum;
+    return sum + (item.atk || item.stat || 0);
+  }, 0);
+
   return {
-    totalAtk: items.reduce((sum, item) => {
-      const refineBonus = item.type === 'weapon' ? (item.refinement || 0) * 5 : 0;
-      const baseAtk = item.atk || (item.type === 'weapon' ? (item.stat || 0) : 0);
-      return sum + baseAtk + refineBonus;
-    }, 0),
+    weaponAtk,
+    weaponLevel,
+    weaponRefine,
+    equipBonusAtk,
     totalDef: items.reduce((sum, item) => {
       const armorTypes = ['armor', 'head', 'garment', 'footgear'];
       const refineBonus = armorTypes.includes(item.type) ? (item.refinement || 0) * 2 : 0;
