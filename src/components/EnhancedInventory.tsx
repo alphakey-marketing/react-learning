@@ -1,30 +1,20 @@
 import { useState } from "react";
-import { Equipment, EquippedItems, getEquipmentIcon, getRarityColor, calculateGearScore, canEquipWeapon, getWeaponTypeName } from "../types/equipment";
+import { Equipment, EquippedItems, getEquipmentIcon, getRarityColor, calculateGearScore } from "../types/equipment";
 import { EquipmentComparisonModal } from "./EquipmentComparisonModal";
-import { JobClass } from "../types/character";
 
 interface EnhancedInventoryProps {
   inventory: Equipment[];
   equipped: EquippedItems;
-  jobClass: JobClass;
   onEquip: (item: Equipment) => void;
   onUnequip?: (slotKey: keyof EquippedItems) => void;
 }
 
 type SortOption = "type" | "rarity" | "power" | "name";
 
-export function EnhancedInventory({ inventory, equipped, jobClass, onEquip, onUnequip }: EnhancedInventoryProps) {
+export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: EnhancedInventoryProps) {
   const [sortBy, setSortBy] = useState<SortOption>("type");
   const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
   const [selectedEquippedSlot, setSelectedEquippedSlot] = useState<keyof EquippedItems | null>(null);
-  
-  // Check if item can be equipped
-  const canEquip = (item: Equipment): boolean => {
-    if (item.type === "weapon" && item.weaponType) {
-      return canEquipWeapon(jobClass, item.weaponType);
-    }
-    return true; // Non-weapons can always be equipped
-  };
   
   // Sort inventory
   const sortedInventory = [...inventory].sort((a, b) => {
@@ -55,7 +45,7 @@ export function EnhancedInventory({ inventory, equipped, jobClass, onEquip, onUn
   ];
   
   const handleEquipClick = () => {
-    if (selectedItem && canEquip(selectedItem)) {
+    if (selectedItem) {
       // If we selected a specific accessory slot to replace
       if (selectedItem.type === "accessory" && selectedEquippedSlot) {
         // We pass a special flag or just rely on the onEquip logic in useGameState
@@ -270,82 +260,46 @@ export function EnhancedInventory({ inventory, equipped, jobClass, onEquip, onUn
             const icon = getEquipmentIcon(item.type);
             const rarityColor = getRarityColor(item.rarity);
             const gearScore = calculateGearScore(item);
-            const isEquippable = canEquip(item);
-            const isWeapon = item.type === "weapon" && item.weaponType;
             
             // For accessories, check if ANY equipped accessory is worse
             let isUpgrade = false;
-            if (isEquippable) {
-              if (item.type === "accessory") {
-                const acc1Score = equipped.accessory1 ? calculateGearScore(equipped.accessory1) : 0;
-                const acc2Score = equipped.accessory2 ? calculateGearScore(equipped.accessory2) : 0;
-                isUpgrade = gearScore > acc1Score || gearScore > acc2Score;
-              } else {
-                const currentlyEquipped = equipped[item.type as keyof EquippedItems];
-                const equippedScore = currentlyEquipped ? calculateGearScore(currentlyEquipped) : 0;
-                isUpgrade = gearScore > equippedScore;
-              }
+            if (item.type === "accessory") {
+              const acc1Score = equipped.accessory1 ? calculateGearScore(equipped.accessory1) : 0;
+              const acc2Score = equipped.accessory2 ? calculateGearScore(equipped.accessory2) : 0;
+              isUpgrade = gearScore > acc1Score || gearScore > acc2Score;
+            } else {
+              const currentlyEquipped = equipped[item.type as keyof EquippedItems];
+              const equippedScore = currentlyEquipped ? calculateGearScore(currentlyEquipped) : 0;
+              isUpgrade = gearScore > equippedScore;
             }
             
             return (
               <button
                 key={item.id}
-                onClick={() => isEquippable && setSelectedItem(item)}
-                disabled={!isEquippable}
-                title={
-                  !isEquippable && isWeapon
-                    ? `Cannot equip ${getWeaponTypeName(item.weaponType!)} as ${jobClass}`
-                    : undefined
-                }
+                onClick={() => setSelectedItem(item)}
                 style={{
                   fontSize: "24px",
                   padding: "10px 8px 14px 8px",
-                  background: !isEquippable ? "#1a1a1a" : "#2a2a2a",
-                  border: !isEquippable 
-                    ? "2px dashed #555" 
-                    : `2px solid ${rarityColor}`,
+                  background: "#2a2a2a",
+                  border: `2px solid ${rarityColor}`,
                   borderRadius: "6px",
-                  cursor: isEquippable ? "pointer" : "not-allowed",
+                  cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   position: "relative",
                   transition: "transform 0.2s, box-shadow 0.2s",
-                  opacity: !isEquippable ? 0.4 : 1,
-                  filter: !isEquippable ? "grayscale(1)" : "none",
                 }}
                 onMouseEnter={(e) => {
-                  if (isEquippable) {
-                    e.currentTarget.style.transform = "scale(1.05)";
-                    e.currentTarget.style.boxShadow = `0 0 12px ${rarityColor}`;
-                  }
+                  e.currentTarget.style.transform = "scale(1.05)";
+                  e.currentTarget.style.boxShadow = `0 0 12px ${rarityColor}`;
                 }}
                 onMouseLeave={(e) => {
-                  if (isEquippable) {
-                    e.currentTarget.style.transform = "scale(1)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 {icon}
-                
-                {/* Cannot equip X indicator */}
-                {!isEquippable && (
-                  <span style={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
-                    fontSize: "32px",
-                    color: "#dc2626",
-                    fontWeight: "bold",
-                    textShadow: "0 0 8px black",
-                    pointerEvents: "none",
-                  }}>
-                    ❌
-                  </span>
-                )}
-                
                 {item.refinement !== undefined && item.refinement > 0 && (
                   <span style={{
                     position: "absolute",
@@ -361,7 +315,7 @@ export function EnhancedInventory({ inventory, equipped, jobClass, onEquip, onUn
                 )}
                 
                 {/* Upgrade indicator arrow */}
-                {isUpgrade && isEquippable && (
+                {isUpgrade && (
                   <span style={{
                     position: "absolute",
                     top: "-6px",
@@ -391,7 +345,7 @@ export function EnhancedInventory({ inventory, equipped, jobClass, onEquip, onUn
                   fontSize: "10px",
                   fontWeight: "bold",
                   background: "#111",
-                  color: !isEquippable ? "#666" : "#fbbf24",
+                  color: "#fbbf24",
                   padding: "2px 6px",
                   borderRadius: "4px",
                   border: "1px solid #666",
@@ -535,7 +489,7 @@ export function EnhancedInventory({ inventory, equipped, jobClass, onEquip, onUn
       )}
       
       {/* Comparison Modal */}
-      {selectedItem && canEquip(selectedItem) && (
+      {selectedItem && (
         (selectedItem.type !== "accessory" || 
          !equipped.accessory1 || 
          !equipped.accessory2 || 

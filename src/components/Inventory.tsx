@@ -1,22 +1,12 @@
-import { Equipment, EquippedItems, canEquipWeapon, getWeaponTypeName } from "../types/equipment";
-import { JobClass } from "../types/character";
+import { Equipment, EquippedItems } from "../types/equipment";
 
 interface InventoryProps {
   inventory: Equipment[];
   equipped: EquippedItems;
-  jobClass: JobClass;
   onEquip: (item: Equipment) => void;
 }
 
-export function Inventory({ inventory, equipped, jobClass, onEquip }: InventoryProps) {
-  // Check if item can be equipped
-  const canEquip = (item: Equipment): boolean => {
-    if (item.type === "weapon" && item.weaponType) {
-      return canEquipWeapon(jobClass, item.weaponType);
-    }
-    return true; // Non-weapons can always be equipped
-  };
-
+export function Inventory({ inventory, equipped, onEquip }: InventoryProps) {
   return (
     <div
       style={{
@@ -91,49 +81,32 @@ export function Inventory({ inventory, equipped, jobClass, onEquip }: InventoryP
         {inventory.length === 0 ? (
           <div style={{ color: "#666", fontSize: "10px" }}>Empty...</div>
         ) : (
-          inventory.map((item) => {
-            const isEquippable = canEquip(item);
-            const isWeapon = item.type === "weapon" && item.weaponType;
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => isEquippable && onEquip(item)}
-                disabled={!isEquippable}
-                title={
-                  !isEquippable && isWeapon
-                    ? `Cannot equip ${getWeaponTypeName(item.weaponType!)} as ${jobClass}`
-                    : undefined
-                }
-                style={{
-                  fontSize: "9px",
-                  padding: "2px 4px",
-                  background: !isEquippable
-                    ? "#333"
-                    : item.rarity === "legendary"
-                      ? "#f59e0b"
-                      : item.rarity === "epic"
-                        ? "#a855f7"
-                        : item.rarity === "rare"
-                          ? "#3b82f6"
-                          : "#555",
-                  color: !isEquippable ? "#666" : "white",
-                  border: !isEquippable ? "1px dashed #555" : "none",
-                  borderRadius: "3px",
-                  cursor: isEquippable ? "pointer" : "not-allowed",
-                  maxWidth: "90px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  opacity: !isEquippable ? 0.5 : 1,
-                  textDecoration: !isEquippable ? "line-through" : "none",
-                }}
-              >
-                {!isEquippable && "❌ "}
-                {item.name}
-              </button>
-            );
-          })
+          inventory.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onEquip(item)}
+              style={{
+                fontSize: "9px",
+                padding: "2px 4px",
+                background:
+                  item.rarity === "epic"
+                    ? "#a855f7"
+                    : item.rarity === "rare"
+                      ? "#3b82f6"
+                      : "#555",
+                color: "white",
+                border: "none",
+                borderRadius: "3px",
+                cursor: "pointer",
+                maxWidth: "90px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {item.name}
+            </button>
+          ))
         )}
       </div>
     </div>

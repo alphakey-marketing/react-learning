@@ -14,7 +14,6 @@ import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
 import { DevToolsPanel } from "./components/DevToolsPanel";
-import { ElementGuideModal } from "./components/ElementGuideModal";
 import { Equipment } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
@@ -35,7 +34,6 @@ export function MiniLevelGame() {
     }
     return true;
   });
-  const [showElementGuide, setShowElementGuide] = useState(false);
   const [showDevTools, setShowDevTools] = useState(false);
   
   const game = useGameState(addLog, {
@@ -162,7 +160,6 @@ export function MiniLevelGame() {
       }}
     >
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
-      {showElementGuide && <ElementGuideModal onClose={() => setShowElementGuide(false)} />}
       {showDevTools && (
         <DevToolsPanel
           character={game.char}
@@ -236,26 +233,6 @@ export function MiniLevelGame() {
           >
             <span>📖</span>
             <span>How to Play</span>
-          </button>
-          
-          <button
-            onClick={() => setShowElementGuide(true)}
-            style={{
-              padding: "8px 16px",
-              background: "rgba(16, 185, 129, 0.2)",
-              color: "#34d399",
-              border: "1px solid #10b981",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "14px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <span>💪</span>
-            <span>Get Stronger</span>
           </button>
         </div>
 
@@ -380,7 +357,6 @@ export function MiniLevelGame() {
               <EnhancedInventory
                 inventory={game.inventory}
                 equipped={game.equipped}
-                jobClass={game.char.jobClass}
                 onEquip={game.equipItem}
                 onUnequip={game.unequipItem}
               />
