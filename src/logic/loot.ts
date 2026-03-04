@@ -87,7 +87,11 @@ export function generateLoot(playerLevel: number): Equipment {
     const weaponBaseValue = baseValue + (equipment.weaponLevel * 2);
     equipment.atk = weaponBaseValue + refinement * 5;
   } else {
-    equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
+    // REBALANCE: Lower equipment base DEF. Armor drops will have roughly half the raw DEF value.
+    // Together with the 0.25 multiplier in calcPlayerDef, this solves the 90% cap issue.
+    equipment.def = Math.floor(baseValue * 0.4) + refinement * 2;
+    // Ensure at least 1 DEF for non-accessory gear
+    if (equipment.def === 0 && type !== 'accessory') equipment.def = 1;
   }
   
   // Random bonus stat (20% chance)
@@ -134,7 +138,9 @@ export function generateBossLoot(playerLevel: number): Equipment {
     const weaponBaseValue = baseValue + (equipment.weaponLevel * 2);
     equipment.atk = weaponBaseValue + refinement * 5;
   } else {
-    equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
+    // REBALANCE: Lower equipment base DEF
+    equipment.def = Math.floor(baseValue * 0.4) + refinement * 2;
+    if (equipment.def === 0 && type !== 'accessory') equipment.def = 1;
   }
   
   // Boss items always have bonus stats
