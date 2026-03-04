@@ -70,8 +70,28 @@ export function CharacterStats({
   const equipStats = calculateEquipmentStats(equipped);
   const armorBonus = equipStats.totalDef;
   
-  const atkRange = calcPlayerAtk(character, equipStats.weaponAtk, equipStats.weaponLevel, equipStats.weaponRefine, equipStats.equipBonusAtk);
-  const atkDisplay = atkRange.min === atkRange.max ? `${atkRange.max}` : `${atkRange.min} ~ ${atkRange.max}`;
+  // Debug logging
+  console.log('[CharacterStats] Equipment stats:', {
+    weaponAtk: equipStats.weaponAtk,
+    weaponLevel: equipStats.weaponLevel,
+    weaponRefine: equipStats.weaponRefine,
+    equipBonusAtk: equipStats.equipBonusAtk,
+    weapon: equipped.weapon,
+  });
+  
+  const atkRange = calcPlayerAtk(
+    character, 
+    equipStats.weaponAtk, 
+    equipStats.weaponLevel, 
+    equipStats.weaponRefine, 
+    equipStats.equipBonusAtk
+  );
+  
+  console.log('[CharacterStats] ATK Range:', atkRange);
+  
+  const atkDisplay = atkRange.min === atkRange.max 
+    ? `${atkRange.max}` 
+    : `${atkRange.min} ~ ${atkRange.max}`;
   
   const matk = calcPlayerMagicAtk(character);
   const def = calcPlayerDef(character, armorBonus);
@@ -97,8 +117,16 @@ export function CharacterStats({
       },
     };
 
-    const previewAtkRange = calcPlayerAtk(previewChar, equipStats.weaponAtk, equipStats.weaponLevel, equipStats.weaponRefine, equipStats.equipBonusAtk);
-    const previewAtkDisplay = previewAtkRange.min === previewAtkRange.max ? `${previewAtkRange.max}` : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
+    const previewAtkRange = calcPlayerAtk(
+      previewChar, 
+      equipStats.weaponAtk, 
+      equipStats.weaponLevel, 
+      equipStats.weaponRefine, 
+      equipStats.equipBonusAtk
+    );
+    const previewAtkDisplay = previewAtkRange.min === previewAtkRange.max 
+      ? `${previewAtkRange.max}` 
+      : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
     
     const previewMatk = calcPlayerMagicAtk(previewChar);
     const previewDef = calcPlayerDef(previewChar, armorBonus);
