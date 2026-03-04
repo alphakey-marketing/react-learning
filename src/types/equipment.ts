@@ -1,4 +1,5 @@
 import { ElementType } from "./element";
+import { JobClass } from "./character";
 
 export type EquipmentType = 
   | "weapon" 
@@ -15,19 +16,36 @@ export type EquipmentRarity =
   | "epic" 
   | "legendary";
 
+// Weapon type system for class restrictions
+export type WeaponType = 
+  | "dagger"      // Novice, Mage, Thief
+  | "sword"       // Swordsman, Knight, Merchant
+  | "2h_sword"    // Swordsman, Knight
+  | "spear"       // Knight (mounted)
+  | "axe"         // Merchant, Blacksmith
+  | "mace"        // Acolyte, Priest, Merchant
+  | "staff"       // Mage, Wizard, Acolyte, Priest
+  | "bow"         // Archer, Hunter
+  | "katar";      // Assassin
+
 export interface Equipment {
   id: number;
   name: string;
   type: EquipmentType;
   rarity: EquipmentRarity;
   
-  // RO-style stats
+  // Weapon properties
+  weaponType?: WeaponType;  // NEW: Weapon classification
   atk?: number;        // Attack power (weapons ONLY)
+  weaponLevel?: number; // Weapon level (1-4), affects variance
+  
+  // Armor properties
   def?: number;        // Defense (armor, head, garment, footgear ONLY)
+  
+  // General properties
   slots?: number;      // Card slots (0-4)
   weight?: number;     // Weight in RO style
   refinement?: number; // +0 to +10 refine level
-  weaponLevel?: number; // Weapon level (1-4), affects variance
   
   // Elemental Properties
   element?: ElementType; // Weapons apply elemental damage, Armor grants resistance
@@ -54,6 +72,23 @@ export interface EquippedItems {
   accessory2: Equipment | null;
 }
 
+// Class weapon restrictions (classic RO style)
+export const CLASS_WEAPON_RESTRICTIONS: Record<JobClass, WeaponType[]> = {
+  Novice: ["dagger"],
+  Swordsman: ["sword", "2h_sword", "dagger"],
+  Knight: ["sword", "2h_sword", "spear"],
+  Mage: ["staff", "dagger"],
+  Wizard: ["staff", "dagger"],
+  Archer: ["bow"],
+  Hunter: ["bow"],
+};
+
+// Check if a class can equip a weapon type
+export function canEquipWeapon(jobClass: JobClass, weaponType: WeaponType): boolean {
+  const allowedWeapons = CLASS_WEAPON_RESTRICTIONS[jobClass];
+  return allowedWeapons.includes(weaponType);
+}
+
 // Helper to get equipment icon
 export function getEquipmentIcon(type: EquipmentType): string {
   const icons: Record<EquipmentType, string> = {
@@ -65,6 +100,22 @@ export function getEquipmentIcon(type: EquipmentType): string {
     accessory: "💍",
   };
   return icons[type];
+}
+
+// Helper to get weapon type display name
+export function getWeaponTypeName(weaponType: WeaponType): string {
+  const names: Record<WeaponType, string> = {
+    dagger: "Dagger",
+    sword: "Sword",
+    "2h_sword": "Two-Handed Sword",
+    spear: "Spear",
+    axe: "Axe",
+    mace: "Mace",
+    staff: "Staff",
+    bow: "Bow",
+    katar: "Katar",
+  };
+  return names[weaponType];
 }
 
 // Helper to get rarity color

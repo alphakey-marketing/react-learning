@@ -1,5 +1,5 @@
 import { Enemy } from "../types/enemy";
-import { getElementColor } from "../types/element";
+import { getElementColor, getElementEmoji, getEffectiveElements } from "../types/element";
 import { useState, useEffect, useMemo } from "react";
 
 interface EnemyDisplayProps {
@@ -27,6 +27,7 @@ export function EnemyDisplay({
   const isBoss = enemy.name.includes("Boss");
   const isGroup = (enemy.count || 1) > 1;
   const isLowHp = hpPercent < 30;
+  const hasElement = enemy.element.type !== "Neutral";
   
   const [enemyAttackProgress, setEnemyAttackProgress] = useState(0);
   const [isHit, setIsHit] = useState(false);
@@ -106,6 +107,9 @@ export function EnemyDisplay({
     return `https://api.dicebear.com/7.x/adventurer/svg?seed=${enemy.name}&backgroundColor=transparent`;
   };
 
+  // Get effective elements against this enemy
+  const effectiveElements = hasElement ? getEffectiveElements(enemy.element.type) : [];
+
   if (inTown) {
     return (
       <div
@@ -163,12 +167,41 @@ export function EnemyDisplay({
         zIndex: 0,
       }} />
 
+      {/* Boss Element Warning Banner */}
+      {hasElement && (
+        <div style={{
+          position: "absolute",
+          top: "8px",
+          left: "8px",
+          right: "8px",
+          background: `linear-gradient(135deg, ${getElementColor(enemy.element.type)}22, ${getElementColor(enemy.element.type)}44)`,
+          border: `2px solid ${getElementColor(enemy.element.type)}`,
+          borderRadius: "6px",
+          padding: "8px 12px",
+          zIndex: 10,
+          boxShadow: `0 0 15px ${getElementColor(enemy.element.type)}66`,
+        }}>
+          <div style={{ fontSize: "11px", color: "#fff", fontWeight: "bold", marginBottom: "2px" }}>
+            ⚠️ ELEMENTAL BOSS
+          </div>
+          <div style={{ fontSize: "13px", color: getElementColor(enemy.element.type), fontWeight: "bold", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+            <span>{getElementEmoji(enemy.element.type)} {enemy.element.type} Type</span>
+            {effectiveElements.length > 0 && (
+              <span style={{ fontSize: "11px", color: "#fbbf24" }}>
+                → Weak to {effectiveElements.map(e => getElementEmoji(e)).join(" ")}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{
         height: "120px",
         display: "flex",
         justifyContent: "center",
         alignItems: "flex-end",
         marginBottom: "15px",
+        marginTop: hasElement ? "50px" : "0",
         position: "relative",
         zIndex: 1,
       }}>
@@ -226,20 +259,6 @@ export function EnemyDisplay({
         
         <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", fontWeight: "normal" }}>
           (Lv.{enemy.level})
-        </span>
-
-        {/* Elemental Indicator */}
-        <span style={{ 
-          fontSize: "10px", 
-          padding: "2px 6px",
-          borderRadius: "4px",
-          background: "rgba(0,0,0,0.6)",
-          border: `1px solid ${getElementColor(enemy.element.type)}`,
-          color: getElementColor(enemy.element.type),
-          fontWeight: "bold",
-          textTransform: "uppercase"
-        }}>
-          {enemy.element.type} {enemy.element.level}
         </span>
       </h2>
       
@@ -424,8 +443,11 @@ export function EnemyDisplay({
       </div>
       
       <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", marginTop: "12px", position: "relative", zIndex: 1 }}>
-        {isGroup && "Tip: AOE skills deal bonus damage to groups!"}
-        {!isGroup && "Tip: Fire is strong against Earth and Undead"}
+        {hasElement && effectiveElements.length > 0 && (
+          <span>💡 Use {effectiveElements.map(e => `${getElementEmoji(e)} ${e}`).join(" or ")} skills for 1.5x damage!</span>
+        )}
+        {!hasElement && isGroup && "Tip: AOE skills deal bonus damage to groups!"}
+        {!hasElement && !isGroup && "Tip: Regular mobs are Neutral element"}
       </div>
 
       <style>{`
