@@ -11,8 +11,10 @@ export interface PlayerAttack {
   max: number;
 }
 
-// Physical Attack - Class-specific stat scaling (Classic RO style)
-// Now returns { min, max } to support weapon variance
+// Phase 4: Classic RO Quadratic ATK Formula
+// Physical Attack - Quadratic scaling for primary stats (Classic RO Pre-Renewal style)
+// Formula: Floor(Floor(PrimaryStat/10)^2) + Floor(SecondaryStat/5) + Floor(LUK/5) + Level
+// Returns { min, max } to support weapon variance
 export function calcPlayerAtk(
   char: Character,
   weaponAtk: number,
@@ -25,24 +27,63 @@ export function calcPlayerAtk(
   
   let statusAtk = 0;
   
-  // Status ATK: Melee classes use STR primary, DEX secondary
+  // Phase 4: Quadratic Scaling by Job Class (Classic RO Formula)
+  // Each class has a primary stat that scales quadratically
+  
   if (char.jobClass === "Swordsman" || char.jobClass === "Knight") {
-    statusAtk = str * 2 + dex * 0.5 + luk * 0.3;
+    // Melee classes: STR quadratic, DEX/LUK linear
+    const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
   }
-  // Ranged classes: DEX primary, STR + AGI secondary
   else if (char.jobClass === "Archer" || char.jobClass === "Hunter") {
-    statusAtk = dex * 2 + str * 0.5 + agi * 0.3 + luk * 0.3;
+    // Ranged classes: DEX quadratic, STR/AGI secondary
+    const dexBonus = Math.floor(Math.pow(Math.floor(dex / 10), 2));
+    const strBonus = Math.floor(str / 5);
+    const agiBonus = Math.floor(agi / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = dexBonus + strBonus + agiBonus + lukBonus;
   }
-  // Mages use magic attack, but basic attack is physical with balanced scaling
   else if (char.jobClass === "Mage" || char.jobClass === "Wizard") {
-    statusAtk = str * 1.0 + dex * 0.5 + char.stats.int * 0.5 + luk * 0.3;
+    // Mages: Weak physical attack (they use MATK for skills)
+    // INT has no effect on physical ATK in Classic RO
+    const strBonus = Math.floor(str / 5);
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
   }
-  // Novice: Balanced scaling for all stats
+  else if (char.jobClass === "Thief" || char.jobClass === "Assassin") {
+    // Thieves: Balanced STR/DEX hybrid for fast weapons
+    const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
+    const dexBonus = Math.floor(dex / 3); // Higher DEX contribution than Swordsman
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
+  }
+  else if (char.jobClass === "Acolyte" || char.jobClass === "Priest") {
+    // Support classes: Very weak physical attack
+    const strBonus = Math.floor(str / 5);
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
+  }
+  else if (char.jobClass === "Merchant" || char.jobClass === "Blacksmith") {
+    // Merchant classes: STR quadratic (they can wear heavy gear)
+    const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
+  }
   else {
-    statusAtk = str * 1.5 + dex * 0.5 + luk * 0.3;
+    // Novice: Balanced scaling for all stats (linear only)
+    const strBonus = Math.floor(str / 3);
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
   }
   
-  statusAtk = Math.floor(statusAtk) + char.level + jobBonus + equipBonusAtk;
+  // Add level and job bonus
+  statusAtk += char.level + jobBonus + equipBonusAtk;
 
   // If no weapon is equipped, attack is just status ATK (bare hands)
   if (weaponAtk === 0) {
@@ -79,11 +120,18 @@ export function calcPlayerAtk(
   };
 }
 
-// Magic Attack - INT primary (all magic classes)
+// Magic Attack - INT quadratic (all magic classes)
+// Classic RO Formula: Floor(Floor(INT/7)^2) + Floor(INT/5) + Floor(DEX/5) + Level
 export function calcPlayerMagicAtk(char: Character): number {
   const { int, dex } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
-  return Math.floor(int * 3 + dex * 0.5) + char.level + jobBonus;
+  
+  // Quadratic INT scaling for MATK
+  const intQuadratic = Math.floor(Math.pow(Math.floor(int / 7), 2));
+  const intLinear = Math.floor(int / 5);
+  const dexBonus = Math.floor(dex / 5);
+  
+  return intQuadratic + intLinear + dexBonus + char.level + jobBonus;
 }
 
 // Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
