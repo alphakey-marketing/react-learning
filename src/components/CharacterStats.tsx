@@ -70,33 +70,35 @@ export function CharacterStats({
   const equipStats = calculateEquipmentStats(equipped);
   const armorBonus = equipStats.totalDef;
   
-  // Debug logging
-  console.log('[CharacterStats] Equipment stats:', {
-    weaponAtk: equipStats.weaponAtk,
-    weaponLevel: equipStats.weaponLevel,
-    weaponRefine: equipStats.weaponRefine,
-    equipBonusAtk: equipStats.equipBonusAtk,
-    weapon: equipped.weapon,
-  });
+  // Create character with equipment stats included for combat calculations
+  const charWithEquipStats = useMemo(() => ({
+    ...character,
+    stats: {
+      str: character.stats.str + equipStats.bonusStr,
+      agi: character.stats.agi + equipStats.bonusAgi,
+      vit: character.stats.vit + equipStats.bonusVit,
+      int: character.stats.int + equipStats.bonusInt,
+      dex: character.stats.dex + equipStats.bonusDex,
+      luk: character.stats.luk + equipStats.bonusLuk,
+    },
+  }), [character, equipStats]);
   
   const atkRange = calcPlayerAtk(
-    character, 
+    charWithEquipStats, 
     equipStats.weaponAtk, 
     equipStats.weaponLevel, 
     equipStats.weaponRefine, 
     equipStats.equipBonusAtk
   );
   
-  console.log('[CharacterStats] ATK Range:', atkRange);
-  
   const atkDisplay = atkRange.min === atkRange.max 
     ? `${atkRange.max}` 
     : `${atkRange.min} ~ ${atkRange.max}`;
   
-  const matk = calcPlayerMagicAtk(character);
-  const def = calcPlayerDef(character, armorBonus);
-  const crit = calcCritChance(character);
-  const aspd = calcASPD(character).toFixed(2);
+  const matk = calcPlayerMagicAtk(charWithEquipStats);
+  const def = calcPlayerDef(charWithEquipStats, armorBonus);
+  const crit = calcCritChance(charWithEquipStats);
+  const aspd = calcASPD(charWithEquipStats).toFixed(2);
 
   // Format DEF string: e.g. "12 + 15%"
   const defDisplay = `${def.softDef} + ${def.hardDefPercent}%`;
@@ -108,12 +110,12 @@ export function CharacterStats({
     const previewChar: Character = {
       ...character,
       stats: {
-        str: character.stats.str + pendingStats.str,
-        agi: character.stats.agi + pendingStats.agi,
-        vit: character.stats.vit + pendingStats.vit,
-        int: character.stats.int + pendingStats.int,
-        dex: character.stats.dex + pendingStats.dex,
-        luk: character.stats.luk + pendingStats.luk,
+        str: character.stats.str + pendingStats.str + equipStats.bonusStr,
+        agi: character.stats.agi + pendingStats.agi + equipStats.bonusAgi,
+        vit: character.stats.vit + pendingStats.vit + equipStats.bonusVit,
+        int: character.stats.int + pendingStats.int + equipStats.bonusInt,
+        dex: character.stats.dex + pendingStats.dex + equipStats.bonusDex,
+        luk: character.stats.luk + pendingStats.luk + equipStats.bonusLuk,
       },
     };
 
@@ -391,65 +393,73 @@ export function CharacterStats({
               Pts: {remainingPoints}
             </span>
           </div>
-          {(["str", "agi", "vit", "int", "dex", "luk"] as const).map((key) => (
-            <div
-              key={key}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "3px",
-                gap: "4px",
-              }}
-            >
-              <span style={{ width: "35px", textTransform: "uppercase", color: "#bbb" }}>
-                {key}
-              </span>
-              <span style={{ width: "auto", fontWeight: "bold", minWidth: "24px" }}>
-                {character.stats[key]}
-                {pendingStats[key] > 0 && (
-                  <span style={{ color: "#22c55e", marginLeft: "4px" }}>
-                    +{pendingStats[key]}
-                  </span>
-                )}
-              </span>
-              <div style={{ marginLeft: "auto", display: "flex", gap: "2px" }}>
-                <button
-                  onClick={() => removePendingStat(key)}
-                  disabled={pendingStats[key] === 0}
-                  style={{
-                    padding: "0 6px",
-                    fontSize: "12px",
-                    borderRadius: "3px",
-                    border: "none",
-                    background: pendingStats[key] > 0 ? "linear-gradient(to bottom, #dc2626, #991b1b)" : "#333",
-                    color: "white",
-                    cursor: pendingStats[key] > 0 ? "pointer" : "not-allowed",
-                    opacity: pendingStats[key] > 0 ? 1 : 0.3,
-                    fontWeight: "bold"
-                  }}
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => addPendingStat(key)}
-                  disabled={remainingPoints <= 0}
-                  style={{
-                    padding: "0 6px",
-                    fontSize: "12px",
-                    borderRadius: "3px",
-                    border: "none",
-                    background: remainingPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
-                    color: "white",
-                    cursor: remainingPoints > 0 ? "pointer" : "not-allowed",
-                    opacity: remainingPoints > 0 ? 1 : 0.3,
-                    fontWeight: "bold"
-                  }}
-                >
-                  +
-                </button>
+          {(["str", "agi", "vit", "int", "dex", "luk"] as const).map((key) => {
+            const equipBonus = equipStats[`bonus${key.charAt(0).toUpperCase() + key.slice(1)}` as keyof typeof equipStats] as number;
+            return (
+              <div
+                key={key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: "3px",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ width: "35px", textTransform: "uppercase", color: "#bbb" }}>
+                  {key}
+                </span>
+                <span style={{ width: "auto", fontWeight: "bold", minWidth: "24px" }}>
+                  {character.stats[key]}
+                  {equipBonus > 0 && (
+                    <span style={{ color: "#60a5fa", marginLeft: "2px", fontSize: "10px" }}>
+                      +{equipBonus}
+                    </span>
+                  )}
+                  {pendingStats[key] > 0 && (
+                    <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+                      +{pendingStats[key]}
+                    </span>
+                  )}
+                </span>
+                <div style={{ marginLeft: "auto", display: "flex", gap: "2px" }}>
+                  <button
+                    onClick={() => removePendingStat(key)}
+                    disabled={pendingStats[key] === 0}
+                    style={{
+                      padding: "0 6px",
+                      fontSize: "12px",
+                      borderRadius: "3px",
+                      border: "none",
+                      background: pendingStats[key] > 0 ? "linear-gradient(to bottom, #dc2626, #991b1b)" : "#333",
+                      color: "white",
+                      cursor: pendingStats[key] > 0 ? "pointer" : "not-allowed",
+                      opacity: pendingStats[key] > 0 ? 1 : 0.3,
+                      fontWeight: "bold"
+                    }}
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={() => addPendingStat(key)}
+                    disabled={remainingPoints <= 0}
+                    style={{
+                      padding: "0 6px",
+                      fontSize: "12px",
+                      borderRadius: "3px",
+                      border: "none",
+                      background: remainingPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
+                      color: "white",
+                      cursor: remainingPoints > 0 ? "pointer" : "not-allowed",
+                      opacity: remainingPoints > 0 ? 1 : 0.3,
+                      fontWeight: "bold"
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Confirmation Buttons */}
           {hasPendingChanges && (
