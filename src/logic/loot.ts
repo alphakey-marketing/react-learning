@@ -1,5 +1,6 @@
-import { Equipment, EquipmentType, EquipmentRarity } from "../types/equipment";
+import { Equipment, EquipmentType, EquipmentRarity, WeaponType } from "../types/equipment";
 import { DROP_CHANCE } from "../data/constants";
+import { JobClass } from "../types/character";
 
 // RO-inspired equipment names
 const EQUIPMENT_NAMES: Record<EquipmentType, string[]> = {
@@ -29,6 +30,30 @@ const EQUIPMENT_NAMES: Record<EquipmentType, string[]> = {
   ],
 };
 
+// Weapon names by type (matching existing classes only)
+const WEAPON_NAMES_BY_TYPE: Record<WeaponType, string[]> = {
+  dagger: ["Knife", "Cutter", "Main Gauche", "Stiletto", "Damascus"],
+  sword: ["Gladius", "Saber", "Haedonggum", "Tsurugi", "Falchion"],
+  "2h_sword": ["Claymore", "Katana", "Zweihander", "Executioner", "Muramasa"],
+  spear: ["Pike", "Partisan", "Trident", "Gungnir", "Holy Lance"],
+  staff: ["Rod", "Wand", "Arc Wand", "Staff of Wing", "Wizardy Staff"],
+  bow: ["Bow", "Composite Bow", "Great Bow", "Crossbow", "Arbalest"],
+  // Not implemented yet - will add when classes are available
+  axe: [],
+  mace: [],
+  katar: [],
+};
+
+// Only generate these weapon types (for existing classes)
+const AVAILABLE_WEAPON_TYPES: WeaponType[] = [
+  "dagger",    // Novice, Mage, Wizard
+  "sword",     // Swordsman, Knight
+  "2h_sword",  // Swordsman, Knight
+  "spear",     // Knight
+  "staff",     // Mage, Wizard
+  "bow",       // Archer, Hunter
+];
+
 export function shouldDropLoot(): boolean {
   return Math.random() < DROP_CHANCE;
 }
@@ -51,13 +76,15 @@ function generateStatsByType(
   type: EquipmentType,
   baseValue: number,
   refinement: number,
-  rarity: EquipmentRarity
+  rarity: EquipmentRarity,
+  weaponType?: WeaponType
 ): Partial<Equipment> {
   const stats: Partial<Equipment> = {};
 
   switch (type) {
     case "weapon":
       // Weapons: Pure ATK, weapon level controls variance
+      stats.weaponType = weaponType;
       stats.weaponLevel = getWeaponLevel(rarity);
       // Scale weapon ATK with baseValue (level-appropriate)
       const weaponBaseValue = baseValue + (stats.weaponLevel * 3);
@@ -134,9 +161,19 @@ export function generateLoot(playerLevel: number): Equipment {
   const types: EquipmentType[] = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
   const type = types[Math.floor(Math.random() * types.length)];
   
-  // Random name from pool
-  const names = EQUIPMENT_NAMES[type];
-  const baseName = names[Math.floor(Math.random() * names.length)];
+  // For weapons, pick a random weapon type from available types
+  let weaponType: WeaponType | undefined = undefined;
+  let baseName: string;
+  
+  if (type === "weapon") {
+    weaponType = AVAILABLE_WEAPON_TYPES[Math.floor(Math.random() * AVAILABLE_WEAPON_TYPES.length)];
+    const weaponNames = WEAPON_NAMES_BY_TYPE[weaponType];
+    baseName = weaponNames[Math.floor(Math.random() * weaponNames.length)];
+  } else {
+    // Non-weapon equipment uses generic names
+    const names = EQUIPMENT_NAMES[type];
+    baseName = names[Math.floor(Math.random() * names.length)];
+  }
   
   // Base value scales with player level
   // Tuned to match enemy power curve: Zone 1 (~level 3) → Zone 8 (~level 38)
@@ -166,7 +203,7 @@ export function generateLoot(playerLevel: number): Equipment {
   };
   
   // Apply type-specific stats
-  const typeStats = generateStatsByType(type, baseValue, refinement, rarity);
+  const typeStats = generateStatsByType(type, baseValue, refinement, rarity, weaponType);
   Object.assign(equipment, typeStats);
   
   // Legacy support for old systems
@@ -179,8 +216,18 @@ export function generateBossLoot(playerLevel: number): Equipment {
   const types: EquipmentType[] = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
   const type = types[Math.floor(Math.random() * types.length)];
   
-  const names = EQUIPMENT_NAMES[type];
-  const baseName = names[Math.floor(Math.random() * names.length)];
+  // For weapons, pick a random weapon type from available types
+  let weaponType: WeaponType | undefined = undefined;
+  let baseName: string;
+  
+  if (type === "weapon") {
+    weaponType = AVAILABLE_WEAPON_TYPES[Math.floor(Math.random() * AVAILABLE_WEAPON_TYPES.length)];
+    const weaponNames = WEAPON_NAMES_BY_TYPE[weaponType];
+    baseName = weaponNames[Math.floor(Math.random() * weaponNames.length)];
+  } else {
+    const names = EQUIPMENT_NAMES[type];
+    baseName = names[Math.floor(Math.random() * names.length)];
+  }
   
   // Boss drops are significantly better
   const baseValue = Math.floor(Math.random() * 10) + 5 + Math.floor(playerLevel * 2.5);
@@ -201,7 +248,7 @@ export function generateBossLoot(playerLevel: number): Equipment {
   };
   
   // Apply type-specific stats
-  const typeStats = generateStatsByType(type, baseValue, refinement, rarity);
+  const typeStats = generateStatsByType(type, baseValue, refinement, rarity, weaponType);
   Object.assign(equipment, typeStats);
   
   // Boss items get EXTRA bonus stats (always at least 1, up to 2)
