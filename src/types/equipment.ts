@@ -74,31 +74,40 @@ export function getRarityColor(rarity: EquipmentRarity): string {
   return colors[rarity];
 }
 
-// Helper to calculate Gear Score (Combat Power) for a single item
+// Phase 3: Calculate Gear Score with TYPE SPECIALIZATION
+// Only count stats that are actually relevant to each equipment type
 export function calculateGearScore(item: Equipment): number {
   if (!item) return 0;
   
   let score = 0;
   
-  // Base stats weight
-  score += (item.atk || 0) * 2;
-  score += (item.def || 0) * 1.5;
-  score += (item.stat || 0) * 2; // Legacy stat support (usually atk or def)
+  const isWeapon = item.type === 'weapon';
+  const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
   
-  // Bonus stats weight (very valuable)
+  // ATK: ONLY for weapons
+  if (isWeapon) {
+    score += (item.atk || 0) * 2;
+    
+    // Weapon level bonus (only weapons have this)
+    if (item.weaponLevel) {
+      score += item.weaponLevel * 5;
+    }
+  }
+  
+  // DEF: ONLY for armor types
+  if (isArmor) {
+    score += (item.def || 0) * 1.5;
+  }
+  
+  // Bonus stats: ALL equipment types can have these
   const stats = ['str', 'agi', 'vit', 'int', 'dex', 'luk'] as const;
   stats.forEach(stat => {
     score += (item[stat] || 0) * 5;
   });
   
-  // Refinement bonus
-  if (item.refinement) {
+  // Refinement bonus: All equipment except accessories
+  if (item.type !== 'accessory' && item.refinement) {
     score += item.refinement * 3;
-  }
-
-  // Weapon level bonus
-  if (item.weaponLevel) {
-    score += item.weaponLevel * 5;
   }
   
   return Math.floor(score);
