@@ -6,31 +6,77 @@ export interface PlayerDefense {
   hardDefPercent: number;
 }
 
+export interface PlayerAttack {
+  min: number;
+  max: number;
+}
+
 // Physical Attack - Class-specific stat scaling (Classic RO style)
-export function calcPlayerAtk(char: Character, weaponBonus: number): number {
+// Now returns { min, max } to support weapon variance
+export function calcPlayerAtk(
+  char: Character,
+  weaponAtk: number,
+  weaponLevel: number,
+  weaponRefine: number,
+  equipBonusAtk: number
+): PlayerAttack {
   const { str, agi, dex, luk } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
-  let baseAtk = 0;
+  let statusAtk = 0;
   
-  // Melee classes: STR primary, DEX secondary
+  // Status ATK: Melee classes use STR primary, DEX secondary
   if (char.jobClass === "Swordsman" || char.jobClass === "Knight") {
-    baseAtk = str * 2 + dex * 0.5 + luk * 0.3;
+    statusAtk = str * 2 + dex * 0.5 + luk * 0.3;
   }
-  // Ranged classes: DEX primary, STR + AGI secondary (archers benefit from AGI!)
+  // Ranged classes: DEX primary, STR + AGI secondary
   else if (char.jobClass === "Archer" || char.jobClass === "Hunter") {
-    baseAtk = dex * 2 + str * 0.5 + agi * 0.3 + luk * 0.3;
+    statusAtk = dex * 2 + str * 0.5 + agi * 0.3 + luk * 0.3;
   }
   // Mages use magic attack, but basic attack is physical with balanced scaling
   else if (char.jobClass === "Mage" || char.jobClass === "Wizard") {
-    baseAtk = str * 1.0 + dex * 0.5 + char.stats.int * 0.5 + luk * 0.3;
+    statusAtk = str * 1.0 + dex * 0.5 + char.stats.int * 0.5 + luk * 0.3;
   }
   // Novice: Balanced scaling for all stats
   else {
-    baseAtk = str * 1.5 + dex * 0.5 + luk * 0.3;
+    statusAtk = str * 1.5 + dex * 0.5 + luk * 0.3;
   }
   
-  return Math.floor(baseAtk) + weaponBonus + char.level + jobBonus;
+  statusAtk = Math.floor(statusAtk) + char.level + jobBonus + equipBonusAtk;
+
+  // If no weapon is equipped, attack is just status ATK (bare hands)
+  if (weaponAtk === 0) {
+    return { min: statusAtk, max: statusAtk };
+  }
+
+  // RO Weapon Variance Formula
+  // Refine ATK is added cleanly
+  const refineAtk = weaponRefine * 5;
+  
+  // Variance scales with Weapon Level (10% variance per level)
+  // Level 1 = 10% variance, Level 4 = 40% variance
+  const variancePercent = weaponLevel * 0.1;
+  const varianceAmount = Math.floor(weaponAtk * variancePercent);
+
+  // High DEX reduces variance by boosting the minimum ATK floor
+  const dexBonusFloor = Math.floor(dex * 0.5);
+  
+  let minWeaponAtk = weaponAtk - varianceAmount + dexBonusFloor;
+  let maxWeaponAtk = weaponAtk + varianceAmount;
+
+  // Min weapon ATK cannot exceed max weapon ATK
+  if (minWeaponAtk > maxWeaponAtk) {
+    minWeaponAtk = maxWeaponAtk;
+  }
+  // Min weapon ATK cannot be lower than 0
+  if (minWeaponAtk < 0) {
+    minWeaponAtk = 0;
+  }
+
+  return {
+    min: statusAtk + minWeaponAtk + refineAtk,
+    max: statusAtk + maxWeaponAtk + refineAtk,
+  };
 }
 
 // Magic Attack - INT primary (all magic classes)
