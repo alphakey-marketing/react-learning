@@ -6,6 +6,7 @@ import { getRandomEnemyForZone, ZONES } from "../data/zones";
 import { SKILLS_DB } from "../data/skills";
 import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
 import { RefineResult } from "../components/RefineNPC";
+import { STARTING_STAT_POINTS } from "../logic/progression"; // Import the constant
 import {
   calculateDamage,
   calculateEnemyDamage,
@@ -61,7 +62,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     maxMp: initialMaxMp,
     gold: 0,
     stats: initialStats,
-    statPoints: 9,
+    statPoints: STARTING_STAT_POINTS, // Phase 4 Rebalance: Now uses centralized constant (12)
     jobClass: initialJobClass,
     jobLevel: 1,
     jobExp: 0,
@@ -576,7 +577,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         nextCharHp = levelUpResult.newHp;
         nextCharMp = levelUpResult.newMp;
         didLevelUp = true;
-        addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +3)`);
+        addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +${STAT_POINTS_PER_LEVEL})`);
         callbacks?.onLevelUp?.(nextCharLevel);
       }
 
