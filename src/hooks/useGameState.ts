@@ -530,7 +530,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextEnemyHp = enemy.hp;
     let nextEnemy = enemy;
 
-    const { damage, isCrit, isAOE } = calculateDamage(
+    const { damage, isCrit, isAOE, elementMultiplier } = calculateDamage(
       char,
       enemy,
       skill,
@@ -543,8 +543,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     const critText = isCrit ? " ❗CRIT!" : "";
     const aoeText = isAOE ? " 🔥 AOE BONUS!" : "";
+    let elementText = "";
+    if (elementMultiplier > 1) elementText = " 🌟 Effective!";
+    else if (elementMultiplier < 1) elementText = " 🛡️ Resisted!";
+    
     addLog(
-      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText}${aoeText} (MP-${mpCost})`
+      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${enemy.name} for ${damage} dmg.${critText}${aoeText}${elementText} (MP-${mpCost})`
     );
 
     let nextJobLevel = char.jobLevel;
@@ -654,7 +658,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
         // Loot drops scale with group size
         if (isGroup) {
-          // Each enemy in the group has a chance to drop loot
           for (let i = 0; i < enemyCount; i++) {
             if (shouldDropLoot()) {
               const newGear = generateLoot(nextCharLevel);
