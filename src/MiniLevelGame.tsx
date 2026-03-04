@@ -380,6 +380,7 @@ export function MiniLevelGame() {
               <EnhancedInventory
                 inventory={game.inventory}
                 equipped={game.equipped}
+                jobClass={game.char.jobClass}
                 onEquip={game.equipItem}
                 onUnequip={game.unequipItem}
               />
