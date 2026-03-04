@@ -8,9 +8,10 @@ import { Equipment } from "../types/equipment";
  */
 
 // Generate unique IDs for starting equipment
-let equipmentIdCounter = 1000;
-function generateId(): string {
-  return `starter_${equipmentIdCounter++}_${Date.now()}`;
+// Use negative numbers to avoid conflicts with loot generation
+let equipmentIdCounter = -1000;
+function generateId(): number {
+  return equipmentIdCounter--;
 }
 
 /**
@@ -22,10 +23,12 @@ export function createTrainingKnife(): Equipment {
     id: generateId(),
     name: "Training Knife",
     type: "weapon",
+    rarity: "common",
     atk: 8,
     weaponLevel: 1,
     refinement: 0,
     slots: 0,
+    weight: 40,
   };
 }
 
@@ -38,9 +41,11 @@ export function createCottonShirt(): Equipment {
     id: generateId(),
     name: "Cotton Shirt",
     type: "armor",
+    rarity: "common",
     def: 5,
     refinement: 0,
     slots: 0,
+    weight: 10,
   };
 }
 
@@ -53,9 +58,11 @@ export function createNoviceSlippers(): Equipment {
     id: generateId(),
     name: "Novice Slippers",
     type: "footgear",
+    rarity: "common",
     def: 2,
     refinement: 0,
     slots: 0,
+    weight: 20,
   };
 }
 
