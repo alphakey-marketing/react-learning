@@ -20,8 +20,20 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
     return { text: "0", color: "#9ca3af" }; // Gray
   };
   
-  const atkDiff = getStatDiff(item.atk || item.stat || 0, currentItem?.atk || currentItem?.stat || 0);
-  const defDiff = getStatDiff(item.def || 0, currentItem?.def || 0);
+  // Phase 3: Strict type checking for tooltips
+  const isWeapon = item.type === 'weapon';
+  const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
+  
+  const currentIsWeapon = currentItem?.type === 'weapon';
+  const currentIsArmor = currentItem ? ['armor', 'head', 'garment', 'footgear'].includes(currentItem.type) : false;
+
+  const itemAtk = isWeapon ? (item.atk || 0) : 0;
+  const currentAtk = currentIsWeapon ? (currentItem?.atk || 0) : 0;
+  const atkDiff = getStatDiff(itemAtk, currentAtk);
+  
+  const itemDef = isArmor ? (item.def || 0) : 0;
+  const currentDef = currentIsArmor ? (currentItem?.def || 0) : 0;
+  const defDiff = getStatDiff(itemDef, currentDef);
   
   // Smart positioning - prevent tooltip from going off screen
   const padding = 15;
@@ -103,12 +115,12 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
       
       <div style={{ borderTop: "1px solid #444", marginBottom: "8px" }} />
       
-      {/* Stats */}
-      {(item.atk || item.stat) && (
+      {/* Stats - Strictly enforced by type */}
+      {isWeapon && (
         <div style={statRowStyle}>
           <span style={{ color: "#fca5a5" }}>⚔️ ATK:</span>
           <span>
-            {item.atk || item.stat}
+            {itemAtk}
             {currentItem && (
               <span style={{ color: atkDiff.color, marginLeft: "6px" }}>({atkDiff.text})</span>
             )}
@@ -116,11 +128,18 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
         </div>
       )}
       
-      {item.def !== undefined && item.def > 0 && (
+      {isWeapon && item.weaponLevel && (
+        <div style={statRowStyle}>
+          <span style={{ color: "#fca5a5" }}>Weapon Level:</span>
+          <span>{item.weaponLevel}</span>
+        </div>
+      )}
+      
+      {isArmor && itemDef > 0 && (
         <div style={statRowStyle}>
           <span style={{ color: "#93c5fd" }}>🛡️ DEF:</span>
           <span>
-            {item.def}
+            {itemDef}
             {currentItem && (
               <span style={{ color: defDiff.color, marginLeft: "6px" }}>({defDiff.text})</span>
             )}
@@ -129,42 +148,42 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
       )}
       
       {/* Bonus Stats */}
-      {item.str && (
+      {item.str !== undefined && item.str > 0 && (
         <div style={statRowStyle}>
           <span style={{ color: "#fca5a5" }}>STR:</span>
           <span style={{ color: "#22c55e" }}>+{item.str}</span>
         </div>
       )}
       
-      {item.agi && (
+      {item.agi !== undefined && item.agi > 0 && (
         <div style={statRowStyle}>
           <span style={{ color: "#86efac" }}>AGI:</span>
           <span style={{ color: "#22c55e" }}>+{item.agi}</span>
         </div>
       )}
       
-      {item.vit && (
+      {item.vit !== undefined && item.vit > 0 && (
         <div style={statRowStyle}>
           <span style={{ color: "#fdba74" }}>VIT:</span>
           <span style={{ color: "#22c55e" }}>+{item.vit}</span>
         </div>
       )}
       
-      {item.int && (
+      {item.int !== undefined && item.int > 0 && (
         <div style={statRowStyle}>
           <span style={{ color: "#93c5fd" }}>INT:</span>
           <span style={{ color: "#22c55e" }}>+{item.int}</span>
         </div>
       )}
       
-      {item.dex && (
+      {item.dex !== undefined && item.dex > 0 && (
         <div style={statRowStyle}>
           <span style={{ color: "#fde047" }}>DEX:</span>
           <span style={{ color: "#22c55e" }}>+{item.dex}</span>
         </div>
       )}
       
-      {item.luk && (
+      {item.luk !== undefined && item.luk > 0 && (
         <div style={statRowStyle}>
           <span style={{ color: "#c084fc" }}>LUK:</span>
           <span style={{ color: "#22c55e" }}>+{item.luk}</span>
