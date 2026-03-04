@@ -28,24 +28,3 @@ export function getAvailableStatPoints(char: Character): number {
   const spent = calculateSpentPoints(char.stats);
   return Math.max(0, total - spent);
 }
-
-// Initialize a new character
-export function createNewCharacter(name: string): Character {
-  return {
-    id: Date.now().toString(),
-    name,
-    level: 1,
-    jobClass: "Novice",
-    experience: 0,
-    zeny: 0,
-    stats: {
-      str: 1,
-      agi: 1,
-      vit: 1,
-      int: 1,
-      dex: 1,
-      luk: 1,
-    },
-    statPoints: STARTING_STAT_POINTS,
-  };
-}

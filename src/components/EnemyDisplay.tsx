@@ -262,7 +262,7 @@ export function EnemyDisplay({
         border: "1px solid rgba(255,255,255,0.15)"
       }}>
         <span><span style={{color: "#fca5a5"}}>⚔️</span> {enemy.atk}</span>
-        <span><span style={{color: "#93c5fd"}}>🛡️</span> {enemy.def}</span>
+        <span><span style={{color: "#93c5fd"}}>🛡️</span> {enemy.softDef}</span>
         <span><span style={{color: "#fde047"}}>⚡</span> {enemy.attackSpeed.toFixed(1)}/s</span>
       </div>
       
