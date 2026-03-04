@@ -1,6 +1,7 @@
 import { Character } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Skill } from "../types/skill";
+import { EquippedItems, calculateEquipmentStats } from "../types/equipment";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, PlayerDefense } from "./character";
 import { CRIT_MULTIPLIER } from "../data/constants";
 
@@ -22,15 +23,30 @@ export function calculateDamage(
   enemy: Enemy,
   skill: Skill,
   skillLevel: number,
-  weaponBonus: number
+  equipped: EquippedItems
 ): DamageResult {
   const isMagic = isMagicSkill(skill.id);
-  const baseAtk = isMagic
-    ? calcPlayerMagicAtk(char)
-    : calcPlayerAtk(char, weaponBonus);
-
-  const randomVar = Math.floor(Math.random() * 5);
-  let rawDmg = baseAtk + randomVar;
+  
+  let rawDmg = 0;
+  
+  if (isMagic) {
+    const baseAtk = calcPlayerMagicAtk(char);
+    const randomVar = Math.floor(Math.random() * 5);
+    rawDmg = baseAtk + randomVar;
+  } else {
+    // Physical Attack with Weapon Variance
+    const equipStats = calculateEquipmentStats(equipped);
+    const atkRange = calcPlayerAtk(
+      char, 
+      equipStats.weaponAtk, 
+      equipStats.weaponLevel, 
+      equipStats.weaponRefine, 
+      equipStats.equipBonusAtk
+    );
+    
+    // Roll random damage between min and max
+    rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
+  }
 
   // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
   // Apply Enemy Defense
