@@ -97,9 +97,15 @@ export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefens
   const maxVarSoft = Math.max(variableSoft, Math.floor((vit * vit) / 150) - 1);
   const softDef = baseSoft + Math.floor(Math.random() * (Math.max(0, maxVarSoft - variableSoft) + 1)) + variableSoft;
   
-  // Hard DEF %: From equipment armor + job bonus
-  // Assuming 1 point of armor = 1% damage reduction for now, cap at 90%
-  const hardDefPercent = Math.min(90, armorBonus + jobBonus);
+  // REBALANCE Phase 2: Hard DEF %
+  // Instead of 1 armor = 1% reduction, make it 1 armor = 0.25% reduction
+  // This scales much better into endgame without hitting immunity too early
+  // A fully geared level 50 player might have ~120 DEF, giving 30% reduction instead of 90% cap
+  const defMultiplier = 0.25;
+  const rawHardDef = Math.floor((armorBonus + jobBonus) * defMultiplier);
+  
+  // Set a healthier cap of 70% reduction max (very hard to reach now)
+  const hardDefPercent = Math.min(70, rawHardDef);
   
   return { softDef, hardDefPercent };
 }
