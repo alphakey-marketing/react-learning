@@ -6,7 +6,7 @@ import { getRandomEnemyForZone, ZONES } from "../data/zones";
 import { SKILLS_DB } from "../data/skills";
 import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
 import { RefineResult } from "../components/RefineNPC";
-import { STARTING_STAT_POINTS } from "../logic/progression"; // Import the constant
+import { STARTING_STAT_POINTS, STAT_POINTS_PER_LEVEL } from "../logic/progression"; // Import both constants
 import {
   calculateDamage,
   calculateEnemyDamage,
