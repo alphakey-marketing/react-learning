@@ -1,4 +1,5 @@
 import { Enemy } from "../types/enemy";
+import { getElementColor } from "../types/element";
 import { useState, useEffect, useMemo } from "react";
 
 interface EnemyDisplayProps {
@@ -31,42 +32,39 @@ export function EnemyDisplay({
   const [isHit, setIsHit] = useState(false);
   const [prevHp, setPrevHp] = useState(enemy.hp);
 
-  // Get zone-specific battle arena background
   const battleArenaBackground = useMemo(() => {
     if (isBoss) {
-      return "linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)"; // Boss - Red
+      return "linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #1c0a0a 100%)";
     }
     
     if (isGroup) {
-      // Slightly darker/more intense for groups
       switch(currentZoneId) {
-        case 1: return "linear-gradient(135deg, #15803d 0%, #14532d 50%, #052e16 100%)"; // Darker green
-        case 2: return "linear-gradient(135deg, #14532d 0%, #052e16 50%, #000000 100%)"; // Very dark green
-        case 3: return "linear-gradient(135deg, #44403c 0%, #292524 50%, #0c0a09 100%)"; // Darker gray
-        case 4: return "linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)"; // Darker orange
-        case 5: return "linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #0f172a 100%)"; // Darker blue
-        case 6: return "linear-gradient(135deg, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)"; // Darker red
-        case 7: return "linear-gradient(135deg, #581c87 0%, #3b0764 50%, #1e1b4b 100%)"; // Darker purple
-        case 8: return "linear-gradient(135deg, #4c1d95 0%, #2e1065 50%, #1e1b4b 100%)"; // Darker void
+        case 1: return "linear-gradient(135deg, #15803d 0%, #14532d 50%, #052e16 100%)";
+        case 2: return "linear-gradient(135deg, #14532d 0%, #052e16 50%, #000000 100%)";
+        case 3: return "linear-gradient(135deg, #44403c 0%, #292524 50%, #0c0a09 100%)";
+        case 4: return "linear-gradient(135deg, #92400e 0%, #78350f 50%, #451a03 100%)";
+        case 5: return "linear-gradient(135deg, #1e40af 0%, #1e3a8a 50%, #0f172a 100%)";
+        case 6: return "linear-gradient(135deg, #991b1b 0%, #7f1d1d 50%, #450a0a 100%)";
+        case 7: return "linear-gradient(135deg, #581c87 0%, #3b0764 50%, #1e1b4b 100%)";
+        case 8: return "linear-gradient(135deg, #4c1d95 0%, #2e1065 50%, #1e1b4b 100%)";
         default: return "linear-gradient(135deg, #1f2937 0%, #111827 50%, #000000 100%)";
       }
     }
     
     switch(currentZoneId) {
-      case 0: return "linear-gradient(135deg, #334155 0%, #1e293b 70%, #0f172a 100%)"; // Blue-slate
-      case 1: return "linear-gradient(135deg, #22c55e 0%, #15803d 50%, #14532d 100%)"; // Light green
-      case 2: return "linear-gradient(135deg, #166534 0%, #14532d 50%, #052e16 100%)"; // Dark green
-      case 3: return "linear-gradient(135deg, #57534e 0%, #44403c 50%, #292524 100%)"; // Gray-brown
-      case 4: return "linear-gradient(135deg, #d97706 0%, #92400e 50%, #78350f 100%)"; // Orange-sandy
-      case 5: return "linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%)"; // Icy blue
-      case 6: return "linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%)"; // Red-orange
-      case 7: return "linear-gradient(135deg, #7c3aed 0%, #581c87 50%, #3b0764 100%)"; // Purple
-      case 8: return "linear-gradient(135deg, #6366f1 0%, #4c1d95 50%, #2e1065 100%)"; // Deep purple
-      default: return "linear-gradient(135deg, #374151 0%, #1f2937 70%, #111827 100%)"; // Default gray
+      case 0: return "linear-gradient(135deg, #334155 0%, #1e293b 70%, #0f172a 100%)";
+      case 1: return "linear-gradient(135deg, #22c55e 0%, #15803d 50%, #14532d 100%)";
+      case 2: return "linear-gradient(135deg, #166534 0%, #14532d 50%, #052e16 100%)";
+      case 3: return "linear-gradient(135deg, #57534e 0%, #44403c 50%, #292524 100%)";
+      case 4: return "linear-gradient(135deg, #d97706 0%, #92400e 50%, #78350f 100%)";
+      case 5: return "linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%)";
+      case 6: return "linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%)";
+      case 7: return "linear-gradient(135deg, #7c3aed 0%, #581c87 50%, #3b0764 100%)";
+      case 8: return "linear-gradient(135deg, #6366f1 0%, #4c1d95 50%, #2e1065 100%)";
+      default: return "linear-gradient(135deg, #374151 0%, #1f2937 70%, #111827 100%)";
     }
   }, [currentZoneId, isBoss, isGroup]);
 
-  // Trigger hit animation when HP drops
   useEffect(() => {
     if (enemy.hp < prevHp) {
       setIsHit(true);
@@ -101,7 +99,6 @@ export function EnemyDisplay({
     return () => clearInterval(interval);
   }, [enemy.attackSpeed, inTown]);
 
-  // Generate a procedural seed for the enemy avatar based on their name
   const getAvatarUrl = () => {
     if (isBoss) {
       return `https://api.dicebear.com/7.x/bottts/svg?seed=${enemy.name}&backgroundColor=transparent&colors=ff0000`;
@@ -155,7 +152,6 @@ export function EnemyDisplay({
         transition: "background 1s ease, border 0.3s ease"
       }}
     >
-      {/* Animated light rays effect for depth */}
       <div style={{
         position: "absolute",
         top: "0",
@@ -167,7 +163,6 @@ export function EnemyDisplay({
         zIndex: 0,
       }} />
 
-      {/* Enemy Sprite/Avatar Container */}
       <div style={{
         height: "120px",
         display: "flex",
@@ -189,7 +184,6 @@ export function EnemyDisplay({
           }}
         />
         
-        {/* Ground shadow */}
         <div style={{
           position: "absolute",
           bottom: "-5px",
@@ -212,22 +206,43 @@ export function EnemyDisplay({
           position: "relative",
           zIndex: 1,
           fontWeight: "900",
-          letterSpacing: "0.5px"
+          letterSpacing: "0.5px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "6px"
         }}
       >
-        {isBoss && "💀 "}
-        {isGroup && !isBoss && (
-          <span style={{ color: "#fbbf24", fontSize: "16px" }}>
-            {enemy.count}x{" "}
-          </span>
-        )}
-        {enemy.name}{" "}
+        <span>
+          {isBoss && "💀 "}
+          {isGroup && !isBoss && (
+            <span style={{ color: "#fbbf24", fontSize: "16px" }}>
+              {enemy.count}x{" "}
+            </span>
+          )}
+          {enemy.name}
+        </span>
+        
         <span style={{ fontSize: "14px", color: "rgba(255,255,255,0.8)", fontWeight: "normal" }}>
           (Lv.{enemy.level})
         </span>
+
+        {/* Elemental Indicator */}
+        <span style={{ 
+          fontSize: "10px", 
+          padding: "2px 6px",
+          borderRadius: "4px",
+          background: "rgba(0,0,0,0.6)",
+          border: `1px solid ${getElementColor(enemy.element.type)}`,
+          color: getElementColor(enemy.element.type),
+          fontWeight: "bold",
+          textTransform: "uppercase"
+        }}>
+          {enemy.element.type} {enemy.element.level}
+        </span>
       </h2>
       
-      {/* Group indicator badge */}
       {isGroup && !isBoss && (
         <div style={{
           display: "inline-block",
@@ -246,7 +261,6 @@ export function EnemyDisplay({
         </div>
       )}
       
-      {/* Enemy Stats Row */}
       <div style={{ 
         fontSize: "12px", 
         marginBottom: "15px", 
@@ -266,7 +280,6 @@ export function EnemyDisplay({
         <span><span style={{color: "#fde047"}}>⚡</span> {enemy.attackSpeed.toFixed(1)}/s</span>
       </div>
       
-      {/* HP Bar Container */}
       <div style={{ background: "rgba(0,0,0,0.6)", padding: "10px", borderRadius: "8px", marginBottom: "15px", position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "6px", fontWeight: "bold" }}>
           <span style={{ color: "#fca5a5" }}>HP</span>
@@ -299,7 +312,6 @@ export function EnemyDisplay({
               position: "relative"
             }}
           >
-            {/* Shimmer effect on HP bar */}
             <div style={{
               position: "absolute",
               top: 0,
@@ -311,7 +323,6 @@ export function EnemyDisplay({
           </div>
         </div>
 
-        {/* Enemy Attack Timer integrated smoothly */}
         <div style={{ 
           marginTop: "10px",
           display: "flex", 
@@ -339,7 +350,6 @@ export function EnemyDisplay({
         </div>
       </div>
 
-      {/* Combat Controls Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", position: "relative", zIndex: 1 }}>
         <button
           onClick={onToggleAutoAttack}
@@ -395,7 +405,6 @@ export function EnemyDisplay({
             ⚔️ ATTACK
           </button>
 
-          {/* Attack Cooldown Overlay */}
           {!canAttack && attackCooldownPercent < 100 && (
             <div 
               style={{
@@ -416,7 +425,7 @@ export function EnemyDisplay({
       
       <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", marginTop: "12px", position: "relative", zIndex: 1 }}>
         {isGroup && "Tip: AOE skills deal bonus damage to groups!"}
-        {!isGroup && "Tip: Press 'A' key to attack manually"}
+        {!isGroup && "Tip: Fire is strong against Earth and Undead"}
       </div>
 
       <style>{`

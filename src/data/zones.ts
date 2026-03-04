@@ -1,4 +1,5 @@
 import { Zone, Enemy } from "../types/enemy";
+import { ElementType, ElementLevel } from "../types/element";
 
 function createEnemy(
   name: string,
@@ -7,7 +8,9 @@ function createEnemy(
   softDef: number,
   hp: number,
   attackSpeed: number = 0.5,
-  hardDefPercent: number = 0
+  hardDefPercent: number = 0,
+  elementType: ElementType = "Neutral",
+  elementLevel: ElementLevel = 1
 ): Enemy {
   return {
     name,
@@ -19,11 +22,10 @@ function createEnemy(
     hardDefPercent,
     attackSpeed,
     count: 1,
+    element: { type: elementType, level: elementLevel },
   };
 }
 
-// Phase 4 Rebalance: Enemy stats reduced by ~40% to match quadratic player scaling
-// ATK: -40%, HP: -35%, Soft DEF: -35%, Hard DEF capped at 25% (endgame 35%)
 export const ZONES: Zone[] = [
   {
     id: 0,
@@ -36,11 +38,10 @@ export const ZONES: Zone[] = [
     name: "Beginner Plains",
     minLevel: 1,
     enemies: [
-      // Zone 1: Tutorial enemies (very weak)
-      createEnemy("Poring", 1, 5, 1, 35, 0.4, 0),        // was: 8 ATK, 2 DEF, 50 HP
-      createEnemy("Lunatic", 2, 7, 2, 40, 0.45, 0),      // was: 12 ATK, 3 DEF, 60 HP
-      createEnemy("Fabre", 2, 6, 3, 38, 0.4, 0),         // was: 10 ATK, 4 DEF, 55 HP
-      createEnemy("Willow", 3, 9, 3, 48, 0.5, 0),        // was: 15 ATK, 4 DEF, 70 HP
+      createEnemy("Poring", 1, 5, 1, 35, 0.4, 0, "Water", 1),
+      createEnemy("Lunatic", 2, 7, 2, 40, 0.45, 0, "Neutral", 1),
+      createEnemy("Fabre", 2, 6, 3, 38, 0.4, 0, "Earth", 1),
+      createEnemy("Willow", 3, 9, 3, 48, 0.5, 0, "Earth", 1),
     ],
   },
   {
@@ -48,10 +49,10 @@ export const ZONES: Zone[] = [
     name: "Dark Forest",
     minLevel: 5,
     enemies: [
-      createEnemy("Spore", 5, 15, 5, 80, 0.5, 3),        // was: 25 ATK, 8 DEF, 120 HP, 5% Hard DEF
-      createEnemy("Rocker", 6, 18, 7, 92, 0.55, 3),      // was: 30 ATK, 10 DEF, 140 HP, 5% Hard DEF
-      createEnemy("Wolf", 7, 21, 6, 98, 0.6, 3),         // was: 35 ATK, 9 DEF, 150 HP, 5% Hard DEF
-      createEnemy("Snake", 8, 24, 8, 105, 0.5, 3),       // was: 40 ATK, 12 DEF, 160 HP, 5% Hard DEF
+      createEnemy("Spore", 5, 15, 5, 80, 0.5, 3, "Water", 1),
+      createEnemy("Rocker", 6, 18, 7, 92, 0.55, 3, "Earth", 1),
+      createEnemy("Wolf", 7, 21, 6, 98, 0.6, 3, "Earth", 1),
+      createEnemy("Snake", 8, 24, 8, 105, 0.5, 3, "Poison", 1),
     ],
   },
   {
@@ -59,10 +60,10 @@ export const ZONES: Zone[] = [
     name: "Mountain Path",
     minLevel: 10,
     enemies: [
-      createEnemy("Orc Warrior", 10, 36, 13, 185, 0.6, 7),  // was: 60 ATK, 20 DEF, 280 HP, 10% Hard DEF
-      createEnemy("Golem", 12, 33, 20, 230, 0.5, 10),       // was: 55 ATK, 30 DEF, 350 HP, 15% Hard DEF
-      createEnemy("Hill Wind", 11, 39, 12, 165, 0.65, 7),   // was: 65 ATK, 18 DEF, 250 HP, 10% Hard DEF
-      createEnemy("Harpy", 13, 42, 14, 198, 0.7, 7),        // was: 70 ATK, 22 DEF, 300 HP, 10% Hard DEF
+      createEnemy("Orc Warrior", 10, 36, 13, 185, 0.6, 7, "Earth", 1),
+      createEnemy("Golem", 12, 33, 20, 230, 0.5, 10, "Neutral", 3),
+      createEnemy("Hill Wind", 11, 39, 12, 165, 0.65, 7, "Wind", 2),
+      createEnemy("Harpy", 13, 42, 14, 198, 0.7, 7, "Wind", 2),
     ],
   },
   {
@@ -70,10 +71,10 @@ export const ZONES: Zone[] = [
     name: "Desert Ruins",
     minLevel: 15,
     enemies: [
-      createEnemy("Sand Man", 15, 54, 23, 295, 0.65, 10),    // was: 90 ATK, 35 DEF, 450 HP, 15% Hard DEF
-      createEnemy("Scorpion", 16, 60, 20, 275, 0.7, 10),     // was: 100 ATK, 30 DEF, 420 HP, 15% Hard DEF
-      createEnemy("Mummy", 17, 57, 26, 328, 0.6, 10),        // was: 95 ATK, 40 DEF, 500 HP, 15% Hard DEF
-      createEnemy("Horus", 18, 66, 25, 315, 0.75, 10),       // was: 110 ATK, 38 DEF, 480 HP, 15% Hard DEF
+      createEnemy("Sand Man", 15, 54, 23, 295, 0.65, 10, "Earth", 2),
+      createEnemy("Scorpion", 16, 60, 20, 275, 0.7, 10, "Fire", 1),
+      createEnemy("Mummy", 17, 57, 26, 328, 0.6, 10, "Undead", 1),
+      createEnemy("Horus", 18, 66, 25, 315, 0.75, 10, "Holy", 2),
     ],
   },
   {
@@ -81,10 +82,10 @@ export const ZONES: Zone[] = [
     name: "Frozen Cavern",
     minLevel: 20,
     enemies: [
-      createEnemy("Ice Titan", 20, 78, 33, 425, 0.65, 15),   // was: 130 ATK, 50 DEF, 650 HP, 20% Hard DEF
-      createEnemy("Frost Diver", 22, 84, 29, 405, 0.75, 15), // was: 140 ATK, 45 DEF, 620 HP, 20% Hard DEF
-      createEnemy("Siroma", 21, 75, 31, 393, 0.7, 15),       // was: 125 ATK, 48 DEF, 600 HP, 20% Hard DEF
-      createEnemy("Gazeti", 23, 90, 34, 445, 0.7, 15),       // was: 150 ATK, 52 DEF, 680 HP, 20% Hard DEF
+      createEnemy("Ice Titan", 20, 78, 33, 425, 0.65, 15, "Water", 3),
+      createEnemy("Frost Diver", 22, 84, 29, 405, 0.75, 15, "Water", 2),
+      createEnemy("Siroma", 21, 75, 31, 393, 0.7, 15, "Water", 2),
+      createEnemy("Gazeti", 23, 90, 34, 445, 0.7, 15, "Water", 2),
     ],
   },
   {
@@ -92,10 +93,10 @@ export const ZONES: Zone[] = [
     name: "Volcanic Depths",
     minLevel: 25,
     enemies: [
-      createEnemy("Lava Golem", 25, 138, 55, 685, 0.75, 20),  // was: 230 ATK, 85 DEF, 1050 HP, 35% Hard DEF
-      createEnemy("Fire Imp", 27, 156, 49, 640, 0.9, 20),     // was: 260 ATK, 75 DEF, 980 HP, 35% Hard DEF
-      createEnemy("Kaho", 26, 147, 52, 653, 0.85, 20),        // was: 245 ATK, 80 DEF, 1000 HP, 35% Hard DEF
-      createEnemy("Blazer", 28, 165, 57, 718, 0.85, 20),      // was: 275 ATK, 88 DEF, 1100 HP, 35% Hard DEF
+      createEnemy("Lava Golem", 25, 138, 55, 685, 0.75, 20, "Fire", 3),
+      createEnemy("Fire Imp", 27, 156, 49, 640, 0.9, 20, "Fire", 2),
+      createEnemy("Kaho", 26, 147, 52, 653, 0.85, 20, "Fire", 2),
+      createEnemy("Blazer", 28, 165, 57, 718, 0.85, 20, "Fire", 2),
     ],
   },
   {
@@ -103,10 +104,10 @@ export const ZONES: Zone[] = [
     name: "Ancient Castle",
     minLevel: 30,
     enemies: [
-      createEnemy("Dark Knight", 30, 210, 72, 980, 0.85, 25),  // was: 350 ATK, 110 DEF, 1500 HP, 45% Hard DEF
-      createEnemy("Evil Druid", 32, 228, 65, 915, 0.95, 25),   // was: 380 ATK, 100 DEF, 1400 HP, 45% Hard DEF
-      createEnemy("Wraith", 31, 219, 68, 883, 0.9, 25),        // was: 365 ATK, 105 DEF, 1350 HP, 45% Hard DEF
-      createEnemy("Chimera", 33, 240, 75, 1045, 0.9, 25),      // was: 400 ATK, 115 DEF, 1600 HP, 45% Hard DEF
+      createEnemy("Dark Knight", 30, 210, 72, 980, 0.85, 25, "Shadow", 2),
+      createEnemy("Evil Druid", 32, 228, 65, 915, 0.95, 25, "Undead", 2),
+      createEnemy("Wraith", 31, 219, 68, 883, 0.9, 25, "Undead", 2),
+      createEnemy("Chimera", 33, 240, 75, 1045, 0.9, 25, "Fire", 3),
     ],
   },
   {
@@ -114,11 +115,10 @@ export const ZONES: Zone[] = [
     name: "Void Dimension",
     minLevel: 35,
     enemies: [
-      // Endgame: Slightly higher Hard DEF cap (35%) for final challenge
-      createEnemy("Void Stalker", 35, 312, 91, 1435, 1.0, 35),   // was: 520 ATK, 140 DEF, 2200 HP, 55% Hard DEF
-      createEnemy("Dark Illusion", 37, 336, 85, 1305, 1.2, 35),  // was: 560 ATK, 130 DEF, 2000 HP, 55% Hard DEF
-      createEnemy("Nightmare", 36, 324, 88, 1370, 1.1, 35),      // was: 540 ATK, 135 DEF, 2100 HP, 55% Hard DEF
-      createEnemy("Thanatos", 38, 360, 98, 1630, 1.1, 35),       // was: 600 ATK, 150 DEF, 2500 HP, 60% Hard DEF
+      createEnemy("Void Stalker", 35, 312, 91, 1435, 1.0, 35, "Ghost", 3),
+      createEnemy("Dark Illusion", 37, 336, 85, 1305, 1.2, 35, "Ghost", 3),
+      createEnemy("Nightmare", 36, 324, 88, 1370, 1.1, 35, "Ghost", 3),
+      createEnemy("Thanatos", 38, 360, 98, 1630, 1.1, 35, "Ghost", 4),
     ],
   },
 ];
@@ -126,46 +126,36 @@ export const ZONES: Zone[] = [
 export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enemy {
   const zone = ZONES.find((z) => z.id === zoneId);
   if (!zone || zone.enemies.length === 0) {
-    return createEnemy("Training Dummy", 1, 3, 1, 20, 0.3, 0);
+    return createEnemy("Training Dummy", 1, 3, 1, 20, 0.3, 0, "Neutral", 1);
   }
 
   const randomIndex = Math.floor(Math.random() * zone.enemies.length);
   const baseEnemy = zone.enemies[randomIndex];
 
-  // Phase 4: SOFT LEVEL SCALING (±20% max)
-  // Instead of uncapped scaling, we cap at ±20% to maintain zone identity
   const levelDiff = playerLevel - zone.minLevel;
   
-  // 5% scaling per level difference
   let scalingFactor = 1 + (levelDiff * 0.05);
-  
-  // Cap scaling at ±20% (so zones remain relevant for ~4 levels above/below)
   scalingFactor = Math.max(0.8, Math.min(1.2, scalingFactor));
 
   const scaledHp = Math.floor(baseEnemy.maxHp * scalingFactor);
   const scaledAtk = Math.floor(baseEnemy.atk * scalingFactor);
   const scaledSoftDef = Math.floor(baseEnemy.softDef * scalingFactor);
   
-  // Hard DEF increases slightly with level, but capped
-  // Early zones: max 15%, mid zones: max 25%, endgame: max 35%
   const hardDefCap = zoneId >= 8 ? 35 : (zoneId >= 6 ? 25 : (zoneId >= 4 ? 15 : 10));
   const scaledHardDefPercent = Math.min(
     hardDefCap,
     Math.max(0, baseEnemy.hardDefPercent + Math.floor(levelDiff * 0.3))
   );
 
-  // Determine group size (30% chance for groups in combat zones)
   let count = 1;
   if (zoneId > 0 && Math.random() < 0.3) {
     const maxCount = zoneId === 1 ? 2 : (zoneId < 4 ? 3 : 4);
     count = Math.floor(Math.random() * (maxCount - 1)) + 2;
   }
 
-  // Group scaling (reduced from sqrt to linear 0.7x per enemy)
   const groupHpMultiplier = count > 1 ? (1 + (count - 1) * 0.7) : 1;
   const finalHp = Math.floor(scaledHp * groupHpMultiplier);
 
-  // Group ATK scaling (slight bump for danger)
   const groupAtkMultiplier = count > 1 ? 1 + (count * 0.08) : 1;
   const finalAtk = Math.floor(scaledAtk * groupAtkMultiplier);
 
@@ -179,5 +169,6 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
     hardDefPercent: scaledHardDefPercent,
     attackSpeed: baseEnemy.attackSpeed,
     count,
+    element: baseEnemy.element,
   };
 }

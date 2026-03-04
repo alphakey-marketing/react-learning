@@ -1,3 +1,5 @@
+import { ElementType } from "./element";
+
 export interface Skill {
   id: string;
   name: string;
@@ -9,4 +11,5 @@ export interface Skill {
   cooldown: number;
   effect?: "stun" | "dot" | "heal" | "buff";
   targetCount?: number; // Number of targets this skill can hit (1 = single, 2+ = AOE)
+  element?: ElementType; // Optional elemental property
 }

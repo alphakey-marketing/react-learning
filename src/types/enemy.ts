@@ -1,3 +1,5 @@
+import { ElementalProperty } from "./element";
+
 export interface Enemy {
   name: string;
   level: number;
@@ -8,6 +10,7 @@ export interface Enemy {
   hardDefPercent: number; // Equipment-based percentage reduction (0-100)
   attackSpeed: number; // Attacks per second (independent from player)
   count: number; // Number of enemies in this group (1 = single, 2+ = group)
+  element: ElementalProperty; // Elemental typing
 }
 
 export interface Zone {
