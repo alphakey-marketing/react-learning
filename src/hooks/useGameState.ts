@@ -6,7 +6,8 @@ import { getRandomEnemyForZone, ZONES } from "../data/zones";
 import { SKILLS_DB } from "../data/skills";
 import { JobClass, canChangeJob, getJobBonuses } from "../data/jobs";
 import { RefineResult } from "../components/RefineNPC";
-import { STARTING_STAT_POINTS, STAT_POINTS_PER_LEVEL } from "../logic/progression"; // Import both constants
+import { STARTING_STAT_POINTS, STAT_POINTS_PER_LEVEL } from "../logic/progression";
+import { getStartingEquipment, STARTING_RESOURCES } from "../data/startingEquipment";
 import {
   calculateDamage,
   calculateEnemyDamage,
@@ -60,9 +61,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     maxHp: initialMaxHp,
     mp: initialMaxMp,
     maxMp: initialMaxMp,
-    gold: 0,
+    gold: STARTING_RESOURCES.gold, // BALANCE FIX: Now 100 instead of 0
     stats: initialStats,
-    statPoints: STARTING_STAT_POINTS, // Phase 4 Rebalance: Now uses centralized constant (12)
+    statPoints: STARTING_STAT_POINTS,
     jobClass: initialJobClass,
     jobLevel: 1,
     jobExp: 0,
@@ -70,8 +71,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     skillPoints: 3,
     learnedSkills: { basic_attack: 1 },
     autoAttackSkillId: "basic_attack",
-    elunium: 0,
-    oridecon: 0,
+    elunium: STARTING_RESOURCES.elunium,
+    oridecon: STARTING_RESOURCES.oridecon,
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -79,14 +80,19 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   );
 
   const [inventory, setInventory] = useState<Equipment[]>([]);
-  const [equipped, setEquipped] = useState<EquippedItems>({
-    weapon: null,
-    armor: null,
-    head: null,
-    garment: null,
-    footgear: null,
-    accessory1: null,
-    accessory2: null,
+  
+  // BALANCE FIX: Provide starting equipment
+  const [equipped, setEquipped] = useState<EquippedItems>(() => {
+    const startingItems = getStartingEquipment();
+    return {
+      weapon: startingItems.find(item => item.type === 'weapon') || null,
+      armor: startingItems.find(item => item.type === 'armor') || null,
+      head: null,
+      garment: null,
+      footgear: startingItems.find(item => item.type === 'footgear') || null,
+      accessory1: null,
+      accessory2: null,
+    };
   });
 
   const [currentZoneId, setCurrentZoneId] = useState<number>(0);
@@ -96,8 +102,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const [bossDefeated, setBossDefeated] = useState<boolean>(false);
   const [isBossFight, setIsBossFight] = useState<boolean>(false);
 
-  const [hpPotions, setHpPotions] = useState<number>(1);
-  const [mpPotions, setMpPotions] = useState<number>(1);
+  // BALANCE FIX: More starting potions
+  const [hpPotions, setHpPotions] = useState<number>(STARTING_RESOURCES.hpPotions); // Now 5 instead of 1
+  const [mpPotions, setMpPotions] = useState<number>(STARTING_RESOURCES.mpPotions); // Now 3 instead of 1
   const [autoHpPercent, setAutoHpPercent] = useState<number>(0);
   const [autoMpPercent, setAutoMpPercent] = useState<number>(0);
 
@@ -149,7 +156,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
-  // Use the new shared helper to ensure stats are calculated consistently
   const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
   
   const attacksPerSecond = useMemo(() => 
@@ -646,9 +652,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           addLog(`⚔️ Boss is ready! Click the button to challenge!`);
         }
 
-        // Loot drops scale with group size
         if (isGroup) {
-          // Each enemy in the group has a chance to drop loot
           for (let i = 0; i < enemyCount; i++) {
             if (shouldDropLoot()) {
               const newGear = generateLoot(nextCharLevel);
@@ -666,7 +670,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           }
         }
 
-        // Material drops also scale with group size
         for (let i = 0; i < enemyCount; i++) {
           const matRoll = Math.random();
           if (matRoll < 0.05) {
@@ -768,15 +771,17 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearTimeout(timer);
   }, [autoAttackEnabled, canAttack, currentZoneId, char.hp]);
 
+  // PERFORMANCE OPTIMIZATION: Auto-potion only runs when needed
   useEffect(() => {
     if (autoPotionTimerRef.current !== null) {
       clearInterval(autoPotionTimerRef.current);
       autoPotionTimerRef.current = null;
     }
 
-    if (currentZoneId === 0) {
-      return;
-    }
+    // Don't run if both auto-potions are disabled
+    if (autoHpPercent === 0 && autoMpPercent === 0) return;
+    // Don't run in town
+    if (currentZoneId === 0) return;
 
     autoPotionTimerRef.current = window.setInterval(() => {
       autoPotionRef.current();
@@ -787,7 +792,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(autoPotionTimerRef.current);
       }
     };
-  }, [currentZoneId]);
+  }, [currentZoneId, autoHpPercent, autoMpPercent]); // PERFORMANCE: Added dependencies
 
   useEffect(() => {
     if (enemyAttackTimerRef.current !== null) {
@@ -840,12 +845,15 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus]);
 
+  // PERFORMANCE OPTIMIZATION: Town healing only runs in town
   useEffect(() => {
+    if (currentZoneId !== 0) return; // Only heal in town
+    
     const id = setInterval(() => {
       townHealingRef.current();
     }, 3000);
     return () => clearInterval(id);
-  }, []);
+  }, [currentZoneId]); // PERFORMANCE: Added dependency
 
   function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);
@@ -868,9 +876,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       maxHp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
       softDef: bossTemplate.softDef * BOSS_DEF_MULTIPLIER,
-      hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)), // Bosses have higher hard def too
+      hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)),
       attackSpeed: bossTemplate.attackSpeed * 1.5,
-      count: 1, // Bosses are always single targets
+      count: 1,
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);
