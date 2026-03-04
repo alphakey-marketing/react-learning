@@ -37,7 +37,6 @@ export function TrainingHut({ character, weaponBonus, onClose }: TrainingHutProp
     hp: enemyHP,
     maxHp: enemyMaxHP,
     atk: enemyATK,
-    def: enemySoftDef,
     softDef: enemySoftDef,
     hardDefPercent: enemyHardDefPercent,
     attackSpeed: 0,

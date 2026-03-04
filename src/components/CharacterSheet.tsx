@@ -84,14 +84,14 @@ export function CharacterSheet({ character, onAllocateStat, combatStats }: Chara
     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h2 className="text-xl font-bold text-white">{character.name}</h2>
+          <h2 className="text-xl font-bold text-white">{character.jobClass}</h2>
           <div className="text-gray-400 text-sm">
             Lv. {character.level} {character.jobClass}
           </div>
         </div>
         <div className="text-right">
-          <div className="text-sm text-gray-400">Zeny</div>
-          <div className="text-yellow-400 font-bold">{character.zeny.toLocaleString()} z</div>
+          <div className="text-sm text-gray-400">Gold</div>
+          <div className="text-yellow-400 font-bold">{character.gold.toLocaleString()} g</div>
         </div>
       </div>
 
