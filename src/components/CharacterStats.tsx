@@ -77,6 +77,14 @@ export function CharacterStats({
     weaponRefine: equipStats.weaponRefine,
     equipBonusAtk: equipStats.equipBonusAtk,
     weapon: equipped.weapon,
+    basicStats: {
+      str: equipStats.bonusStr,
+      agi: equipStats.bonusAgi,
+      vit: equipStats.bonusVit,
+      int: equipStats.bonusInt,
+      dex: equipStats.bonusDex,
+      luk: equipStats.bonusLuk
+    }
   });
   
   const atkRange = calcPlayerAtk(
@@ -197,6 +205,18 @@ export function CharacterStats({
         </span>
       </div>
     );
+  };
+
+  const getEquipmentBonusForStat = (statKey: keyof Stats) => {
+    const bonusMap: Record<keyof Stats, number> = {
+      str: equipStats.bonusStr,
+      agi: equipStats.bonusAgi,
+      vit: equipStats.bonusVit,
+      int: equipStats.bonusInt,
+      dex: equipStats.bonusDex,
+      luk: equipStats.bonusLuk
+    };
+    return bonusMap[statKey];
   };
 
   return (
@@ -391,65 +411,74 @@ export function CharacterStats({
               Pts: {remainingPoints}
             </span>
           </div>
-          {(["str", "agi", "vit", "int", "dex", "luk"] as const).map((key) => (
-            <div
-              key={key}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "3px",
-                gap: "4px",
-              }}
-            >
-              <span style={{ width: "35px", textTransform: "uppercase", color: "#bbb" }}>
-                {key}
-              </span>
-              <span style={{ width: "auto", fontWeight: "bold", minWidth: "24px" }}>
-                {character.stats[key]}
-                {pendingStats[key] > 0 && (
-                  <span style={{ color: "#22c55e", marginLeft: "4px" }}>
-                    +{pendingStats[key]}
-                  </span>
-                )}
-              </span>
-              <div style={{ marginLeft: "auto", display: "flex", gap: "2px" }}>
-                <button
-                  onClick={() => removePendingStat(key)}
-                  disabled={pendingStats[key] === 0}
-                  style={{
-                    padding: "0 6px",
-                    fontSize: "12px",
-                    borderRadius: "3px",
-                    border: "none",
-                    background: pendingStats[key] > 0 ? "linear-gradient(to bottom, #dc2626, #991b1b)" : "#333",
-                    color: "white",
-                    cursor: pendingStats[key] > 0 ? "pointer" : "not-allowed",
-                    opacity: pendingStats[key] > 0 ? 1 : 0.3,
-                    fontWeight: "bold"
-                  }}
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => addPendingStat(key)}
-                  disabled={remainingPoints <= 0}
-                  style={{
-                    padding: "0 6px",
-                    fontSize: "12px",
-                    borderRadius: "3px",
-                    border: "none",
-                    background: remainingPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
-                    color: "white",
-                    cursor: remainingPoints > 0 ? "pointer" : "not-allowed",
-                    opacity: remainingPoints > 0 ? 1 : 0.3,
-                    fontWeight: "bold"
-                  }}
-                >
-                  +
-                </button>
+          {(["str", "agi", "vit", "int", "dex", "luk"] as const).map((key) => {
+            const equipBonus = getEquipmentBonusForStat(key);
+            
+            return (
+              <div
+                key={key}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: "3px",
+                  gap: "4px",
+                }}
+              >
+                <span style={{ width: "35px", textTransform: "uppercase", color: "#bbb" }}>
+                  {key}
+                </span>
+                <span style={{ width: "auto", fontWeight: "bold", minWidth: "24px" }}>
+                  {character.stats[key]}
+                  {equipBonus > 0 && (
+                    <span style={{ color: "#22c55e", marginLeft: "2px", fontSize: "10px" }} title={`+${equipBonus} from equipment`}>
+                      +{equipBonus}
+                    </span>
+                  )}
+                  {pendingStats[key] > 0 && (
+                    <span style={{ color: "#f59e0b", marginLeft: "4px" }}>
+                      (+{pendingStats[key]})
+                    </span>
+                  )}
+                </span>
+                <div style={{ marginLeft: "auto", display: "flex", gap: "2px" }}>
+                  <button
+                    onClick={() => removePendingStat(key)}
+                    disabled={pendingStats[key] === 0}
+                    style={{
+                      padding: "0 6px",
+                      fontSize: "12px",
+                      borderRadius: "3px",
+                      border: "none",
+                      background: pendingStats[key] > 0 ? "linear-gradient(to bottom, #dc2626, #991b1b)" : "#333",
+                      color: "white",
+                      cursor: pendingStats[key] > 0 ? "pointer" : "not-allowed",
+                      opacity: pendingStats[key] > 0 ? 1 : 0.3,
+                      fontWeight: "bold"
+                    }}
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={() => addPendingStat(key)}
+                    disabled={remainingPoints <= 0}
+                    style={{
+                      padding: "0 6px",
+                      fontSize: "12px",
+                      borderRadius: "3px",
+                      border: "none",
+                      background: remainingPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
+                      color: "white",
+                      cursor: remainingPoints > 0 ? "pointer" : "not-allowed",
+                      opacity: remainingPoints > 0 ? 1 : 0.3,
+                      fontWeight: "bold"
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Confirmation Buttons */}
           {hasPendingChanges && (
