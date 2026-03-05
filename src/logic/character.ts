@@ -1,4 +1,4 @@
-import { Character } from "../types/character";
+import { Character, CharacterStats } from "../types/character";
 import { JobClass, JOB_DATA } from "../data/jobs";
 
 export interface PlayerDefense {
@@ -11,6 +11,28 @@ export interface PlayerAttack {
   max: number;
 }
 
+export interface EquipBonusStats {
+  bonusStr: number;
+  bonusAgi: number;
+  bonusVit: number;
+  bonusInt: number;
+  bonusDex: number;
+  bonusLuk: number;
+}
+
+// Helper to get total stats (base + equipment)
+export function getTotalStats(char: Character, equipStats?: EquipBonusStats): CharacterStats {
+  if (!equipStats) return char.stats;
+  return {
+    str: char.stats.str + equipStats.bonusStr,
+    agi: char.stats.agi + equipStats.bonusAgi,
+    vit: char.stats.vit + equipStats.bonusVit,
+    int: char.stats.int + equipStats.bonusInt,
+    dex: char.stats.dex + equipStats.bonusDex,
+    luk: char.stats.luk + equipStats.bonusLuk,
+  };
+}
+
 // Phase 4: Classic RO Quadratic ATK Formula
 // Physical Attack - Quadratic scaling for primary stats (Classic RO Pre-Renewal style)
 // Formula: Floor(Floor(PrimaryStat/10)^2) + Floor(SecondaryStat/5) + Floor(LUK/5) + Level
@@ -20,9 +42,10 @@ export function calcPlayerAtk(
   weaponAtk: number,
   weaponLevel: number,
   weaponRefine: number,
-  equipBonusAtk: number
+  equipBonusAtk: number,
+  equipStats?: EquipBonusStats
 ): PlayerAttack {
-  const { str, agi, dex, luk } = char.stats;
+  const { str, agi, dex, luk } = getTotalStats(char, equipStats);
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
   let statusAtk = 0;
@@ -101,8 +124,8 @@ export function calcPlayerAtk(
 
 // Magic Attack - INT quadratic (all magic classes)
 // Classic RO Formula: Floor(Floor(INT/7)^2) + Floor(INT/5) + Floor(DEX/5) + Level
-export function calcPlayerMagicAtk(char: Character): number {
-  const { int, dex } = char.stats;
+export function calcPlayerMagicAtk(char: Character, equipStats?: EquipBonusStats): number {
+  const { int, dex } = getTotalStats(char, equipStats);
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
   // Quadratic INT scaling for MATK
@@ -114,8 +137,8 @@ export function calcPlayerMagicAtk(char: Character): number {
 }
 
 // Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
-export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefense {
-  const { vit } = char.stats;
+export function calcPlayerDef(char: Character, armorBonus: number, equipStats?: EquipBonusStats): PlayerDefense {
+  const { vit } = getTotalStats(char, equipStats);
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.defBonus || 0;
   
   // Soft DEF: VIT*0.5 + random variance based on VIT (RO style approximation)
@@ -138,15 +161,15 @@ export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefens
 }
 
 // Critical Rate - LUK based (all physical classes)
-export function calcCritChance(char: Character): number {
-  const { luk } = char.stats;
+export function calcCritChance(char: Character, equipStats?: EquipBonusStats): number {
+  const { luk } = getTotalStats(char, equipStats);
   return Math.min(50, Math.floor(luk / 3));
 }
 
 // Attack Speed (ASPD) - AGI and DEX based
 // Returns attacks per second (e.g., 1.5 means 1.5 attacks every second)
-export function calcASPD(char: Character): number {
-  const { agi, dex } = char.stats;
+export function calcASPD(char: Character, equipStats?: EquipBonusStats): number {
+  const { agi, dex } = getTotalStats(char, equipStats);
   
   // Base ASPD is 1 attack per 1.5 seconds (0.66 attacks/sec)
   // Max ASPD is roughly 3 attacks per second (like RO 190 ASPD)
