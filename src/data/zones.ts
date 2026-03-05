@@ -7,7 +7,9 @@ function createEnemy(
   softDef: number,
   hp: number,
   attackSpeed: number = 0.5,
-  hardDefPercent: number = 0
+  hardDefPercent: number = 0,
+  softMdef: number = -1,
+  hardMdefPercent: number = -1
 ): Enemy {
   return {
     name,
@@ -17,6 +19,8 @@ function createEnemy(
     atk,
     softDef,
     hardDefPercent,
+    softMdef: softMdef === -1 ? Math.floor(softDef * 0.8) : softMdef, // Default MDEF is slightly lower than DEF
+    hardMdefPercent: hardMdefPercent === -1 ? hardDefPercent : hardMdefPercent,
     attackSpeed,
     count: 1,
   };
@@ -145,6 +149,7 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
   const scaledHp = Math.floor(baseEnemy.maxHp * scalingFactor);
   const scaledAtk = Math.floor(baseEnemy.atk * scalingFactor);
   const scaledSoftDef = Math.floor(baseEnemy.softDef * scalingFactor);
+  const scaledSoftMdef = Math.floor(baseEnemy.softMdef * scalingFactor);
   
   // Hard DEF increases slightly with level, but capped
   // Early zones: max 15%, mid zones: max 25%, endgame: max 35%
@@ -152,6 +157,11 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
   const scaledHardDefPercent = Math.min(
     hardDefCap,
     Math.max(0, baseEnemy.hardDefPercent + Math.floor(levelDiff * 0.3))
+  );
+
+  const scaledHardMdefPercent = Math.min(
+    hardDefCap,
+    Math.max(0, baseEnemy.hardMdefPercent + Math.floor(levelDiff * 0.3))
   );
 
   // Determine group size (30% chance for groups in combat zones)
@@ -177,6 +187,8 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
     atk: finalAtk,
     softDef: scaledSoftDef,
     hardDefPercent: scaledHardDefPercent,
+    softMdef: scaledSoftMdef,
+    hardMdefPercent: scaledHardMdefPercent,
     attackSpeed: baseEnemy.attackSpeed,
     count,
   };
