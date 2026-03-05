@@ -76,6 +76,7 @@ export function CharacterStats({
     weaponLevel: equipStats.weaponLevel,
     weaponRefine: equipStats.weaponRefine,
     equipBonusAtk: equipStats.equipBonusAtk,
+    weaponType: equipStats.weaponType,
     weapon: equipped.weapon,
     basicStats: {
       str: equipStats.bonusStr,
@@ -87,12 +88,14 @@ export function CharacterStats({
     }
   });
   
-  const atkRange = calcPlayerAtk(
+  // Phase 2: Extract attack range from new return type
+  const { attack: atkRange, passives } = calcPlayerAtk(
     character, 
     equipStats.weaponAtk, 
     equipStats.weaponLevel, 
     equipStats.weaponRefine, 
-    equipStats.equipBonusAtk
+    equipStats.equipBonusAtk,
+    equipStats.weaponType
   );
   
   console.log('[CharacterStats] ATK Range:', atkRange);
@@ -101,10 +104,22 @@ export function CharacterStats({
     ? `${atkRange.max}` 
     : `${atkRange.min} ~ ${atkRange.max}`;
   
-  const matk = calcPlayerMagicAtk(character);
+  // Phase 2: Extract MATK from new return type
+  const { matk } = calcPlayerMagicAtk(
+    character,
+    equipStats.weaponMatk,
+    equipStats.weaponLevel,
+    equipStats.weaponRefine,
+    equipStats.weaponType
+  );
+  
   const def = calcPlayerDef(character, armorBonus);
-  const crit = calcCritChance(character);
-  const aspd = calcASPD(character).toFixed(2);
+  
+  // Phase 2: Use weapon crit bonus
+  const crit = calcCritChance(character, passives.critBonus);
+  
+  // Phase 2: Use weapon ASPD modifier
+  const aspd = calcASPD(character, passives.aspdBonus).toFixed(2);
 
   // Format DEF string: e.g. "12 + 15%"
   const defDisplay = `${def.softDef} + ${def.hardDefPercent}%`;
@@ -125,21 +140,36 @@ export function CharacterStats({
       },
     };
 
-    const previewAtkRange = calcPlayerAtk(
+    // Phase 2: Extract attack range from new return type
+    const { attack: previewAtkRange, passives: previewPassives } = calcPlayerAtk(
       previewChar, 
       equipStats.weaponAtk, 
       equipStats.weaponLevel, 
       equipStats.weaponRefine, 
-      equipStats.equipBonusAtk
+      equipStats.equipBonusAtk,
+      equipStats.weaponType
     );
     const previewAtkDisplay = previewAtkRange.min === previewAtkRange.max 
       ? `${previewAtkRange.max}` 
       : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
     
-    const previewMatk = calcPlayerMagicAtk(previewChar);
+    // Phase 2: Extract MATK from new return type
+    const { matk: previewMatk } = calcPlayerMagicAtk(
+      previewChar,
+      equipStats.weaponMatk,
+      equipStats.weaponLevel,
+      equipStats.weaponRefine,
+      equipStats.weaponType
+    );
+    
     const previewDef = calcPlayerDef(previewChar, armorBonus);
-    const previewCrit = calcCritChance(previewChar);
-    const previewAspd = calcASPD(previewChar).toFixed(2);
+    
+    // Phase 2: Use weapon crit bonus
+    const previewCrit = calcCritChance(previewChar, previewPassives.critBonus);
+    
+    // Phase 2: Use weapon ASPD modifier
+    const previewAspd = calcASPD(previewChar, previewPassives.aspdBonus).toFixed(2);
+    
     const previewMaxHp = calcMaxHp(character.level, previewChar.stats.vit, character.jobClass);
     const previewMaxMp = calcMaxMp(character.level, previewChar.stats.int, character.jobClass);
 
