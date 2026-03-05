@@ -27,12 +27,18 @@ export function calculateDamage(
 ): DamageResult {
   const isMagic = isMagicSkill(skill.id);
   
-  let rawDmg = 0;
+  let baseDmg = 0;
+  let isCrit = false;
   
   if (isMagic) {
     const baseAtk = calcPlayerMagicAtk(char);
     const randomVar = Math.floor(Math.random() * 5);
-    rawDmg = baseAtk + randomVar;
+    const rawDmg = baseAtk + randomVar;
+    
+    // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
+    // Apply Enemy Defense
+    const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
+    baseDmg = Math.max(1, afterHardDef - enemy.softDef);
   } else {
     // Physical Attack with Weapon Variance
     const equipStats = calculateEquipmentStats(equipped);
@@ -44,22 +50,21 @@ export function calculateDamage(
       equipStats.equipBonusAtk
     );
     
-    // Roll random damage between min and max
-    rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
-  }
+    const critChance = calcCritChance(char);
+    const roll = Math.random() * 100;
 
-  // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
-  // Apply Enemy Defense
-  const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
-  let baseDmg = Math.max(1, afterHardDef - enemy.softDef);
-
-  const critChance = isMagic ? 0 : calcCritChance(char);
-  const roll = Math.random() * 100;
-  let isCrit = false;
-
-  if (roll < critChance) {
-    isCrit = true;
-    baseDmg = Math.floor(baseDmg * CRIT_MULTIPLIER);
+    if (roll < critChance) {
+      // CRITICAL HIT: Bypass variance (use max ATK) and bypass DEF entirely
+      isCrit = true;
+      baseDmg = Math.floor(atkRange.max * CRIT_MULTIPLIER);
+    } else {
+      // NORMAL HIT: Roll random damage between min and max
+      const rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
+      
+      // Apply Enemy Defense
+      const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
+      baseDmg = Math.max(1, afterHardDef - enemy.softDef);
+    }
   }
 
   const multiplier = skill.damageMultiplier(skillLevel);
