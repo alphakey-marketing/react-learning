@@ -44,6 +44,23 @@ export const STARTING_FOOTGEAR: Equipment = {
 };
 
 /**
+ * BALANCE: Improved starter wand for Mage job change
+ * Provides 12 MATK instead of 8, helping early Mage/Wizard viability
+ */
+export const STARTING_WAND: Equipment = {
+  id: -1003,
+  name: "Apprentice Wand",
+  type: "weapon",
+  weaponType: "wand",
+  rarity: "common",
+  matk: 12,  // Higher than Training Knife's 8 ATK
+  weaponLevel: 1,
+  refinement: 0,
+  slots: 0,
+  weight: 30,
+};
+
+/**
  * Configuration for starting resources
  */
 export const STARTING_RESOURCES = {
