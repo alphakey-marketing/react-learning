@@ -120,7 +120,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
     tier: 3,
     canChangeTo: [],
     requirements: {
-      minJobLevel: 10,
+      minJobLevel: 20, // INCREASED FROM 10 TO 20
     },
     statRecommendations: {
       primary: ["str", "vit"],
@@ -141,7 +141,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
     tier: 3,
     canChangeTo: [],
     requirements: {
-      minJobLevel: 10,
+      minJobLevel: 20, // INCREASED FROM 10 TO 20
     },
     statRecommendations: {
       primary: ["int", "dex"],
@@ -162,7 +162,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
     tier: 3,
     canChangeTo: [],
     requirements: {
-      minJobLevel: 10,
+      minJobLevel: 20, // INCREASED FROM 10 TO 20
     },
     statRecommendations: {
       primary: ["dex", "agi"],
