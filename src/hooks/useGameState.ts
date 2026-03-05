@@ -156,11 +156,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
-  const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
+  const equipStats = useMemo(() => calculateEquipmentStats(equipped), [equipped]);
+  const armorBonus = equipStats.totalDef;
+  const mdefBonus = equipStats.totalMdef;
   
   // Phase 2: Calculate ASPD with weapon passives
   const attacksPerSecond = useMemo(() => {
-    const equipStats = calculateEquipmentStats(equipped);
     // Get weapon passives to determine ASPD modifier
     const { passives } = calcPlayerAtk(
       char,
@@ -171,7 +172,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       equipStats.weaponType
     );
     return calcASPD(char, passives.aspdBonus);
-  }, [char.stats.agi, char.stats.dex, char.level, equipped]);
+  }, [char.stats.agi, char.stats.dex, char.level, equipStats]);
 
   function devAddBaseLevel() {
     const currentExp = char.expToNext;
@@ -852,7 +853,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       if (currentChar.hp <= 0 || currentZone === 0) return;
 
-      const playerDef = calcPlayerDef(currentChar, armorBonus);
+      const equipStats = calculateEquipmentStats(currentEquipped);
+      const playerDef = calcPlayerDef(currentChar, equipStats.totalDef, equipStats.totalMdef);
       const enemyDmg = calculateEnemyDamage(currentEnemy, playerDef);
 
       currentCallbacks?.onEnemyDamageDealt?.(enemyDmg);
@@ -880,7 +882,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus]);
+  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus, mdefBonus]);
 
   useEffect(() => {
     if (currentZoneId !== 0) return;
@@ -913,6 +915,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
       softDef: bossTemplate.softDef * BOSS_DEF_MULTIPLIER,
       hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)), // Bosses have higher hard def too
+      softMdef: bossTemplate.softMdef * BOSS_DEF_MULTIPLIER,
+      hardMdefPercent: Math.min(90, Math.floor(bossTemplate.hardMdefPercent * 1.5)),
       attackSpeed: bossTemplate.attackSpeed * 1.5,
       count: 1, // Bosses are always single targets
     };
