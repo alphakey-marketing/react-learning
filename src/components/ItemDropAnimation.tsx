@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Equipment } from '../types/equipment';
+import { Equipment, getEquipmentIcon } from '../types/equipment';
 
 export interface DroppingItem {
   id: string;
@@ -126,7 +126,7 @@ function DroppingItemSprite({
         textShadow: `0 0 15px ${color}`,
         userSelect: 'none',
       }}>
-        {item.item.type === 'weapon' ? '⚔️' : '🛡️'}
+        {getEquipmentIcon(item.item)}
       </div>
       <div style={{
         color: color,
