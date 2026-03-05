@@ -1,4 +1,4 @@
-import { Equipment, EquippedItems } from "../types/equipment";
+import { Equipment, EquippedItems, getWeaponTypeIcon, getEquipmentIcon } from "../types/equipment";
 
 interface InventoryProps {
   inventory: Equipment[];
@@ -46,7 +46,7 @@ export function Inventory({ inventory, equipped, onEquip }: InventoryProps) {
             whiteSpace: "nowrap",
           }}
         >
-          ⚔️{" "}
+          {equipped.weapon ? getWeaponTypeIcon(equipped.weapon.weaponType) : "⚔️"}{" "}
           {equipped.weapon
             ? `${equipped.weapon.name} (+${equipped.weapon.stat})`
             : "No Weapon"}
@@ -81,32 +81,39 @@ export function Inventory({ inventory, equipped, onEquip }: InventoryProps) {
         {inventory.length === 0 ? (
           <div style={{ color: "#666", fontSize: "10px" }}>Empty...</div>
         ) : (
-          inventory.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onEquip(item)}
-              style={{
-                fontSize: "9px",
-                padding: "2px 4px",
-                background:
-                  item.rarity === "epic"
-                    ? "#a855f7"
-                    : item.rarity === "rare"
-                      ? "#3b82f6"
-                      : "#555",
-                color: "white",
-                border: "none",
-                borderRadius: "3px",
-                cursor: "pointer",
-                maxWidth: "90px",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {item.name}
-            </button>
-          ))
+          inventory.map((item) => {
+            const icon = item.type === "weapon" ? getWeaponTypeIcon(item.weaponType) : getEquipmentIcon(item.type);
+            return (
+              <button
+                key={item.id}
+                onClick={() => onEquip(item)}
+                style={{
+                  fontSize: "9px",
+                  padding: "2px 4px",
+                  background:
+                    item.rarity === "legendary"
+                      ? "#f59e0b"
+                      : item.rarity === "epic"
+                        ? "#a855f7"
+                        : item.rarity === "rare"
+                          ? "#3b82f6"
+                          : item.rarity === "uncommon"
+                            ? "#22c55e"
+                            : "#555",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "3px",
+                  cursor: "pointer",
+                  maxWidth: "90px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {icon} {item.name}
+              </button>
+            );
+          })
         )}
       </div>
     </div>
