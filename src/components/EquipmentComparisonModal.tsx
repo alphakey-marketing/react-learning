@@ -16,8 +16,8 @@ export function EquipmentComparisonModal({
 }: EquipmentComparisonModalProps) {
   const newRarityColor = getRarityColor(newItem.rarity);
   const currentRarityColor = currentItem ? getRarityColor(currentItem.rarity) : "#666";
-  const newIcon = getEquipmentIcon(newItem.type);
-  const currentIcon = currentItem ? getEquipmentIcon(currentItem.type) : "❌";
+  const newIcon = getEquipmentIcon(newItem);
+  const currentIcon = currentItem ? getEquipmentIcon(currentItem) : "❌";
 
   const newGearScore = calculateGearScore(newItem);
   const currentGearScore = currentItem ? calculateGearScore(currentItem) : 0;
@@ -131,8 +131,8 @@ export function EquipmentComparisonModal({
 
     return (
       <>
-        <div style={{ fontSize: "10px", color: "#9ca3af", marginBottom: "8px" }}>
-          {item.type} • {item.rarity}
+        <div style={{ fontSize: "10px", color: "#9ca3af", marginBottom: "8px", textTransform: "capitalize" }}>
+          {item.type}{item.weaponType ? ` (${item.weaponType})` : ""} • {item.rarity}
         </div>
         <div style={{ borderTop: "1px solid #444", marginBottom: "8px" }} />
         
