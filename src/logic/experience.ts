@@ -66,7 +66,8 @@ export function processLevelUp(char: Character, expGained: number): LevelUpResul
   while (newExp >= newExpToNext) {
     newExp -= newExpToNext;
     newLevel += 1;
-    newExpToNext = Math.floor(newExpToNext * 1.5);
+    // BALANCE: Make Base Level easier by reducing exponential growth from 1.5 to 1.35
+    newExpToNext = Math.floor(newExpToNext * 1.35);
     newStatPoints += STAT_POINTS_PER_LEVEL; // Phase 4 Rebalance: Now uses constant (4)
     leveledUp = true;
   }
@@ -98,7 +99,8 @@ export function processJobLevelUp(
   while (newJobExp >= newJobExpToNext) {
     newJobExp -= newJobExpToNext;
     newJobLevel += 1;
-    newJobExpToNext = Math.floor(newJobExpToNext * 1.4);
+    // BALANCE: Make Job Level harder by increasing exponential growth from 1.4 to 1.6
+    newJobExpToNext = Math.floor(newJobExpToNext * 1.6);
     newSkillPoints += 1;
     leveledUp = true;
   }
