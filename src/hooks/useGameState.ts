@@ -915,7 +915,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     addLog(`⚔️ CHALLENGE: ${bossEnemy.name} appeared!`);
   }
 
-  function equipItem(item: Equipment) {
+  function equipItem(itemObj: Equipment & { targetSlot?: keyof EquippedItems }) {
+    const { targetSlot, ...item } = itemObj;
+    
     // Comprehensive weapon class restrictions with helpful error messages
     if (item.type === "weapon") {
       const weaponType = item.weaponType || "sword";
@@ -940,7 +942,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }
 
     if (item.type === "accessory") {
-      if (!equipped.accessory1) {
+      if (targetSlot && (targetSlot === "accessory1" || targetSlot === "accessory2")) {
+        const oldItem = equipped[targetSlot];
+        setEquipped((prev) => ({ ...prev, [targetSlot]: item }));
+        if (oldItem) {
+          setInventory((prev) => [...prev, oldItem]);
+        }
+      } else if (!equipped.accessory1) {
         setEquipped((prev) => ({ ...prev, accessory1: item }));
       } else if (!equipped.accessory2) {
         setEquipped((prev) => ({ ...prev, accessory2: item }));
