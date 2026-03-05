@@ -110,6 +110,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
           const item = equipped[slot.key];
           const rarityColor = item ? getRarityColor(item.rarity) : "#444";
           const gearScore = item ? calculateGearScore(item) : 0;
+          const displayIcon = item ? getEquipmentIcon(item) : slot.icon;
           
           return (
             <div
@@ -186,7 +187,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
               
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px" }}>
                 <span style={{ color: "#9ca3af", fontSize: "10px", fontWeight: "bold" }}>
-                  {slot.icon} {slot.label}
+                  {displayIcon} {slot.label}
                 </span>
               </div>
               
@@ -257,7 +258,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
           </div>
         ) : (
           sortedInventory.map((item) => {
-            const icon = getEquipmentIcon(item.type);
+            const icon = getEquipmentIcon(item);
             const rarityColor = getRarityColor(item.rarity);
             const gearScore = calculateGearScore(item);
             
