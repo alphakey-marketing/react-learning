@@ -79,8 +79,9 @@ export function calculateDamage(
       // Phase 2: Apply cross-class penalty BEFORE defense calculation
       const penalizedDmg = Math.floor(rawDmg * classPenalty);
       
-      // Apply Enemy Defense
-      const afterHardDef = Math.floor(penalizedDmg * (1 - enemy.hardDefPercent / 100));
+      // BALANCE: Apply physical penetration to reduce enemy DEF effectiveness
+      const effectiveDefPercent = Math.max(0, enemy.hardDefPercent - passives.penetration);
+      const afterHardDef = Math.floor(penalizedDmg * (1 - effectiveDefPercent / 100));
       baseDmg = Math.max(1, afterHardDef - enemy.softDef);
     }
   }
