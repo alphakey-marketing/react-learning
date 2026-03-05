@@ -1,9 +1,11 @@
 import { Character } from "../types/character";
 import { JobClass, JOB_DATA } from "../data/jobs";
+import { WeaponType } from "../types/equipment";
 
 export interface PlayerDefense {
   softDef: number;
   hardDefPercent: number;
+  softMdef: number; // Phase 3: Magic Defense
 }
 
 export interface PlayerAttack {
@@ -11,17 +13,101 @@ export interface PlayerAttack {
   max: number;
 }
 
+// Phase 2: Weapon Type Passive Bonuses
+// Each weapon type provides unique benefits
+export interface WeaponPassives {
+  critBonus: number;      // Extra crit chance
+  aspdBonus: number;      // Attack speed modifier
+  penetration: number;    // Ignore % of enemy defense
+  accuracyBonus: number;  // Hit rate increase
+}
+
+// Phase 2: Get weapon passive bonuses based on weapon type
+function getWeaponPassives(weaponType: WeaponType | null): WeaponPassives {
+  if (!weaponType) {
+    return { critBonus: 0, aspdBonus: 0, penetration: 0, accuracyBonus: 0 };
+  }
+  
+  switch (weaponType) {
+    case "sword":
+      // Swords: Balanced, slight ASPD boost
+      return {
+        critBonus: 0,
+        aspdBonus: 0.1,      // +10% attack speed
+        penetration: 0,
+        accuracyBonus: 0,
+      };
+    
+    case "bow":
+      // Bows: High crit, accuracy, but slower
+      return {
+        critBonus: 5,        // +5% base crit chance
+        aspdBonus: -0.15,    // -15% attack speed (slower)
+        penetration: 0,
+        accuracyBonus: 10,   // +10% hit rate
+      };
+    
+    case "wand":
+      // Wands: Defense penetration for magic
+      return {
+        critBonus: 0,
+        aspdBonus: 0,
+        penetration: 15,     // Ignore 15% of enemy MDEF
+        accuracyBonus: 0,
+      };
+    
+    default:
+      return { critBonus: 0, aspdBonus: 0, penetration: 0, accuracyBonus: 0 };
+  }
+}
+
+// Phase 2: Cross-class weapon penalty
+// Returns a damage multiplier (1.0 = no penalty, 0.7 = 30% damage loss)
+function getWeaponClassPenalty(jobClass: JobClass, weaponType: WeaponType | null): number {
+  if (!weaponType) return 1.0; // No weapon, no penalty
+  
+  // Define optimal weapon types per class
+  const classWeaponMatch: Record<JobClass, WeaponType[]> = {
+    "Novice": ["sword"], // Novices prefer swords
+    "Swordsman": ["sword"],
+    "Knight": ["sword"],
+    "Archer": ["bow"],
+    "Hunter": ["bow"],
+    "Mage": ["wand"],
+    "Wizard": ["wand"],
+  };
+  
+  const optimalWeapons = classWeaponMatch[jobClass];
+  
+  // If using optimal weapon type, no penalty
+  if (optimalWeapons.includes(weaponType)) {
+    return 1.0;
+  }
+  
+  // Mages/Wizards CANNOT use non-wands (enforced in equipment system)
+  // This should never happen, but return 0 if it does
+  if ((jobClass === "Mage" || jobClass === "Wizard") && weaponType !== "wand") {
+    return 0.0;
+  }
+  
+  // Cross-class usage: 25% damage penalty
+  // Example: Knight with Bow, Archer with Sword
+  return 0.75;
+}
+
 // Phase 4: Classic RO Quadratic ATK Formula
 // Physical Attack - Quadratic scaling for primary stats (Classic RO Pre-Renewal style)
 // Formula: Floor(Floor(PrimaryStat/10)^2) + Floor(SecondaryStat/5) + Floor(LUK/5) + Level
 // Returns { min, max } to support weapon variance
+// Phase 2: Now returns weapon passives and cross-class penalty
 export function calcPlayerAtk(
   char: Character,
   weaponAtk: number,
   weaponLevel: number,
   weaponRefine: number,
-  equipBonusAtk: number
-): PlayerAttack {
+  equipBonusAtk: number,
+  weaponType: WeaponType | null = null
+): { attack: PlayerAttack; passives: WeaponPassives; classPenalty: number } {
   const { str, agi, dex, luk } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
@@ -66,7 +152,12 @@ export function calcPlayerAtk(
 
   // If no weapon is equipped, attack is just status ATK (bare hands)
   if (weaponAtk === 0) {
-    return { min: statusAtk, max: statusAtk };
+    const passives = getWeaponPassives(null);
+    return { 
+      attack: { min: statusAtk, max: statusAtk },
+      passives,
+      classPenalty: 1.0,
+    };
   }
 
   // Phase 5: Weapon-Level Scaling Refinement (Classic RO style)
@@ -102,21 +193,31 @@ export function calcPlayerAtk(
     minWeaponAtk = 0;
   }
 
+  // Phase 2: Get weapon passives and cross-class penalty
+  const passives = getWeaponPassives(weaponType);
+  const classPenalty = getWeaponClassPenalty(char.jobClass, weaponType);
+
   return {
-    min: statusAtk + minWeaponAtk + refineAtk,
-    max: statusAtk + maxWeaponAtk + refineAtk,
+    attack: {
+      min: statusAtk + minWeaponAtk + refineAtk,
+      max: statusAtk + maxWeaponAtk + refineAtk,
+    },
+    passives,
+    classPenalty,
   };
 }
 
 // Phase 5: Magic Attack with Wand Refinement Support
 // Classic RO Formula: Floor(Floor(INT/7)^2) + Floor(INT/5) + Floor(DEX/5) + Level
 // Wands provide MATK instead of ATK, and benefit from refinement at 50% rate
+// Phase 2: Now returns weapon passives
 export function calcPlayerMagicAtk(
   char: Character,
   weaponMatk: number = 0,
   weaponLevel: number = 1,
-  weaponRefine: number = 0
-): number {
+  weaponRefine: number = 0,
+  weaponType: WeaponType | null = null
+): { matk: number; passives: WeaponPassives } {
   const { int, dex } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
@@ -129,7 +230,8 @@ export function calcPlayerMagicAtk(
   
   // If no wand equipped, return status MATK only
   if (weaponMatk === 0) {
-    return statusMatk;
+    const passives = getWeaponPassives(null);
+    return { matk: statusMatk, passives };
   }
   
   // Phase 5: Wand Refinement (50% rate of physical weapons)
@@ -145,12 +247,19 @@ export function calcPlayerMagicAtk(
   
   const refineMatk = refineBaseBonus + refineBreakpointBonus;
   
-  return statusMatk + weaponMatk + refineMatk;
+  // Phase 2: Get weapon passives (wand penetration is useful here)
+  const passives = getWeaponPassives(weaponType);
+  
+  return { 
+    matk: statusMatk + weaponMatk + refineMatk,
+    passives,
+  };
 }
 
 // Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
+// Phase 3: Add Soft MDEF calculation
 export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefense {
-  const { vit } = char.stats;
+  const { vit, int } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.defBonus || 0;
   
   // Soft DEF: VIT*0.5 + random variance based on VIT (RO style approximation)
@@ -169,18 +278,26 @@ export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefens
   // Set a healthier cap of 70% reduction max (very hard to reach now)
   const hardDefPercent = Math.min(70, rawHardDef);
   
-  return { softDef, hardDefPercent };
+  // Phase 3: Soft MDEF (Magic Defense)
+  // Classic RO Formula: INT + VIT/2 (simplified)
+  // INT is primary magic defense stat, VIT provides secondary protection
+  const softMdef = int + Math.floor(vit / 2);
+  
+  return { softDef, hardDefPercent, softMdef };
 }
 
 // Critical Rate - LUK based (all physical classes)
-export function calcCritChance(char: Character): number {
+// Phase 2: Now accepts weapon passive bonus
+export function calcCritChance(char: Character, weaponCritBonus: number = 0): number {
   const { luk } = char.stats;
-  return Math.min(50, Math.floor(luk / 3));
+  const baseCrit = Math.floor(luk / 3);
+  return Math.min(50, baseCrit + weaponCritBonus);
 }
 
 // Attack Speed (ASPD) - AGI and DEX based
 // Returns attacks per second (e.g., 1.5 means 1.5 attacks every second)
-export function calcASPD(char: Character): number {
+// Phase 2: Now accepts weapon ASPD modifier
+export function calcASPD(char: Character, weaponAspdModifier: number = 0): number {
   const { agi, dex } = char.stats;
   
   // Base ASPD is 1 attack per 1.5 seconds (0.66 attacks/sec)
@@ -190,7 +307,12 @@ export function calcASPD(char: Character): number {
   // AGI provides the bulk of ASPD, DEX provides a small amount
   const aspdBonus = (agi * 0.02) + (dex * 0.005);
   
-  return Math.min(3.0, baseASPD + aspdBonus);
+  const rawASPD = baseASPD + aspdBonus;
+  
+  // Apply weapon modifier (e.g., bow = -15%, sword = +10%)
+  const finalASPD = rawASPD * (1 + weaponAspdModifier);
+  
+  return Math.min(3.0, Math.max(0.3, finalASPD)); // Min 0.3, max 3.0 attacks/sec
 }
 
 // Max HP - Level + VIT, scaled by job multiplier
