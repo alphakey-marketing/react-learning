@@ -1,4 +1,4 @@
-import { Equipment, EquippedItems, getRarityColor } from "../types/equipment";
+import { Equipment, EquippedItems, getRarityColor, getEquipmentIcon } from "../types/equipment";
 import { Character } from "../types/character";
 import { useState, useEffect } from "react";
 
@@ -103,6 +103,10 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
     const isWeapon = item.type === "weapon";
     const currentRefine = item.refinement || 0;
     
+    const typeLabel = isWeapon 
+      ? (item.weaponType ? `Weapon (${item.weaponType.charAt(0).toUpperCase() + item.weaponType.slice(1)})` : "Weapon") 
+      : item.type.charAt(0).toUpperCase() + item.type.slice(1);
+    
     return (
       <div
         key={item.id}
@@ -119,12 +123,15 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
           marginBottom: "8px"
         }}
       >
-        <div>
-          <div style={{ color: getRarityColor(item.rarity), fontWeight: "bold" }}>
-            {currentRefine > 0 ? `+${currentRefine} ` : ""}{item.name}
-          </div>
-          <div style={{ fontSize: "12px", color: "#888" }}>
-            {isWeapon ? "Weapon" : "Armor"} | {isWeapon ? `ATK: ${item.atk || item.stat}` : `DEF: ${item.def || item.stat}`}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "18px" }}>{getEquipmentIcon(item)}</span>
+          <div>
+            <div style={{ color: getRarityColor(item.rarity), fontWeight: "bold" }}>
+              {currentRefine > 0 ? `+${currentRefine} ` : ""}{item.name}
+            </div>
+            <div style={{ fontSize: "12px", color: "#888" }}>
+              {typeLabel} | {isWeapon ? `ATK: ${item.atk || item.stat}` : `DEF: ${item.def || item.stat}`}
+            </div>
           </div>
         </div>
         {currentRefine >= 10 && (
@@ -273,7 +280,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
               <div style={{ flex: 1, display: "flex", flexDirection: "column", marginTop: refineResult ? "70px" : "0", transition: "margin 0.3s" }}>
                 <div style={{ textAlign: "center", marginBottom: "15px" }}>
                   <div style={{ fontSize: "40px", marginBottom: "10px" }}>
-                    {selectedItem.item.type === "weapon" ? "⚔️" : "🛡️"}
+                    {getEquipmentIcon(selectedItem.item)}
                   </div>
                   <div style={{ fontSize: "18px", fontWeight: "bold", color: getRarityColor(selectedItem.item.rarity) }}>
                     {selectedItem.item.refinement ? `+${selectedItem.item.refinement} ` : ""}{selectedItem.item.name}
