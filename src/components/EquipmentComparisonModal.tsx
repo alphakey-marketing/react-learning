@@ -92,6 +92,16 @@ export function EquipmentComparisonModal({
     fontSize: "12px",
   };
 
+  const sectionHeaderStyle: CSSProperties = {
+    fontSize: "12px",
+    color: "#fbbf24",
+    marginBottom: "8px",
+    marginTop: "12px",
+    borderBottom: "1px solid #444",
+    paddingBottom: "4px",
+    fontWeight: "bold"
+  };
+
   const BadgeStyle: CSSProperties = {
     position: "absolute",
     top: "-10px",
@@ -115,6 +125,10 @@ export function EquipmentComparisonModal({
     const isWeapon = item.type === 'weapon';
     const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
 
+    const hasCombatStats = (isWeapon && itemAtk > 0) || (isArmor && itemDef > 0) || (isWeapon && item.weaponLevel);
+    const hasBasicStats = (item.str || 0) > 0 || (item.agi || 0) > 0 || (item.vit || 0) > 0 || 
+                          (item.int || 0) > 0 || (item.dex || 0) > 0 || (item.luk || 0) > 0;
+
     return (
       <>
         <div style={{ fontSize: "10px", color: "#9ca3af", marginBottom: "8px" }}>
@@ -122,106 +136,117 @@ export function EquipmentComparisonModal({
         </div>
         <div style={{ borderTop: "1px solid #444", marginBottom: "8px" }} />
         
-        {/* ATK - Weapons only */}
-        {isWeapon && itemAtk > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#fca5a5" }}>⚔️ ATK:</span>
-            <span>
-              {itemAtk}
-              {showDiff && currentItem && (
-                <span style={{ color: atkDiff.color, marginLeft: "6px" }}>({atkDiff.text})</span>
-              )}
-            </span>
-          </div>
+        {/* Combat Stats */}
+        {hasCombatStats && (
+          <>
+            <div style={sectionHeaderStyle}>Combat Stats</div>
+            {/* ATK - Weapons only */}
+            {isWeapon && itemAtk > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#fca5a5" }}>⚔️ ATK:</span>
+                <span>
+                  {itemAtk}
+                  {showDiff && currentItem && (
+                    <span style={{ color: atkDiff.color, marginLeft: "6px" }}>({atkDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+            
+            {/* Weapon Level - Weapons only */}
+            {isWeapon && item.weaponLevel && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#fca5a5" }}>Weapon Level:</span>
+                <span>{item.weaponLevel}</span>
+              </div>
+            )}
+            
+            {/* DEF - Armor types only */}
+            {isArmor && itemDef > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#93c5fd" }}>🛡️ DEF:</span>
+                <span>
+                  {itemDef}
+                  {showDiff && currentItem && (
+                    <span style={{ color: defDiff.color, marginLeft: "6px" }}>({defDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+          </>
         )}
         
-        {/* Weapon Level - Weapons only */}
-        {isWeapon && item.weaponLevel && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#fca5a5" }}>Weapon Level:</span>
-            <span>{item.weaponLevel}</span>
-          </div>
-        )}
-        
-        {/* DEF - Armor types only */}
-        {isArmor && itemDef > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#93c5fd" }}>🛡️ DEF:</span>
-            <span>
-              {itemDef}
-              {showDiff && currentItem && (
-                <span style={{ color: defDiff.color, marginLeft: "6px" }}>({defDiff.text})</span>
-              )}
-            </span>
-          </div>
-        )}
-        
-        {/* Bonus Stats - All equipment */}
-        {item.str !== undefined && item.str > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#fca5a5" }}>STR:</span>
-            <span>
-              <span style={{ color: "#22c55e" }}>+{item.str}</span>
-              {showDiff && currentItem && currentItem.str !== item.str && (
-                <span style={{ color: strDiff.color, marginLeft: "6px" }}>({strDiff.text})</span>
-              )}
-            </span>
-          </div>
-        )}
-        {item.agi !== undefined && item.agi > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#86efac" }}>AGI:</span>
-            <span>
-              <span style={{ color: "#22c55e" }}>+{item.agi}</span>
-              {showDiff && currentItem && currentItem.agi !== item.agi && (
-                <span style={{ color: agiDiff.color, marginLeft: "6px" }}>({agiDiff.text})</span>
-              )}
-            </span>
-          </div>
-        )}
-        {item.vit !== undefined && item.vit > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#fdba74" }}>VIT:</span>
-            <span>
-              <span style={{ color: "#22c55e" }}>+{item.vit}</span>
-              {showDiff && currentItem && currentItem.vit !== item.vit && (
-                <span style={{ color: vitDiff.color, marginLeft: "6px" }}>({vitDiff.text})</span>
-              )}
-            </span>
-          </div>
-        )}
-        {item.int !== undefined && item.int > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#93c5fd" }}>INT:</span>
-            <span>
-              <span style={{ color: "#22c55e" }}>+{item.int}</span>
-              {showDiff && currentItem && currentItem.int !== item.int && (
-                <span style={{ color: intDiff.color, marginLeft: "6px" }}>({intDiff.text})</span>
-              )}
-            </span>
-          </div>
-        )}
-        {item.dex !== undefined && item.dex > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#fde047" }}>DEX:</span>
-            <span>
-              <span style={{ color: "#22c55e" }}>+{item.dex}</span>
-              {showDiff && currentItem && currentItem.dex !== item.dex && (
-                <span style={{ color: dexDiff.color, marginLeft: "6px" }}>({dexDiff.text})</span>
-              )}
-            </span>
-          </div>
-        )}
-        {item.luk !== undefined && item.luk > 0 && (
-          <div style={statRowStyle}>
-            <span style={{ color: "#c084fc" }}>LUK:</span>
-            <span>
-              <span style={{ color: "#22c55e" }}>+{item.luk}</span>
-              {showDiff && currentItem && currentItem.luk !== item.luk && (
-                <span style={{ color: lukDiff.color, marginLeft: "6px" }}>({lukDiff.text})</span>
-              )}
-            </span>
-          </div>
+        {/* Basic Stats */}
+        {hasBasicStats && (
+          <>
+            <div style={sectionHeaderStyle}>Basic Stats</div>
+            {item.str !== undefined && item.str > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#fca5a5" }}>STR:</span>
+                <span>
+                  <span style={{ color: "#22c55e" }}>+{item.str}</span>
+                  {showDiff && currentItem && currentItem.str !== item.str && (
+                    <span style={{ color: strDiff.color, marginLeft: "6px" }}>({strDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+            {item.agi !== undefined && item.agi > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#86efac" }}>AGI:</span>
+                <span>
+                  <span style={{ color: "#22c55e" }}>+{item.agi}</span>
+                  {showDiff && currentItem && currentItem.agi !== item.agi && (
+                    <span style={{ color: agiDiff.color, marginLeft: "6px" }}>({agiDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+            {item.vit !== undefined && item.vit > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#fdba74" }}>VIT:</span>
+                <span>
+                  <span style={{ color: "#22c55e" }}>+{item.vit}</span>
+                  {showDiff && currentItem && currentItem.vit !== item.vit && (
+                    <span style={{ color: vitDiff.color, marginLeft: "6px" }}>({vitDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+            {item.int !== undefined && item.int > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#93c5fd" }}>INT:</span>
+                <span>
+                  <span style={{ color: "#22c55e" }}>+{item.int}</span>
+                  {showDiff && currentItem && currentItem.int !== item.int && (
+                    <span style={{ color: intDiff.color, marginLeft: "6px" }}>({intDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+            {item.dex !== undefined && item.dex > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#fde047" }}>DEX:</span>
+                <span>
+                  <span style={{ color: "#22c55e" }}>+{item.dex}</span>
+                  {showDiff && currentItem && currentItem.dex !== item.dex && (
+                    <span style={{ color: dexDiff.color, marginLeft: "6px" }}>({dexDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+            {item.luk !== undefined && item.luk > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#c084fc" }}>LUK:</span>
+                <span>
+                  <span style={{ color: "#22c55e" }}>+{item.luk}</span>
+                  {showDiff && currentItem && currentItem.luk !== item.luk && (
+                    <span style={{ color: lukDiff.color, marginLeft: "6px" }}>({lukDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </>
     );
