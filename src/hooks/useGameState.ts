@@ -926,12 +926,27 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }
 
   function equipItem(item: Equipment) {
-    // Phase 1: Class restriction — Mages/Wizards can only equip wands
-    if (item.type === "weapon" && (char.jobClass === "Mage" || char.jobClass === "Wizard")) {
-      if (item.weaponType !== "wand") {
-        addLog("❌ Mages and Wizards can only equip Wands!");
-        return;
+    // Comprehensive weapon class restrictions with helpful error messages
+    if (item.type === "weapon") {
+      const weaponType = item.weaponType || "sword";
+      
+      if (char.jobClass === "Mage" || char.jobClass === "Wizard") {
+        if (weaponType !== "wand") {
+          addLog(`❌ ${char.jobClass}s can only equip Wands!`);
+          return;
+        }
+      } else if (char.jobClass === "Archer" || char.jobClass === "Hunter") {
+        if (weaponType !== "bow") {
+          addLog(`❌ ${char.jobClass}s can only equip Bows!`);
+          return;
+        }
+      } else if (char.jobClass === "Swordsman" || char.jobClass === "Knight") {
+        if (weaponType !== "sword") {
+          addLog(`❌ ${char.jobClass}s can only equip Swords!`);
+          return;
+        }
       }
+      // Novices can equip any weapon type
     }
 
     if (item.type === "accessory") {
@@ -976,7 +991,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
     
-    const sellPrice = Math.floor((item.atk || item.def || item.stat || 1) * 2);
+    const sellPrice = Math.floor((item.atk || item.matk || item.def || item.stat || 1) * 2);
     setInventory((prev) => prev.filter(i => i.id !== item.id));
     setChar((prev) => ({ ...prev, gold: prev.gold + sellPrice }));
     addLog(`💰 Sold ${item.name} for ${sellPrice}g.`);
