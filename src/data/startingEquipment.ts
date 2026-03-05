@@ -12,6 +12,7 @@ export const STARTING_WEAPON: Equipment = {
   id: -1000,
   name: "Training Knife",
   type: "weapon",
+  weaponType: "sword",
   rarity: "common",
   atk: 8,
   weaponLevel: 1,
