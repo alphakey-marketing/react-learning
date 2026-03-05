@@ -337,6 +337,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
     const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
 
+    // Phase 1: Handle weapon equipping based on new class
+    let currentWeapon = equipped.weapon;
+    let newInventory = [...inventory];
+    
+    // If changing to Mage/Wizard and currently holding a non-wand, force equip a basic wand
+    if ((newJob === "Mage" || newJob === "Wizard")) {
+      if (currentWeapon && currentWeapon.weaponType !== "wand") {
+        newInventory.push(currentWeapon);
+        currentWeapon = {
+          id: Date.now() + Math.random(),
+          name: "Novice Wand",
+          type: "weapon",
+          weaponType: "wand",
+          rarity: "common",
+          matk: 8,
+          weaponLevel: 1,
+          refinement: 0,
+          slots: 0,
+          weight: 30,
+        };
+        addLog(`🪄 Received and equipped a Novice Wand!`);
+      }
+    }
+
     setChar({
       ...char,
       hp: newMaxHp,
@@ -351,6 +375,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       learnedSkills: initialSkills,
       autoAttackSkillId: firstAttackSkill ? firstAttackSkill.id : "basic_attack",
     });
+
+    setEquipped(prev => ({ ...prev, weapon: currentWeapon }));
+    setInventory(newInventory);
 
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
