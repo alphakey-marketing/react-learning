@@ -11,7 +11,8 @@ import {
   STARTING_RESOURCES, 
   STARTING_WEAPON, 
   STARTING_ARMOR, 
-  STARTING_FOOTGEAR 
+  STARTING_FOOTGEAR,
+  STARTING_WAND
 } from "../data/startingEquipment";
 import {
   calculateDamage,
@@ -352,23 +353,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let currentWeapon = equipped.weapon;
     let newInventory = [...inventory];
     
-    // If changing to Mage/Wizard and currently holding a non-wand, force equip a basic wand
+    // BALANCE: Use improved STARTING_WAND for Mage/Wizard job change
     if ((newJob === "Mage" || newJob === "Wizard")) {
       if (currentWeapon && currentWeapon.weaponType !== "wand") {
         newInventory.push(currentWeapon);
-        currentWeapon = {
-          id: Date.now() + Math.random(),
-          name: "Novice Wand",
-          type: "weapon",
-          weaponType: "wand",
-          rarity: "common",
-          matk: 8,
-          weaponLevel: 1,
-          refinement: 0,
-          slots: 0,
-          weight: 30,
-        };
-        addLog(`🪄 Received and equipped a Novice Wand!`);
+        currentWeapon = { ...STARTING_WAND };
+        addLog(`🪄 Received and equipped an Apprentice Wand!`);
       }
     }
 
