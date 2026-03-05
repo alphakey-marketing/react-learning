@@ -6,29 +6,34 @@ const EQUIPMENT_NAMES: Omit<Record<EquipmentType, string[]>, "weapon"> = {
   armor: [
     "Cotton Shirt", "Padded Armor", "Chain Mail", "Full Plate",
     "Saint's Robe", "Formal Suit", "Tights", "Silver Robe", "Glittering Jacket",
+    "Heavy Chestplate", "Leather Vest", "Mithril Armor"
   ],
   head: [
     "Bandana", "Circlet", "Goggles", "Biretta", "Helm",
     "Crown", "Feather Beret", "Unicorn Horn", "Angel Wing", "Dragon Helm",
+    "Pointy Hat", "Iron Cap", "Bone Mask"
   ],
   garment: [
     "Muffler", "Manteau", "Cape", "Ragamuffin Manteau",
     "Heavenly Maiden Robe", "Survivor's Manteau", "Noxious", "Asprika",
+    "Leather Cloak", "Silk Mantle", "Tattered Shawl"
   ],
   footgear: [
     "Sandals", "Shoes", "Boots", "Crystal Pumps",
     "Sleipnir", "Green Boots", "Variant Shoes", "Shukabu",
+    "Roller Skates", "Ice Skates", "Steel Greaves", "Heavy Sabatons", "Leather Sneakers", "Cloth Slippers"
   ],
   accessory: [
     "Ring", "Earring", "Glove", "Brooch", "Clip",
     "Rosary", "Safety Ring", "Celebrant's Glove", "Orleans Glove", "Megingjard",
+    "Silver Necklace", "Jade Pendant", "Gold Bracelet", "Ruby Amulet"
   ],
 };
 
 const WEAPON_NAMES: Record<WeaponType, string[]> = {
-  sword: ["Knife", "Cutter", "Main Gauche", "Stiletto", "Gladius", "Damascus", "Katana", "Claymore", "Excalibur"],
-  bow: ["Bow", "Crossbow", "Composite Bow", "Gakkung", "Arbalest", "Hunter Bow", "Elven Bow", "Rudra Bow"],
-  wand: ["Rod", "Wand", "Staff", "Arc Wand", "Mighty Staff", "Piercing Staff", "Wizardry Staff", "Staff of Destruction"],
+  sword: ["Knife", "Cutter", "Main Gauche", "Stiletto", "Gladius", "Damascus", "Katana", "Claymore", "Excalibur", "Broadsword", "Rapier"],
+  bow: ["Bow", "Crossbow", "Composite Bow", "Gakkung", "Arbalest", "Hunter Bow", "Elven Bow", "Rudra Bow", "Longbow", "Shortbow"],
+  wand: ["Rod", "Wand", "Staff", "Arc Wand", "Mighty Staff", "Piercing Staff", "Wizardry Staff", "Staff of Destruction", "Scepter", "Cane"],
 };
 
 export function shouldDropLoot(): boolean {
