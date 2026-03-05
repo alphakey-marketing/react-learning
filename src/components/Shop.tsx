@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Character } from "../types/character";
-import { Equipment } from "../types/equipment";
+import { Equipment, getEquipmentIcon } from "../types/equipment";
 import { HP_POTION_COST, MP_POTION_COST } from "../data/constants";
 
 interface ShopProps {
@@ -392,13 +392,12 @@ export function Shop({
                               color: getRarityColor(item.rarity),
                             }}
                           >
-                            {item.type === "weapon" && "⚔️"}
-                            {item.type === "armor" && "🛡️"}
-                            {item.type === "head" && "🎩"}
-                            {item.type === "garment" && "🧥"}
-                            {item.type === "footgear" && "👢"}
-                            {item.type === "accessory" && "💍"}
-                            {" "}{item.name}
+                            {getEquipmentIcon(item)} {item.name}
+                            {item.type === "weapon" && item.weaponType && (
+                              <span style={{ fontSize: "11px", color: "#999", marginLeft: "4px", fontWeight: "normal", textTransform: "capitalize" }}>
+                                ({item.weaponType})
+                              </span>
+                            )}
                             {item.refinement !== undefined && item.refinement > 0 && (
                               <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
                             )}
