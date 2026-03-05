@@ -44,14 +44,12 @@ export function calculateDamage(
     const randomVar = Math.floor(Math.random() * 5);
     const rawDmg = matk + randomVar;
     
-    // Phase 3: Apply Enemy MDEF (if enemy has it)
-    // For now, enemies use their physical defense as MDEF (simplified)
+    // Phase 3: Apply Enemy MDEF
     // Phase 2: Wand penetration reduces MDEF effectiveness
-    const effectiveMdefPercent = Math.max(0, enemy.hardDefPercent - passives.penetration);
+    const effectiveMdefPercent = Math.max(0, enemy.hardMdefPercent - passives.penetration);
     const afterHardMdef = Math.floor(rawDmg * (1 - effectiveMdefPercent / 100));
     
-    // Use soft DEF as soft MDEF for enemies (simplified for now)
-    baseDmg = Math.max(1, afterHardMdef - enemy.softDef);
+    baseDmg = Math.max(1, afterHardMdef - enemy.softMdef);
   } else {
     // Phase 2: Physical Attack with Weapon Passives and Cross-Class Penalty
     const { attack: atkRange, passives, classPenalty } = calcPlayerAtk(
@@ -116,10 +114,8 @@ export function calculateEnemyDamage(
   const isMagicAttack = Math.random() < 0.3;
   
   if (isMagicAttack) {
-    // Phase 3: Magic damage uses player's Soft MDEF
-    // Enemies don't have hard MDEF penetration (yet), so use full defense
-    // For simplicity, use hardDefPercent as hardMdefPercent
-    const afterHardMdef = Math.floor(enemyRawDmg * (1 - playerDef.hardDefPercent / 100));
+    // Phase 3: Magic damage uses player's Soft MDEF and Hard MDEF
+    const afterHardMdef = Math.floor(enemyRawDmg * (1 - playerDef.hardMdefPercent / 100));
     const finalDamage = Math.max(1, afterHardMdef - playerDef.softMdef);
     return finalDamage;
   } else {
