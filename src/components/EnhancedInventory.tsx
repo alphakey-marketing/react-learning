@@ -274,22 +274,25 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
               isUpgrade = gearScore > equippedScore;
             }
             
+            const typeLabel = item.type === 'weapon' && item.weaponType ? item.weaponType : item.type;
+
             return (
               <button
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
                 style={{
-                  fontSize: "24px",
                   padding: "10px 8px 14px 8px",
                   background: "#2a2a2a",
                   border: `2px solid ${rarityColor}`,
                   borderRadius: "6px",
                   cursor: "pointer",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                   position: "relative",
                   transition: "transform 0.2s, box-shadow 0.2s",
+                  gap: "2px"
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "scale(1.05)";
@@ -300,7 +303,11 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {icon}
+                <span style={{ fontSize: "24px" }}>{icon}</span>
+                <span style={{ fontSize: "9px", color: "#888", textTransform: "capitalize", fontWeight: "normal" }}>
+                  {typeLabel}
+                </span>
+
                 {item.refinement !== undefined && item.refinement > 0 && (
                   <span style={{
                     position: "absolute",
