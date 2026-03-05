@@ -17,7 +17,7 @@ import {
   calculateDamage,
   calculateEnemyDamage,
 } from "../logic/combat";
-import { calcPlayerDef, calcMaxHp, calcMaxMp, calcASPD } from "../logic/character";
+import { calcPlayerDef, calcMaxHp, calcMaxMp, calcASPD, calcPlayerAtk } from "../logic/character";
 import {
   calculateExpGain,
   calculateJobExpGain,
@@ -158,10 +158,20 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
   
-  const attacksPerSecond = useMemo(() => 
-    calcASPD(char), 
-    [char.stats.agi, char.stats.dex, char.level]
-  );
+  // Phase 2: Calculate ASPD with weapon passives
+  const attacksPerSecond = useMemo(() => {
+    const equipStats = calculateEquipmentStats(equipped);
+    // Get weapon passives to determine ASPD modifier
+    const { passives } = calcPlayerAtk(
+      char,
+      equipStats.weaponAtk,
+      equipStats.weaponLevel,
+      equipStats.weaponRefine,
+      equipStats.equipBonusAtk,
+      equipStats.weaponType
+    );
+    return calcASPD(char, passives.aspdBonus);
+  }, [char.stats.agi, char.stats.dex, char.level, equipped]);
 
   function devAddBaseLevel() {
     const currentExp = char.expToNext;
