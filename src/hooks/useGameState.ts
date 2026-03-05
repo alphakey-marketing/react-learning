@@ -698,7 +698,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
 
-    const finalMaxHp = didLevelUp \
+    const finalMaxHp = didLevelUp 
       ? calcMaxHp(nextCharLevel, char.stats.vit, char.jobClass)
       : char.maxHp;
     const finalMaxMp = didLevelUp
