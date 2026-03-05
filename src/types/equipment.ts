@@ -55,7 +55,19 @@ export interface EquippedItems {
 }
 
 // Helper to get equipment icon
-export function getEquipmentIcon(type: EquipmentType): string {
+export function getEquipmentIcon(itemOrType: Equipment | EquipmentType): string {
+  const type = typeof itemOrType === 'string' ? itemOrType : itemOrType.type;
+  const weaponType = typeof itemOrType === 'string' ? undefined : itemOrType.weaponType;
+
+  if (type === "weapon" && weaponType) {
+    const weaponIcons: Record<WeaponType, string> = {
+      sword: "🗡️",
+      bow: "🏹",
+      wand: "🪄",
+    };
+    return weaponIcons[weaponType] || "⚔️";
+  }
+
   const icons: Record<EquipmentType, string> = {
     weapon: "⚔️",
     armor: "🛡️",
@@ -71,7 +83,7 @@ export function getEquipmentIcon(type: EquipmentType): string {
 export function getWeaponTypeIcon(weaponType?: WeaponType): string {
   if (!weaponType) return "⚔️";
   const icons: Record<WeaponType, string> = {
-    sword: "⚔️",
+    sword: "🗡️",
     bow: "🏹",
     wand: "🪄",
   };
