@@ -69,9 +69,18 @@ export function calcPlayerAtk(
     return { min: statusAtk, max: statusAtk };
   }
 
-  // RO Weapon Variance Formula
-  // Refine ATK is added cleanly
-  const refineAtk = weaponRefine * 5;
+  // Phase 5: Weapon-Level Scaling Refinement (Classic RO style)
+  // Base refinement scales with weapon level
+  const refineBaseBonus = weaponRefine * weaponLevel * 2;
+  
+  // Over-refine breakpoints (+7, +8, +9, +10)
+  let refineBreakpointBonus = 0;
+  if (weaponRefine >= 7) refineBreakpointBonus += 5;
+  if (weaponRefine >= 8) refineBreakpointBonus += 10;
+  if (weaponRefine >= 9) refineBreakpointBonus += 15;
+  if (weaponRefine >= 10) refineBreakpointBonus += 15;
+  
+  const refineAtk = refineBaseBonus + refineBreakpointBonus;
   
   // Variance scales with Weapon Level (10% variance per level)
   // Level 1 = 10% variance, Level 4 = 40% variance
@@ -99,18 +108,44 @@ export function calcPlayerAtk(
   };
 }
 
-// Magic Attack - INT quadratic (all magic classes)
+// Phase 5: Magic Attack with Wand Refinement Support
 // Classic RO Formula: Floor(Floor(INT/7)^2) + Floor(INT/5) + Floor(DEX/5) + Level
-export function calcPlayerMagicAtk(char: Character): number {
+// Wands provide MATK instead of ATK, and benefit from refinement at 50% rate
+export function calcPlayerMagicAtk(
+  char: Character,
+  weaponMatk: number = 0,
+  weaponLevel: number = 1,
+  weaponRefine: number = 0
+): number {
   const { int, dex } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
-  // Quadratic INT scaling for MATK
+  // Quadratic INT scaling for status MATK
   const intQuadratic = Math.floor(Math.pow(Math.floor(int / 7), 2));
   const intLinear = Math.floor(int / 5);
   const dexBonus = Math.floor(dex / 5);
   
-  return intQuadratic + intLinear + dexBonus + char.level + jobBonus;
+  const statusMatk = intQuadratic + intLinear + dexBonus + char.level + jobBonus;
+  
+  // If no wand equipped, return status MATK only
+  if (weaponMatk === 0) {
+    return statusMatk;
+  }
+  
+  // Phase 5: Wand Refinement (50% rate of physical weapons)
+  // Base refinement scales with weapon level at half rate
+  const refineBaseBonus = weaponRefine * weaponLevel * 1; // Half of physical (weaponLevel * 2)
+  
+  // Over-refine breakpoints at reduced rate
+  let refineBreakpointBonus = 0;
+  if (weaponRefine >= 7) refineBreakpointBonus += 3;  // Half of physical (+5)
+  if (weaponRefine >= 8) refineBreakpointBonus += 5;  // Half of physical (+10)
+  if (weaponRefine >= 9) refineBreakpointBonus += 8;  // ~Half of physical (+15)
+  if (weaponRefine >= 10) refineBreakpointBonus += 8; // ~Half of physical (+15)
+  
+  const refineMatk = refineBaseBonus + refineBreakpointBonus;
+  
+  return statusMatk + weaponMatk + refineMatk;
 }
 
 // Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
