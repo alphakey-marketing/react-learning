@@ -6,6 +6,7 @@ export interface PlayerDefense {
   softDef: number;
   hardDefPercent: number;
   softMdef: number; // Phase 3: Magic Defense
+  hardMdefPercent: number;
 }
 
 export interface PlayerAttack {
@@ -258,7 +259,7 @@ export function calcPlayerMagicAtk(
 
 // Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
 // Phase 3: Add Soft MDEF calculation
-export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefense {
+export function calcPlayerDef(char: Character, armorBonus: number, mdefBonus: number = 0): PlayerDefense {
   const { vit, int } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.defBonus || 0;
   
@@ -283,7 +284,10 @@ export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefens
   // INT is primary magic defense stat, VIT provides secondary protection
   const softMdef = int + Math.floor(vit / 2);
   
-  return { softDef, hardDefPercent, softMdef };
+  const rawHardMdef = Math.floor((mdefBonus + Math.floor(jobBonus/2)) * defMultiplier);
+  const hardMdefPercent = Math.min(70, rawHardMdef);
+
+  return { softDef, hardDefPercent, softMdef, hardMdefPercent };
 }
 
 // Critical Rate - LUK based (all physical classes)
