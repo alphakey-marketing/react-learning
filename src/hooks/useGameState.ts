@@ -17,7 +17,7 @@ import {
   calculateDamage,
   calculateEnemyDamage,
 } from "../logic/combat";
-import { calcPlayerDef, calcMaxHp, calcMaxMp, calcASPD } from "../logic/character";
+import { calcPlayerDef, calcMaxHp, calcMaxMp, calcASPD, getTotalStats } from "../logic/character";
 import {
   calculateExpGain,
   calculateJobExpGain,
@@ -156,12 +156,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
 
-  const armorBonus = useMemo(() => calculateEquipmentStats(equipped).totalDef, [equipped]);
+  const equipStats = useMemo(() => calculateEquipmentStats(equipped), [equipped]);
+  const totalStats = useMemo(() => getTotalStats(char, equipStats), [char.stats, equipStats]);
+  const armorBonus = equipStats.totalDef;
   
   const attacksPerSecond = useMemo(() => 
-    calcASPD(char), 
-    [char.stats.agi, char.stats.dex, char.level]
+    calcASPD(char, equipStats), 
+    [char.stats.agi, char.stats.dex, char.level, equipStats]
   );
+
+  // Dynamic calculation of max HP and MP when stats, level, or equipment changes
+  useEffect(() => {
+    const newMaxHp = calcMaxHp(char.level, totalStats.vit, char.jobClass);
+    const newMaxMp = calcMaxMp(char.level, totalStats.int, char.jobClass);
+    
+    if (newMaxHp !== char.maxHp || newMaxMp !== char.maxMp) {
+      setChar(prev => ({
+        ...prev,
+        maxHp: newMaxHp,
+        maxMp: newMaxMp,
+        hp: Math.min(prev.hp, newMaxHp),
+        mp: Math.min(prev.mp, newMaxMp)
+      }));
+    }
+  }, [char.level, totalStats.vit, totalStats.int, char.jobClass, char.maxHp, char.maxMp]);
 
   function devAddBaseLevel() {
     const currentExp = char.expToNext;
@@ -174,9 +192,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       expToNext: levelUpResult.newExpToNext,
       statPoints: levelUpResult.newStatPoints,
       hp: levelUpResult.newHp,
-      maxHp: calcMaxHp(levelUpResult.newLevel, prev.stats.vit, prev.jobClass),
       mp: levelUpResult.newMp,
-      maxMp: calcMaxMp(levelUpResult.newLevel, prev.stats.int, prev.jobClass),
     }));
     
     callbacks?.onLevelUp?.(levelUpResult.newLevel);
@@ -249,8 +265,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         ...prev,
         stats: newStats,
         statPoints: prev.statPoints - 1,
-        maxHp: stat === 'vit' ? calcMaxHp(prev.level, newStats.vit, prev.jobClass) : prev.maxHp,
-        maxMp: stat === 'int' ? calcMaxMp(prev.level, newStats.int, prev.jobClass) : prev.maxMp,
       };
     });
   }
@@ -334,15 +348,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     const firstAttackSkill = newJobSkills.find(s => s.id !== "basic_attack" && s.effect !== "buff");
 
-    const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
-    const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
-
+    // Let the useEffect handle MaxHP/MP updates
     setChar({
       ...char,
-      hp: newMaxHp,
-      maxHp: newMaxHp,
-      mp: newMaxMp,
-      maxMp: newMaxMp,
       jobClass: newJob,
       jobLevel: 1,
       jobExp: 0,
@@ -698,20 +706,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
 
-    const finalMaxHp = didLevelUp 
-      ? calcMaxHp(nextCharLevel, char.stats.vit, char.jobClass)
-      : char.maxHp;
-    const finalMaxMp = didLevelUp
-      ? calcMaxMp(nextCharLevel, char.stats.int, char.jobClass)
-      : char.maxMp;
-
     if (!isMountedRef.current) return;
 
     setChar({
+      ...char, // keep current properties like maxHp and maxMp which will be corrected by useEffect if needed
       hp: nextCharHp,
-      maxHp: finalMaxHp,
       mp: nextCharMp,
-      maxMp: finalMaxMp,
       level: nextCharLevel,
       exp: nextCharExp,
       expToNext: nextCharExpToNext,
@@ -815,7 +815,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       if (currentChar.hp <= 0 || currentZone === 0) return;
 
-      const playerDef = calcPlayerDef(currentChar, armorBonus);
+      const currentEquipStats = calculateEquipmentStats(currentEquipped);
+      const playerDef = calcPlayerDef(currentChar, currentEquipStats.totalDef, currentEquipStats);
       const enemyDmg = calculateEnemyDamage(currentEnemy, playerDef);
 
       currentCallbacks?.onEnemyDamageDealt?.(enemyDmg);
@@ -843,7 +844,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus]);
+  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus, equipStats]); // added equipStats to dep array
 
   useEffect(() => {
     if (currentZoneId !== 0) return;
