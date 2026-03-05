@@ -25,6 +25,7 @@ export interface Equipment {
   atk?: number;        // Attack power (physical weapons ONLY)
   matk?: number;       // Magic Attack power (wands ONLY)
   def?: number;        // Defense (armor, head, garment, footgear ONLY)
+  mdef?: number;       // Magic Defense percentage (armor, head, garment, footgear ONLY)
   slots?: number;      // Card slots (0-4)
   weight?: number;     // Weight in RO style
   refinement?: number; // +0 to +10 refine level
@@ -110,9 +111,10 @@ export function calculateGearScore(item: Equipment): number {
     }
   }
   
-  // DEF: ONLY for armor types
+  // DEF/MDEF: ONLY for armor types
   if (isArmor) {
     score += (item.def || 0) * 1.5;
+    score += (item.mdef || 0) * 2; // MDEF is valuable
   }
   
   // Bonus stats: ALL equipment types can have these
@@ -139,6 +141,7 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
   weaponType: WeaponType | null;
   equipBonusAtk: number;
   totalDef: number;
+  totalMdef: number;
   bonusStr: number;
   bonusAgi: number;
   bonusVit: number;
@@ -160,20 +163,27 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
   // Legacy items with ATK in wrong slots are ignored
   const equipBonusAtk = 0;
 
-  // === ARMOR TYPES: DEF ONLY ===
+  // === ARMOR TYPES: DEF & MDEF ===
   // Only armor, head, garment, footgear contribute to DEF
   // Accessories and weapons do NOT provide DEF
   const defenseSlots: EquipmentType[] = ['armor', 'head', 'garment', 'footgear'];
+  
   const totalDef = items.reduce((sum, item) => {
     if (!defenseSlots.includes(item.type)) return sum;
-    
     // Base DEF from the item
     const baseDef = item.def || 0;
-    
     // Refine bonus: armor slots get +3 DEF per refine (matching Phase 3 loot generation)
     const refineBonus = (item.refinement || 0) * 3;
-    
     return sum + baseDef + refineBonus;
+  }, 0);
+
+  const totalMdef = items.reduce((sum, item) => {
+    if (!defenseSlots.includes(item.type)) return sum;
+    // Base MDEF from the item
+    const baseMdef = item.mdef || 0;
+    // MDEF refine bonus (maybe +1 MDEF per refine)
+    const refineBonus = (item.refinement || 0) * 1;
+    return sum + baseMdef + refineBonus;
   }, 0);
 
   // === BONUS STATS: ALL EQUIPMENT ===
@@ -186,6 +196,7 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
     weaponType,
     equipBonusAtk,
     totalDef,
+    totalMdef,
     bonusStr: items.reduce((sum, item) => sum + (item.str || 0), 0),
     bonusAgi: items.reduce((sum, item) => sum + (item.agi || 0), 0),
     bonusVit: items.reduce((sum, item) => sum + (item.vit || 0), 0),
