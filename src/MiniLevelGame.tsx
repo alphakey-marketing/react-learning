@@ -2,7 +2,6 @@ import { CharacterStats } from "./components/CharacterStats";
 import { EnemyDisplay } from "./components/EnemyDisplay";
 import { BattleLog } from "./components/BattleLog";
 import { SkillWindow } from "./components/SkillWindow";
-import { SkillHotkeys } from "./components/SkillHotkeys";
 import { EnhancedInventory } from "./components/EnhancedInventory";
 import { Shop } from "./components/Shop";
 import { PotionBar } from "./components/PotionBar";
@@ -157,7 +156,7 @@ export function MiniLevelGame() {
         fontFamily: "system-ui, sans-serif",
         padding: "20px",
         paddingTop: "40px",
-        paddingBottom: "120px",
+        paddingBottom: "40px", // Reduced padding bottom since floating bar is removed
       }}
     >
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
@@ -494,13 +493,6 @@ export function MiniLevelGame() {
             </div>
           </div>
         )}
-
-        <SkillHotkeys
-          character={game.char}
-          skillCooldowns={game.skillCooldowns}
-          onUseSkill={game.battleAction}
-          disabled={game.char.hp <= 0 || !game.canAttack || game.currentZoneId === 0}
-        />
       </div>
 
       <style>{`

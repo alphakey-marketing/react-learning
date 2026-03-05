@@ -1,6 +1,7 @@
 import { Character } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { calcMaxHp, calcMaxMp } from "./character";
+import { STAT_POINTS_PER_LEVEL } from "./progression"; // Import the constant
 
 export interface LevelUpResult {
   newLevel: number;
@@ -66,7 +67,7 @@ export function processLevelUp(char: Character, expGained: number): LevelUpResul
     newExp -= newExpToNext;
     newLevel += 1;
     newExpToNext = Math.floor(newExpToNext * 1.5);
-    newStatPoints += 3;
+    newStatPoints += STAT_POINTS_PER_LEVEL; // Phase 4 Rebalance: Now uses constant (4)
     leveledUp = true;
   }
 

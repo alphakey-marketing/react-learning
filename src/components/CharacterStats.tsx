@@ -68,14 +68,38 @@ export function CharacterStats({
 
   // Calculate derived stats
   const equipStats = calculateEquipmentStats(equipped);
-  const weaponBonus = equipStats.totalAtk;
   const armorBonus = equipStats.totalDef;
   
-  const atk = calcPlayerAtk(character, weaponBonus);
+  // Debug logging
+  console.log('[CharacterStats] Equipment stats:', {
+    weaponAtk: equipStats.weaponAtk,
+    weaponLevel: equipStats.weaponLevel,
+    weaponRefine: equipStats.weaponRefine,
+    equipBonusAtk: equipStats.equipBonusAtk,
+    weapon: equipped.weapon,
+  });
+  
+  const atkRange = calcPlayerAtk(
+    character, 
+    equipStats.weaponAtk, 
+    equipStats.weaponLevel, 
+    equipStats.weaponRefine, 
+    equipStats.equipBonusAtk
+  );
+  
+  console.log('[CharacterStats] ATK Range:', atkRange);
+  
+  const atkDisplay = atkRange.min === atkRange.max 
+    ? `${atkRange.max}` 
+    : `${atkRange.min} ~ ${atkRange.max}`;
+  
   const matk = calcPlayerMagicAtk(character);
   const def = calcPlayerDef(character, armorBonus);
   const crit = calcCritChance(character);
   const aspd = calcASPD(character).toFixed(2);
+
+  // Format DEF string: e.g. "12 + 15%"
+  const defDisplay = `${def.softDef} + ${def.hardDefPercent}%`;
 
   // Calculate preview stats with pending changes
   const previewStats = useMemo(() => {
@@ -93,7 +117,17 @@ export function CharacterStats({
       },
     };
 
-    const previewAtk = calcPlayerAtk(previewChar, weaponBonus);
+    const previewAtkRange = calcPlayerAtk(
+      previewChar, 
+      equipStats.weaponAtk, 
+      equipStats.weaponLevel, 
+      equipStats.weaponRefine, 
+      equipStats.equipBonusAtk
+    );
+    const previewAtkDisplay = previewAtkRange.min === previewAtkRange.max 
+      ? `${previewAtkRange.max}` 
+      : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
+    
     const previewMatk = calcPlayerMagicAtk(previewChar);
     const previewDef = calcPlayerDef(previewChar, armorBonus);
     const previewCrit = calcCritChance(previewChar);
@@ -102,7 +136,7 @@ export function CharacterStats({
     const previewMaxMp = calcMaxMp(character.level, previewChar.stats.int, character.jobClass);
 
     return {
-      atk: previewAtk,
+      atk: previewAtkDisplay,
       matk: previewMatk,
       def: previewDef,
       crit: previewCrit,
@@ -110,7 +144,9 @@ export function CharacterStats({
       maxHp: previewMaxHp,
       maxMp: previewMaxMp,
     };
-  }, [hasPendingChanges, character, pendingStats, weaponBonus, armorBonus]);
+  }, [hasPendingChanges, character, pendingStats, equipStats, armorBonus]);
+
+  const previewDefDisplay = previewStats ? `${previewStats.def.softDef} + ${previewStats.def.hardDefPercent}%` : null;
 
   // Calculate Total Combat Power
   const totalEquipPower = Object.values(equipped)
@@ -127,20 +163,37 @@ export function CharacterStats({
   };
 
   const renderStatWithPreview = (label: string, current: number | string, preview: number | string | null, color: string) => {
-    const currentNum = typeof current === 'string' ? parseFloat(current) : current;
-    const previewNum = preview !== null ? (typeof preview === 'string' ? parseFloat(preview) : preview) : null;
-    const diff = previewNum !== null ? previewNum - currentNum : 0;
+    const diffNode = (() => {
+      if (preview === null) return null;
+      if (typeof current === 'string' || typeof preview === 'string') {
+        // Just show the new string if they differ
+        if (current !== preview) {
+          return (
+            <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+              → {preview}
+            </span>
+          );
+        }
+        return null;
+      }
+      
+      const diff = preview - current;
+      if (diff !== 0) {
+        return (
+          <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+            → {preview} (+{diff > 0 ? diff.toFixed(label === "ASPD" ? 2 : 0) : 0})
+          </span>
+        );
+      }
+      return null;
+    })();
 
     return (
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
         <span style={{ color: "#bbb" }}>{label}</span>
         <span style={{ fontWeight: "bold", color }}>
           {current}
-          {preview !== null && diff !== 0 && (
-            <span style={{ color: "#22c55e", marginLeft: "4px" }}>
-              → {preview} (+{diff > 0 ? diff.toFixed(label === "ASPD" ? 2 : 0) : 0})
-            </span>
-          )}
+          {diffNode}
         </span>
       </div>
     );
@@ -456,9 +509,9 @@ export function CharacterStats({
             <span style={{ color: "#38bdf8", fontWeight: "bold" }}>⚔️ Combat Stats</span>
           </div>
           
-          {renderStatWithPreview("ATK", atk, previewStats?.atk || null, "#f87171")}
+          {renderStatWithPreview("ATK", atkDisplay, previewStats?.atk || null, "#f87171")}
           {renderStatWithPreview("MATK", matk, previewStats?.matk || null, "#c084fc")}
-          {renderStatWithPreview("DEF", def, previewStats?.def || null, "#60a5fa")}
+          {renderStatWithPreview("DEF", defDisplay, previewDefDisplay, "#60a5fa")}
           {renderStatWithPreview("CRIT", crit + "%", previewStats ? previewStats.crit + "%" : null, "#fbbf24")}
           {renderStatWithPreview("ASPD", aspd, previewStats?.aspd || null, "#2dd4bf")}
           

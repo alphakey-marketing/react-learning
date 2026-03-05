@@ -1,46 +1,140 @@
 import { Character } from "../types/character";
 import { JobClass, JOB_DATA } from "../data/jobs";
 
-// Physical Attack - Class-specific stat scaling (Classic RO style)
-export function calcPlayerAtk(char: Character, weaponBonus: number): number {
+export interface PlayerDefense {
+  softDef: number;
+  hardDefPercent: number;
+}
+
+export interface PlayerAttack {
+  min: number;
+  max: number;
+}
+
+// Phase 4: Classic RO Quadratic ATK Formula
+// Physical Attack - Quadratic scaling for primary stats (Classic RO Pre-Renewal style)
+// Formula: Floor(Floor(PrimaryStat/10)^2) + Floor(SecondaryStat/5) + Floor(LUK/5) + Level
+// Returns { min, max } to support weapon variance
+export function calcPlayerAtk(
+  char: Character,
+  weaponAtk: number,
+  weaponLevel: number,
+  weaponRefine: number,
+  equipBonusAtk: number
+): PlayerAttack {
   const { str, agi, dex, luk } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
-  let baseAtk = 0;
+  let statusAtk = 0;
   
-  // Melee classes: STR primary, DEX secondary
+  // Phase 4: Quadratic Scaling by Job Class (Classic RO Formula)
+  // Each class has a primary stat that scales quadratically
+  
   if (char.jobClass === "Swordsman" || char.jobClass === "Knight") {
-    baseAtk = str * 2 + dex * 0.5 + luk * 0.3;
+    // Melee classes: STR quadratic, DEX/LUK linear
+    const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
   }
-  // Ranged classes: DEX primary, STR + AGI secondary (archers benefit from AGI!)
   else if (char.jobClass === "Archer" || char.jobClass === "Hunter") {
-    baseAtk = dex * 2 + str * 0.5 + agi * 0.3 + luk * 0.3;
+    // Ranged classes: DEX quadratic, STR/AGI secondary
+    const dexBonus = Math.floor(Math.pow(Math.floor(dex / 10), 2));
+    const strBonus = Math.floor(str / 5);
+    const agiBonus = Math.floor(agi / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = dexBonus + strBonus + agiBonus + lukBonus;
   }
-  // Mages use magic attack, but basic attack is physical with balanced scaling
   else if (char.jobClass === "Mage" || char.jobClass === "Wizard") {
-    baseAtk = str * 1.0 + dex * 0.5 + char.stats.int * 0.5 + luk * 0.3;
+    // Mages: Weak physical attack (they use MATK for skills)
+    // INT has no effect on physical ATK in Classic RO
+    const strBonus = Math.floor(str / 5);
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
   }
-  // Novice: Balanced scaling for all stats
   else {
-    baseAtk = str * 1.5 + dex * 0.5 + luk * 0.3;
+    // Novice: Balanced scaling for all stats (linear only)
+    const strBonus = Math.floor(str / 3);
+    const dexBonus = Math.floor(dex / 5);
+    const lukBonus = Math.floor(luk / 5);
+    statusAtk = strBonus + dexBonus + lukBonus;
   }
   
-  return Math.floor(baseAtk) + weaponBonus + char.level + jobBonus;
+  // Add level and job bonus
+  statusAtk += char.level + jobBonus + equipBonusAtk;
+
+  // If no weapon is equipped, attack is just status ATK (bare hands)
+  if (weaponAtk === 0) {
+    return { min: statusAtk, max: statusAtk };
+  }
+
+  // RO Weapon Variance Formula
+  // Refine ATK is added cleanly
+  const refineAtk = weaponRefine * 5;
+  
+  // Variance scales with Weapon Level (10% variance per level)
+  // Level 1 = 10% variance, Level 4 = 40% variance
+  const variancePercent = weaponLevel * 0.1;
+  const varianceAmount = Math.floor(weaponAtk * variancePercent);
+
+  // High DEX reduces variance by boosting the minimum ATK floor
+  const dexBonusFloor = Math.floor(dex * 0.5);
+  
+  let minWeaponAtk = weaponAtk - varianceAmount + dexBonusFloor;
+  let maxWeaponAtk = weaponAtk + varianceAmount;
+
+  // Min weapon ATK cannot exceed max weapon ATK
+  if (minWeaponAtk > maxWeaponAtk) {
+    minWeaponAtk = maxWeaponAtk;
+  }
+  // Min weapon ATK cannot be lower than 0
+  if (minWeaponAtk < 0) {
+    minWeaponAtk = 0;
+  }
+
+  return {
+    min: statusAtk + minWeaponAtk + refineAtk,
+    max: statusAtk + maxWeaponAtk + refineAtk,
+  };
 }
 
-// Magic Attack - INT primary (all magic classes)
+// Magic Attack - INT quadratic (all magic classes)
+// Classic RO Formula: Floor(Floor(INT/7)^2) + Floor(INT/5) + Floor(DEX/5) + Level
 export function calcPlayerMagicAtk(char: Character): number {
   const { int, dex } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
-  return Math.floor(int * 3 + dex * 0.5) + char.level + jobBonus;
+  
+  // Quadratic INT scaling for MATK
+  const intQuadratic = Math.floor(Math.pow(Math.floor(int / 7), 2));
+  const intLinear = Math.floor(int / 5);
+  const dexBonus = Math.floor(dex / 5);
+  
+  return intQuadratic + intLinear + dexBonus + char.level + jobBonus;
 }
 
-// Defense - VIT primary, AGI secondary (all classes), plus job bonus
-export function calcPlayerDef(char: Character, armorBonus: number): number {
-  const { vit, agi } = char.stats;
+// Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
+export function calcPlayerDef(char: Character, armorBonus: number): PlayerDefense {
+  const { vit } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.defBonus || 0;
-  const softDef = vit * 1.5 + agi * 0.5;
-  return Math.floor(softDef) + armorBonus + jobBonus;
+  
+  // Soft DEF: VIT*0.5 + random variance based on VIT (RO style approximation)
+  const baseSoft = Math.floor(vit * 0.5);
+  const variableSoft = Math.floor(vit * 0.3);
+  const maxVarSoft = Math.max(variableSoft, Math.floor((vit * vit) / 150) - 1);
+  const softDef = baseSoft + Math.floor(Math.random() * (Math.max(0, maxVarSoft - variableSoft) + 1)) + variableSoft;
+  
+  // REBALANCE Phase 2: Hard DEF %
+  // Instead of 1 armor = 1% reduction, make it 1 armor = 0.25% reduction
+  // This scales much better into endgame without hitting immunity too early
+  // A fully geared level 50 player might have ~120 DEF, giving 30% reduction instead of 90% cap
+  const defMultiplier = 0.25;
+  const rawHardDef = Math.floor((armorBonus + jobBonus) * defMultiplier);
+  
+  // Set a healthier cap of 70% reduction max (very hard to reach now)
+  const hardDefPercent = Math.min(70, rawHardDef);
+  
+  return { softDef, hardDefPercent };
 }
 
 // Critical Rate - LUK based (all physical classes)

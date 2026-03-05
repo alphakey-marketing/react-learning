@@ -33,6 +33,102 @@ export function shouldDropLoot(): boolean {
   return Math.random() < DROP_CHANCE;
 }
 
+// Helper to determine weapon level based on rarity
+function getWeaponLevel(rarity: EquipmentRarity): number {
+  switch (rarity) {
+    case "legendary": return 4;
+    case "epic": return 4;
+    case "rare": return 3;
+    case "uncommon": return 2;
+    case "common":
+    default: return 1;
+  }
+}
+
+// Phase 3: Equipment Type Specialization
+// Different equipment types provide different bonuses matching Classic RO design
+function generateStatsByType(
+  type: EquipmentType,
+  baseValue: number,
+  refinement: number,
+  rarity: EquipmentRarity
+): Partial<Equipment> {
+  const stats: Partial<Equipment> = {};
+
+  switch (type) {
+    case "weapon":
+      // Weapons: Pure ATK, weapon level controls variance
+      stats.weaponLevel = getWeaponLevel(rarity);
+      // Scale weapon ATK with baseValue (level-appropriate)
+      const weaponBaseValue = baseValue + (stats.weaponLevel * 3);
+      stats.atk = weaponBaseValue + refinement * 5;
+      break;
+
+    case "armor":
+      // Armor: Primary DEF source (highest DEF multiplier)
+      // Balanced to provide meaningful defense without reaching cap too early
+      stats.def = Math.floor(baseValue * 0.8) + refinement * 3;
+      if (stats.def === 0) stats.def = 2;
+      break;
+
+    case "head":
+      // Headgear: Medium DEF + stat bonuses (utility focus)
+      stats.def = Math.floor(baseValue * 0.5) + refinement * 2;
+      if (stats.def === 0) stats.def = 1;
+      // 40% chance for stat bonus (higher than other slots)
+      if (Math.random() > 0.6) {
+        const statTypes = ["str", "agi", "vit", "int", "dex", "luk"];
+        const bonusStat = statTypes[Math.floor(Math.random() * statTypes.length)];
+        const bonusValue = Math.floor(Math.random() * 2) + 1; // +1 to +2
+        (stats as any)[bonusStat] = bonusValue;
+      }
+      break;
+
+    case "garment":
+      // Garment: Light DEF + resistance/utility focus
+      stats.def = Math.floor(baseValue * 0.4) + refinement * 2;
+      if (stats.def === 0) stats.def = 1;
+      // 25% chance for stat bonus (defensive stats preferred)
+      if (Math.random() > 0.75) {
+        const statTypes = ["vit", "agi", "int"]; // Defense-oriented stats
+        const bonusStat = statTypes[Math.floor(Math.random() * statTypes.length)];
+        const bonusValue = 1;
+        (stats as any)[bonusStat] = bonusValue;
+      }
+      break;
+
+    case "footgear":
+      // Footgear: Minimal DEF + mobility (AGI/DEX focus)
+      stats.def = Math.floor(baseValue * 0.3) + refinement * 1;
+      if (stats.def === 0) stats.def = 1;
+      // 30% chance for AGI/DEX bonus
+      if (Math.random() > 0.7) {
+        const statTypes = ["agi", "dex"];
+        const bonusStat = statTypes[Math.floor(Math.random() * statTypes.length)];
+        const bonusValue = 1;
+        (stats as any)[bonusStat] = bonusValue;
+      }
+      break;
+
+    case "accessory":
+      // Accessory: No DEF, pure stat bonuses
+      // 60% chance for stat bonus (main purpose)
+      if (Math.random() > 0.4) {
+        const statTypes = ["str", "agi", "vit", "int", "dex", "luk"];
+        const bonusStat = statTypes[Math.floor(Math.random() * statTypes.length)];
+        // Higher rarity = better stat bonuses
+        let bonusValue = 1;
+        if (rarity === "legendary") bonusValue = 4;
+        else if (rarity === "epic") bonusValue = 3;
+        else if (rarity === "rare") bonusValue = 2;
+        (stats as any)[bonusStat] = bonusValue;
+      }
+      break;
+  }
+
+  return stats;
+}
+
 export function generateLoot(playerLevel: number): Equipment {
   // Random equipment type
   const types: EquipmentType[] = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
@@ -42,10 +138,11 @@ export function generateLoot(playerLevel: number): Equipment {
   const names = EQUIPMENT_NAMES[type];
   const baseName = names[Math.floor(Math.random() * names.length)];
   
-  // REBALANCE: Reduced base power scaling from 1.5 to 1.0 to make refinement more competitive
-  const baseValue = Math.floor(Math.random() * 5) + 1 + Math.floor(playerLevel * 1.0);
+  // Base value scales with player level
+  // Tuned to match enemy power curve: Zone 1 (~level 3) → Zone 8 (~level 38)
+  const baseValue = Math.floor(Math.random() * 5) + 1 + Math.floor(playerLevel * 1.2);
   
-  // REBALANCE: Reduced chance of dropping pre-refined gear from 30% to 15%
+  // Refinement chance: 15% for +1 to +4
   const refinement = Math.random() > 0.85 ? Math.floor(Math.random() * 4) + 1 : 0;
   
   // Determine rarity
@@ -57,7 +154,7 @@ export function generateLoot(playerLevel: number): Equipment {
   else if (rarityRoll > 0.40) rarity = "uncommon";
   else rarity = "common";
   
-  // Build equipment
+  // Generate base equipment
   const equipment: Equipment = {
     id: Date.now() + Math.random(),
     name: baseName,
@@ -68,22 +165,11 @@ export function generateLoot(playerLevel: number): Equipment {
     weight: type === "weapon" ? 50 : type === "armor" ? 80 : 20,
   };
   
-  // REBALANCE: Match the new refinement stats (5 for weapon, 2 for armor)
-  if (type === "weapon") {
-    equipment.atk = baseValue + refinement * 5;
-  } else {
-    equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
-  }
+  // Apply type-specific stats
+  const typeStats = generateStatsByType(type, baseValue, refinement, rarity);
+  Object.assign(equipment, typeStats);
   
-  // Random bonus stat (20% chance)
-  if (Math.random() > 0.8) {
-    const statTypes = ["str", "agi", "vit", "int", "dex", "luk"];
-    const bonusStat = statTypes[Math.floor(Math.random() * statTypes.length)];
-    const bonusValue = Math.floor(Math.random() * 3) + 1;
-    (equipment as any)[bonusStat] = bonusValue;
-  }
-  
-  // Legacy support
+  // Legacy support for old systems
   equipment.stat = equipment.atk || equipment.def || baseValue;
   
   return equipment;
@@ -96,11 +182,11 @@ export function generateBossLoot(playerLevel: number): Equipment {
   const names = EQUIPMENT_NAMES[type];
   const baseName = names[Math.floor(Math.random() * names.length)];
   
-  // Boss drops are always good
-  const baseValue = Math.floor(Math.random() * 10) + 5 + Math.floor(playerLevel * 2);
+  // Boss drops are significantly better
+  const baseValue = Math.floor(Math.random() * 10) + 5 + Math.floor(playerLevel * 2.5);
   const refinement = Math.floor(Math.random() * 5) + 3; // +3 to +7
   
-  // Boss drops have better rarity
+  // Boss drops have better rarity distribution
   const rarityRoll = Math.random();
   const rarity: EquipmentRarity = rarityRoll > 0.7 ? "legendary" : "epic";
   
@@ -114,20 +200,19 @@ export function generateBossLoot(playerLevel: number): Equipment {
     weight: type === "weapon" ? 50 : type === "armor" ? 80 : 20,
   };
   
-  if (type === "weapon") {
-    equipment.atk = baseValue + refinement * 5;
-  } else {
-    equipment.def = Math.floor(baseValue * 0.8) + refinement * 2;
-  }
+  // Apply type-specific stats
+  const typeStats = generateStatsByType(type, baseValue, refinement, rarity);
+  Object.assign(equipment, typeStats);
   
-  // Boss items always have bonus stats
+  // Boss items get EXTRA bonus stats (always at least 1, up to 2)
   const statTypes = ["str", "agi", "vit", "int", "dex", "luk"];
   const numBonuses = Math.floor(Math.random() * 2) + 1; // 1-2 bonus stats
   
   for (let i = 0; i < numBonuses; i++) {
     const bonusStat = statTypes[Math.floor(Math.random() * statTypes.length)];
-    const bonusValue = Math.floor(Math.random() * 4) + 2; // +2 to +5
-    (equipment as any)[bonusStat] = bonusValue;
+    const currentValue = (equipment as any)[bonusStat] || 0;
+    const bonusValue = Math.floor(Math.random() * 3) + 2; // +2 to +4
+    (equipment as any)[bonusStat] = currentValue + bonusValue;
   }
   
   equipment.stat = equipment.atk || equipment.def || baseValue;

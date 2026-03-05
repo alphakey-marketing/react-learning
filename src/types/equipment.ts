@@ -20,11 +20,12 @@ export interface Equipment {
   rarity: EquipmentRarity;
   
   // RO-style stats
-  atk?: number;        // Attack power (weapons)
-  def?: number;        // Defense (armor, head, garment, footgear)
+  atk?: number;        // Attack power (weapons ONLY)
+  def?: number;        // Defense (armor, head, garment, footgear ONLY)
   slots?: number;      // Card slots (0-4)
   weight?: number;     // Weight in RO style
   refinement?: number; // +0 to +10 refine level
+  weaponLevel?: number; // Weapon level (1-4), affects variance
   
   // Bonus stats
   str?: number;
@@ -73,34 +74,52 @@ export function getRarityColor(rarity: EquipmentRarity): string {
   return colors[rarity];
 }
 
-// Helper to calculate Gear Score (Combat Power) for a single item
+// Phase 3: Calculate Gear Score with TYPE SPECIALIZATION
+// Only count stats that are actually relevant to each equipment type
 export function calculateGearScore(item: Equipment): number {
   if (!item) return 0;
   
   let score = 0;
   
-  // Base stats weight
-  score += (item.atk || 0) * 2;
-  score += (item.def || 0) * 1.5;
-  score += (item.stat || 0) * 2; // Legacy stat support (usually atk or def)
+  const isWeapon = item.type === 'weapon';
+  const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
   
-  // Bonus stats weight (very valuable)
+  // ATK: ONLY for weapons
+  if (isWeapon) {
+    score += (item.atk || 0) * 2;
+    
+    // Weapon level bonus (only weapons have this)
+    if (item.weaponLevel) {
+      score += item.weaponLevel * 5;
+    }
+  }
+  
+  // DEF: ONLY for armor types
+  if (isArmor) {
+    score += (item.def || 0) * 1.5;
+  }
+  
+  // Bonus stats: ALL equipment types can have these
   const stats = ['str', 'agi', 'vit', 'int', 'dex', 'luk'] as const;
   stats.forEach(stat => {
     score += (item[stat] || 0) * 5;
   });
   
-  // Refinement bonus
-  if (item.refinement) {
+  // Refinement bonus: All equipment except accessories
+  if (item.type !== 'accessory' && item.refinement) {
     score += item.refinement * 3;
   }
   
   return Math.floor(score);
 }
 
-// Helper to calculate total stats from equipment
+// Phase 3: Calculate total stats from equipment with TYPE SPECIALIZATION
+// Weapons provide ATK only, armor slots provide DEF only, accessories provide stats only
 export function calculateEquipmentStats(equipped: EquippedItems): {
-  totalAtk: number;
+  weaponAtk: number;
+  weaponLevel: number;
+  weaponRefine: number;
+  equipBonusAtk: number;
   totalDef: number;
   bonusStr: number;
   bonusAgi: number;
@@ -111,18 +130,40 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
 } {
   const items = Object.values(equipped).filter((item): item is Equipment => item !== null);
   
+  // === WEAPONS: ATK ONLY ===
+  const weapon = equipped.weapon;
+  const weaponAtk = weapon ? (weapon.atk || 0) : 0;
+  const weaponLevel = weapon?.weaponLevel || 1;
+  const weaponRefine = weapon?.refinement || 0;
+  
+  // Phase 3: Non-weapon items should NOT provide ATK (accessories/armor don't boost attack)
+  // Legacy items with ATK in wrong slots are ignored
+  const equipBonusAtk = 0;
+
+  // === ARMOR TYPES: DEF ONLY ===
+  // Only armor, head, garment, footgear contribute to DEF
+  // Accessories and weapons do NOT provide DEF
+  const defenseSlots: EquipmentType[] = ['armor', 'head', 'garment', 'footgear'];
+  const totalDef = items.reduce((sum, item) => {
+    if (!defenseSlots.includes(item.type)) return sum;
+    
+    // Base DEF from the item
+    const baseDef = item.def || 0;
+    
+    // Refine bonus: armor slots get +3 DEF per refine (matching Phase 3 loot generation)
+    const refineBonus = (item.refinement || 0) * 3;
+    
+    return sum + baseDef + refineBonus;
+  }, 0);
+
+  // === BONUS STATS: ALL EQUIPMENT ===
+  // Any equipment can provide stat bonuses (STR ring, DEX boots, etc.)
   return {
-    totalAtk: items.reduce((sum, item) => {
-      const refineBonus = item.type === 'weapon' ? (item.refinement || 0) * 5 : 0;
-      const baseAtk = item.atk || (item.type === 'weapon' ? (item.stat || 0) : 0);
-      return sum + baseAtk + refineBonus;
-    }, 0),
-    totalDef: items.reduce((sum, item) => {
-      const armorTypes = ['armor', 'head', 'garment', 'footgear'];
-      const refineBonus = armorTypes.includes(item.type) ? (item.refinement || 0) * 2 : 0;
-      const baseDef = item.def || (item.type === 'armor' ? (item.stat || 0) : 0);
-      return sum + baseDef + refineBonus;
-    }, 0),
+    weaponAtk,
+    weaponLevel,
+    weaponRefine,
+    equipBonusAtk,
+    totalDef,
     bonusStr: items.reduce((sum, item) => sum + (item.str || 0), 0),
     bonusAgi: items.reduce((sum, item) => sum + (item.agi || 0), 0),
     bonusVit: items.reduce((sum, item) => sum + (item.vit || 0), 0),
