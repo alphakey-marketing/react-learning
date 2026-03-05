@@ -69,6 +69,7 @@ export function CharacterStats({
   // Calculate derived stats
   const equipStats = calculateEquipmentStats(equipped);
   const armorBonus = equipStats.totalDef;
+  const mdefBonus = equipStats.totalMdef;
   
   // Debug logging
   console.log('[CharacterStats] Equipment stats:', {
@@ -113,7 +114,7 @@ export function CharacterStats({
     equipStats.weaponType
   );
   
-  const def = calcPlayerDef(character, armorBonus);
+  const def = calcPlayerDef(character, armorBonus, mdefBonus);
   
   // Phase 2: Use weapon crit bonus
   const crit = calcCritChance(character, passives.critBonus);
@@ -121,8 +122,9 @@ export function CharacterStats({
   // Phase 2: Use weapon ASPD modifier
   const aspd = calcASPD(character, passives.aspdBonus).toFixed(2);
 
-  // Format DEF string: e.g. "12 + 15%"
+  // Format DEF and MDEF strings
   const defDisplay = `${def.softDef} + ${def.hardDefPercent}%`;
+  const mdefDisplay = `${def.softMdef} + ${def.hardMdefPercent}%`;
 
   // Calculate preview stats with pending changes
   const previewStats = useMemo(() => {
@@ -162,7 +164,7 @@ export function CharacterStats({
       equipStats.weaponType
     );
     
-    const previewDef = calcPlayerDef(previewChar, armorBonus);
+    const previewDef = calcPlayerDef(previewChar, armorBonus, mdefBonus);
     
     // Phase 2: Use weapon crit bonus
     const previewCrit = calcCritChance(previewChar, previewPassives.critBonus);
@@ -182,9 +184,10 @@ export function CharacterStats({
       maxHp: previewMaxHp,
       maxMp: previewMaxMp,
     };
-  }, [hasPendingChanges, character, pendingStats, equipStats, armorBonus]);
+  }, [hasPendingChanges, character, pendingStats, equipStats, armorBonus, mdefBonus]);
 
   const previewDefDisplay = previewStats ? `${previewStats.def.softDef} + ${previewStats.def.hardDefPercent}%` : null;
+  const previewMdefDisplay = previewStats ? `${previewStats.def.softMdef} + ${previewStats.def.hardMdefPercent}%` : null;
 
   // Calculate Total Combat Power
   const totalEquipPower = Object.values(equipped)
@@ -571,13 +574,14 @@ export function CharacterStats({
           {renderStatWithPreview("ATK", atkDisplay, previewStats?.atk || null, "#f87171")}
           {renderStatWithPreview("MATK", matk, previewStats?.matk || null, "#c084fc")}
           {renderStatWithPreview("DEF", defDisplay, previewDefDisplay, "#60a5fa")}
+          {renderStatWithPreview("MDEF", mdefDisplay, previewMdefDisplay, "#818cf8")}
           {renderStatWithPreview("CRIT", crit + "%", previewStats ? previewStats.crit + "%" : null, "#fbbf24")}
           {renderStatWithPreview("ASPD", aspd, previewStats?.aspd || null, "#2dd4bf")}
           
           <div style={{ marginTop: "8px", fontSize: "9px", color: "#666", fontStyle: "italic", borderTop: "1px solid #222", paddingTop: "4px" }}>
             {character.jobClass === "Swordsman" || character.jobClass === "Knight" ? "STR increases ATK greatly" : ""}
             {character.jobClass === "Archer" || character.jobClass === "Hunter" ? "DEX & AGI increase ATK" : ""}
-            {character.jobClass === "Mage" || character.jobClass === "Wizard" ? "INT increases MATK" : ""}
+            {character.jobClass === "Mage" || character.jobClass === "Wizard" ? "INT increases MATK & MDEF" : ""}
             {character.jobClass === "Novice" ? "Distribute stats to prepare for job change" : ""}
           </div>
         </div>
