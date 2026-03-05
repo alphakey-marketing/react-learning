@@ -28,6 +28,7 @@ function createEnemy(
 
 // Phase 4 Rebalance: Enemy stats reduced by ~40% to match quadratic player scaling
 // ATK: -40%, HP: -35%, Soft DEF: -35%, Hard DEF capped at 25% (endgame 35%)
+// Phase 5 Rebalance: Zone 7-8 Soft DEF reduced by ~20% to improve gear accessibility
 export const ZONES: Zone[] = [
   {
     id: 0,
@@ -107,10 +108,11 @@ export const ZONES: Zone[] = [
     name: "Ancient Castle",
     minLevel: 30,
     enemies: [
-      createEnemy("Dark Knight", 30, 210, 72, 980, 0.85, 25),  // was: 350 ATK, 110 DEF, 1500 HP, 45% Hard DEF
-      createEnemy("Evil Druid", 32, 228, 65, 915, 0.95, 25),   // was: 380 ATK, 100 DEF, 1400 HP, 45% Hard DEF
-      createEnemy("Wraith", 31, 219, 68, 883, 0.9, 25),        // was: 365 ATK, 105 DEF, 1350 HP, 45% Hard DEF
-      createEnemy("Chimera", 33, 240, 75, 1045, 0.9, 25),      // was: 400 ATK, 115 DEF, 1600 HP, 45% Hard DEF
+      // BALANCE: Reduced Soft DEF by ~24% (72→55, 65→50, 68→52, 75→58)
+      createEnemy("Dark Knight", 30, 210, 55, 980, 0.85, 25),  // was: 72 DEF → 55 DEF
+      createEnemy("Evil Druid", 32, 228, 50, 915, 0.95, 25),   // was: 65 DEF → 50 DEF
+      createEnemy("Wraith", 31, 219, 52, 883, 0.9, 25),        // was: 68 DEF → 52 DEF
+      createEnemy("Chimera", 33, 240, 58, 1045, 0.9, 25),      // was: 75 DEF → 58 DEF
     ],
   },
   {
@@ -118,11 +120,11 @@ export const ZONES: Zone[] = [
     name: "Void Dimension",
     minLevel: 35,
     enemies: [
-      // Endgame: Slightly higher Hard DEF cap (35%) for final challenge
-      createEnemy("Void Stalker", 35, 312, 91, 1435, 1.0, 35),   // was: 520 ATK, 140 DEF, 2200 HP, 55% Hard DEF
-      createEnemy("Dark Illusion", 37, 336, 85, 1305, 1.2, 35),  // was: 560 ATK, 130 DEF, 2000 HP, 55% Hard DEF
-      createEnemy("Nightmare", 36, 324, 88, 1370, 1.1, 35),      // was: 540 ATK, 135 DEF, 2100 HP, 55% Hard DEF
-      createEnemy("Thanatos", 38, 360, 98, 1630, 1.1, 35),       // was: 600 ATK, 150 DEF, 2500 HP, 60% Hard DEF
+      // BALANCE: Reduced Soft DEF by ~23% (91→70, 85→65, 88→68, 98→75)
+      createEnemy("Void Stalker", 35, 312, 70, 1435, 1.0, 35),   // was: 91 DEF → 70 DEF
+      createEnemy("Dark Illusion", 37, 336, 65, 1305, 1.2, 35),  // was: 85 DEF → 65 DEF
+      createEnemy("Nightmare", 36, 324, 68, 1370, 1.1, 35),      // was: 88 DEF → 68 DEF
+      createEnemy("Thanatos", 38, 360, 75, 1630, 1.1, 35),       // was: 98 DEF → 75 DEF
     ],
   },
 ];
