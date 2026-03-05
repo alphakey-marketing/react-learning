@@ -73,16 +73,19 @@ function generateStatsByType(
       break;
 
     case "armor":
-      // Armor: Primary DEF source (highest DEF multiplier)
-      // Balanced to provide meaningful defense without reaching cap too early
+      // Armor: Primary DEF + MDEF source (highest multiplier)
       stats.def = Math.floor(baseValue * 0.8) + refinement * 3;
       if (stats.def === 0) stats.def = 2;
+      // MDEF: roughly 60-70% of DEF value
+      stats.mdef = Math.floor(stats.def * 0.65) + refinement * 1;
+      if (stats.mdef === 0) stats.mdef = 1;
       break;
 
     case "head":
-      // Headgear: Medium DEF + stat bonuses (utility focus)
+      // Headgear: Medium DEF + MDEF + stat bonuses (utility focus)
       stats.def = Math.floor(baseValue * 0.5) + refinement * 2;
       if (stats.def === 0) stats.def = 1;
+      stats.mdef = Math.floor(stats.def * 0.6) + refinement * 1;
       // 40% chance for stat bonus (higher than other slots)
       if (Math.random() > 0.6) {
         const statTypes = ["str", "agi", "vit", "int", "dex", "luk"];
@@ -93,9 +96,10 @@ function generateStatsByType(
       break;
 
     case "garment":
-      // Garment: Light DEF + resistance/utility focus
+      // Garment: Light DEF + MDEF + resistance/utility focus
       stats.def = Math.floor(baseValue * 0.4) + refinement * 2;
       if (stats.def === 0) stats.def = 1;
+      stats.mdef = Math.floor(stats.def * 0.5);
       // 25% chance for stat bonus (defensive stats preferred)
       if (Math.random() > 0.75) {
         const statTypes = ["vit", "agi", "int"]; // Defense-oriented stats
@@ -106,9 +110,10 @@ function generateStatsByType(
       break;
 
     case "footgear":
-      // Footgear: Minimal DEF + mobility (AGI/DEX focus)
+      // Footgear: Minimal DEF + MDEF + mobility (AGI/DEX focus)
       stats.def = Math.floor(baseValue * 0.3) + refinement * 1;
       if (stats.def === 0) stats.def = 1;
+      stats.mdef = Math.floor(stats.def * 0.4);
       // 30% chance for AGI/DEX bonus
       if (Math.random() > 0.7) {
         const statTypes = ["agi", "dex"];
@@ -119,7 +124,7 @@ function generateStatsByType(
       break;
 
     case "accessory":
-      // Accessory: No DEF, pure stat bonuses
+      // Accessory: No DEF/MDEF, pure stat bonuses
       // 60% chance for stat bonus (main purpose)
       if (Math.random() > 0.4) {
         const statTypes = ["str", "agi", "vit", "int", "dex", "luk"];
@@ -187,7 +192,7 @@ export function generateLoot(playerLevel: number): Equipment {
   Object.assign(equipment, typeStats);
   
   // Legacy support for old systems
-  equipment.stat = equipment.atk || equipment.def || baseValue;
+  equipment.stat = equipment.atk || equipment.matk || equipment.def || baseValue;
   
   return equipment;
 }
@@ -242,7 +247,7 @@ export function generateBossLoot(playerLevel: number): Equipment {
     (equipment as any)[bonusStat] = currentValue + bonusValue;
   }
   
-  equipment.stat = equipment.atk || equipment.def || baseValue;
+  equipment.stat = equipment.atk || equipment.matk || equipment.def || baseValue;
   
   return equipment;
 }
