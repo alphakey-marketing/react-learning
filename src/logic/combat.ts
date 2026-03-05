@@ -26,22 +26,23 @@ export function calculateDamage(
   equipped: EquippedItems
 ): DamageResult {
   const isMagic = isMagicSkill(skill.id);
+  const equipStats = calculateEquipmentStats(equipped);
   
   let rawDmg = 0;
   
   if (isMagic) {
-    const baseAtk = calcPlayerMagicAtk(char);
+    const baseAtk = calcPlayerMagicAtk(char, equipStats);
     const randomVar = Math.floor(Math.random() * 5);
     rawDmg = baseAtk + randomVar;
   } else {
     // Physical Attack with Weapon Variance
-    const equipStats = calculateEquipmentStats(equipped);
     const atkRange = calcPlayerAtk(
       char, 
       equipStats.weaponAtk, 
       equipStats.weaponLevel, 
       equipStats.weaponRefine, 
-      equipStats.equipBonusAtk
+      equipStats.equipBonusAtk,
+      equipStats
     );
     
     // Roll random damage between min and max
@@ -53,7 +54,7 @@ export function calculateDamage(
   const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
   let baseDmg = Math.max(1, afterHardDef - enemy.softDef);
 
-  const critChance = isMagic ? 0 : calcCritChance(char);
+  const critChance = isMagic ? 0 : calcCritChance(char, equipStats);
   const roll = Math.random() * 100;
   let isCrit = false;
 
