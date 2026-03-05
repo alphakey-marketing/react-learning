@@ -24,6 +24,7 @@ export interface WeaponPassives {
 }
 
 // Phase 2: Get weapon passive bonuses based on weapon type
+// BALANCE UPDATE: Added physical penetration for swords/bows, reduced bow ASPD penalty
 function getWeaponPassives(weaponType: WeaponType | null): WeaponPassives {
   if (!weaponType) {
     return { critBonus: 0, aspdBonus: 0, penetration: 0, accuracyBonus: 0 };
@@ -31,20 +32,20 @@ function getWeaponPassives(weaponType: WeaponType | null): WeaponPassives {
   
   switch (weaponType) {
     case "sword":
-      // Swords: Balanced, slight ASPD boost
+      // Swords: Balanced, slight ASPD boost + physical penetration for endgame
       return {
         critBonus: 0,
         aspdBonus: 0.1,      // +10% attack speed
-        penetration: 0,
+        penetration: 10,     // BALANCE: Added 10% physical DEF penetration
         accuracyBonus: 0,
       };
     
     case "bow":
-      // Bows: High crit, accuracy, but slower
+      // Bows: High crit, accuracy, penetration, reduced ASPD penalty
       return {
         critBonus: 5,        // +5% base crit chance
-        aspdBonus: -0.15,    // -15% attack speed (slower)
-        penetration: 0,
+        aspdBonus: -0.10,    // BALANCE: Reduced from -15% to -10%
+        penetration: 5,      // BALANCE: Added 5% physical DEF penetration
         accuracyBonus: 10,   // +10% hit rate
       };
     
@@ -313,7 +314,7 @@ export function calcASPD(char: Character, weaponAspdModifier: number = 0): numbe
   
   const rawASPD = baseASPD + aspdBonus;
   
-  // Apply weapon modifier (e.g., bow = -15%, sword = +10%)
+  // Apply weapon modifier (e.g., bow = -10%, sword = +10%)
   const finalASPD = rawASPD * (1 + weaponAspdModifier);
   
   return Math.min(3.0, Math.max(0.3, finalASPD)); // Min 0.3, max 3.0 attacks/sec
