@@ -710,14 +710,14 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           }
         }
 
-        // Material drops also scale with group size
+        // BALANCE: Increased material drop rates (5%→8% Elunium, 3%→6% Oridecon)
         for (let i = 0; i < enemyCount; i++) {
           const matRoll = Math.random();
-          if (matRoll < 0.05) {
+          if (matRoll < 0.08) {
             nextCharElunium += 1;
             addLog(`💎 Looted: 1x Elunium!`);
             callbacks?.onMaterialDrop?.('elunium', 1);
-          } else if (matRoll < 0.08) {
+          } else if (matRoll < 0.14) {
             nextCharOridecon += 1;
             addLog(`💎 Looted: 1x Oridecon!`);
             callbacks?.onMaterialDrop?.('oridecon', 1);
@@ -1065,7 +1065,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: true, broken: false, message: `✨ SUCCESS! ${item.name} is now +${currentRefine + 1}!` };
     } else {
       if (currentRefine >= 4) {
-        const penaltyLevels = 2;
+        // BALANCE: Reduced penalty from -2 to -1 level
+        const penaltyLevels = 1;
         const newRefinement = Math.max(0, currentRefine - penaltyLevels);
         const newItem = { ...item, refinement: newRefinement };
         
