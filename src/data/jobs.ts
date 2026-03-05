@@ -148,10 +148,10 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
       secondary: ["vit"],
     },
     bonuses: {
-      hpMultiplier: 0.7,
+      hpMultiplier: 0.85,  // BALANCE: Increased from 0.7 to improve survivability
       mpMultiplier: 2.0,
       atkBonus: 0,
-      defBonus: 0,
+      defBonus: 2,         // BALANCE: Added +2 DEF for early-game protection
     },
   },
   Hunter: {
