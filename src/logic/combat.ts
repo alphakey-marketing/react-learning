@@ -26,43 +26,63 @@ export function calculateDamage(
   equipped: EquippedItems
 ): DamageResult {
   const isMagic = isMagicSkill(skill.id);
+  const equipStats = calculateEquipmentStats(equipped);
   
   let baseDmg = 0;
   let isCrit = false;
   
   if (isMagic) {
-    const baseAtk = calcPlayerMagicAtk(char);
-    const randomVar = Math.floor(Math.random() * 5);
-    const rawDmg = baseAtk + randomVar;
+    // Phase 2 & 3: Magic damage with wand passives and MDEF
+    const { matk, passives } = calcPlayerMagicAtk(
+      char, 
+      equipStats.weaponMatk,
+      equipStats.weaponLevel,
+      equipStats.weaponRefine,
+      equipStats.weaponType
+    );
     
-    // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
-    // Apply Enemy Defense
-    const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
-    baseDmg = Math.max(1, afterHardDef - enemy.softDef);
+    const randomVar = Math.floor(Math.random() * 5);
+    const rawDmg = matk + randomVar;
+    
+    // Phase 3: Apply Enemy MDEF (if enemy has it)
+    // For now, enemies use their physical defense as MDEF (simplified)
+    // Phase 2: Wand penetration reduces MDEF effectiveness
+    const effectiveMdefPercent = Math.max(0, enemy.hardDefPercent - passives.penetration);
+    const afterHardMdef = Math.floor(rawDmg * (1 - effectiveMdefPercent / 100));
+    
+    // Use soft DEF as soft MDEF for enemies (simplified for now)
+    baseDmg = Math.max(1, afterHardMdef - enemy.softDef);
   } else {
-    // Physical Attack with Weapon Variance
-    const equipStats = calculateEquipmentStats(equipped);
-    const atkRange = calcPlayerAtk(
+    // Phase 2: Physical Attack with Weapon Passives and Cross-Class Penalty
+    const { attack: atkRange, passives, classPenalty } = calcPlayerAtk(
       char, 
       equipStats.weaponAtk, 
       equipStats.weaponLevel, 
       equipStats.weaponRefine, 
-      equipStats.equipBonusAtk
+      equipStats.equipBonusAtk,
+      equipStats.weaponType
     );
     
-    const critChance = calcCritChance(char);
+    // Phase 2: Apply weapon crit bonus
+    const critChance = calcCritChance(char, passives.critBonus);
     const roll = Math.random() * 100;
 
     if (roll < critChance) {
       // CRITICAL HIT: Bypass variance (use max ATK) and bypass DEF entirely
       isCrit = true;
-      baseDmg = Math.floor(atkRange.max * CRIT_MULTIPLIER);
+      const rawCritDmg = Math.floor(atkRange.max * CRIT_MULTIPLIER);
+      
+      // Phase 2: Apply cross-class penalty even to crits
+      baseDmg = Math.floor(rawCritDmg * classPenalty);
     } else {
       // NORMAL HIT: Roll random damage between min and max
       const rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
       
+      // Phase 2: Apply cross-class penalty BEFORE defense calculation
+      const penalizedDmg = Math.floor(rawDmg * classPenalty);
+      
       // Apply Enemy Defense
-      const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
+      const afterHardDef = Math.floor(penalizedDmg * (1 - enemy.hardDefPercent / 100));
       baseDmg = Math.max(1, afterHardDef - enemy.softDef);
     }
   }
@@ -85,15 +105,27 @@ export function calculateDamage(
   return { damage, isCrit, isMagic, isAOE };
 }
 
+// Phase 3: Enhanced enemy damage calculation with MDEF
 export function calculateEnemyDamage(
   enemy: Enemy,
   playerDef: PlayerDefense
 ): number {
   const enemyRawDmg = enemy.atk;
   
-  // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
-  const afterHardDef = Math.floor(enemyRawDmg * (1 - playerDef.hardDefPercent / 100));
-  const finalDamage = Math.max(1, afterHardDef - playerDef.softDef);
+  // Determine if this is a magic attack (simplified: 30% of enemy attacks are "magic")
+  const isMagicAttack = Math.random() < 0.3;
   
-  return finalDamage;
+  if (isMagicAttack) {
+    // Phase 3: Magic damage uses player's Soft MDEF
+    // Enemies don't have hard MDEF penetration (yet), so use full defense
+    // For simplicity, use hardDefPercent as hardMdefPercent
+    const afterHardMdef = Math.floor(enemyRawDmg * (1 - playerDef.hardDefPercent / 100));
+    const finalDamage = Math.max(1, afterHardMdef - playerDef.softMdef);
+    return finalDamage;
+  } else {
+    // Physical damage uses normal DEF
+    const afterHardDef = Math.floor(enemyRawDmg * (1 - playerDef.hardDefPercent / 100));
+    const finalDamage = Math.max(1, afterHardDef - playerDef.softDef);
+    return finalDamage;
+  }
 }
