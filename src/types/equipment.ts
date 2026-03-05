@@ -6,6 +6,8 @@ export type EquipmentType =
   | "footgear" 
   | "accessory";
 
+export type WeaponType = "sword" | "bow" | "wand";
+
 export type EquipmentRarity = 
   | "common" 
   | "uncommon" 
@@ -20,12 +22,14 @@ export interface Equipment {
   rarity: EquipmentRarity;
   
   // RO-style stats
-  atk?: number;        // Attack power (weapons ONLY)
+  atk?: number;        // Attack power (physical weapons ONLY)
+  matk?: number;       // Magic Attack power (wands ONLY)
   def?: number;        // Defense (armor, head, garment, footgear ONLY)
   slots?: number;      // Card slots (0-4)
   weight?: number;     // Weight in RO style
   refinement?: number; // +0 to +10 refine level
-  weaponLevel?: number; // Weapon level (1-4), affects variance
+  weaponLevel?: number; // Weapon level (1-4), affects variance and refine scaling
+  weaponType?: WeaponType; // Weapon sub-type (sword/bow/wand)
   
   // Bonus stats
   str?: number;
@@ -62,6 +66,17 @@ export function getEquipmentIcon(type: EquipmentType): string {
   return icons[type];
 }
 
+// Helper to get weapon type icon
+export function getWeaponTypeIcon(weaponType?: WeaponType): string {
+  if (!weaponType) return "⚔️";
+  const icons: Record<WeaponType, string> = {
+    sword: "⚔️",
+    bow: "🏹",
+    wand: "🪄",
+  };
+  return icons[weaponType];
+}
+
 // Helper to get rarity color
 export function getRarityColor(rarity: EquipmentRarity): string {
   const colors: Record<EquipmentRarity, string> = {
@@ -84,9 +99,10 @@ export function calculateGearScore(item: Equipment): number {
   const isWeapon = item.type === 'weapon';
   const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
   
-  // ATK: ONLY for weapons
+  // ATK/MATK: ONLY for weapons
   if (isWeapon) {
     score += (item.atk || 0) * 2;
+    score += (item.matk || 0) * 2;
     
     // Weapon level bonus (only weapons have this)
     if (item.weaponLevel) {
@@ -113,12 +129,14 @@ export function calculateGearScore(item: Equipment): number {
   return Math.floor(score);
 }
 
-// Phase 3: Calculate total stats from equipment with TYPE SPECIALIZATION
-// Weapons provide ATK only, armor slots provide DEF only, accessories provide stats only
+// Phase 4: Calculate total stats from equipment with WEAPON TYPE support
+// Swords/Bows provide ATK, Wands provide MATK
 export function calculateEquipmentStats(equipped: EquippedItems): {
   weaponAtk: number;
+  weaponMatk: number;
   weaponLevel: number;
   weaponRefine: number;
+  weaponType: WeaponType | null;
   equipBonusAtk: number;
   totalDef: number;
   bonusStr: number;
@@ -130,11 +148,13 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
 } {
   const items = Object.values(equipped).filter((item): item is Equipment => item !== null);
   
-  // === WEAPONS: ATK ONLY ===
+  // === WEAPONS: ATK or MATK ===
   const weapon = equipped.weapon;
-  const weaponAtk = weapon ? (weapon.atk || 0) : 0;
+  const weaponAtk = weapon?.weaponType !== 'wand' ? (weapon?.atk || 0) : 0;
+  const weaponMatk = weapon?.weaponType === 'wand' ? (weapon?.matk || 0) : 0;
   const weaponLevel = weapon?.weaponLevel || 1;
   const weaponRefine = weapon?.refinement || 0;
+  const weaponType = weapon?.weaponType || null;
   
   // Phase 3: Non-weapon items should NOT provide ATK (accessories/armor don't boost attack)
   // Legacy items with ATK in wrong slots are ignored
@@ -160,8 +180,10 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
   // Any equipment can provide stat bonuses (STR ring, DEX boots, etc.)
   return {
     weaponAtk,
+    weaponMatk,
     weaponLevel,
     weaponRefine,
+    weaponType,
     equipBonusAtk,
     totalDef,
     bonusStr: items.reduce((sum, item) => sum + (item.str || 0), 0),
