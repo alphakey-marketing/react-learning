@@ -698,7 +698,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       nextEnemy = { ...enemy, hp: nextEnemyHp };
     }
 
-    const finalMaxHp = didLevelUp 
+    const finalMaxHp = didLevelUp \
       ? calcMaxHp(nextCharLevel, char.stats.vit, char.jobClass)
       : char.maxHp;
     const finalMaxMp = didLevelUp
@@ -885,6 +885,14 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }
 
   function equipItem(item: Equipment) {
+    // Phase 1: Class restriction — Mages/Wizards can only equip wands
+    if (item.type === "weapon" && (char.jobClass === "Mage" || char.jobClass === "Wizard")) {
+      if (item.weaponType !== "wand") {
+        addLog("❌ Mages and Wizards can only equip Wands!");
+        return;
+      }
+    }
+
     if (item.type === "accessory") {
       if (!equipped.accessory1) {
         setEquipped((prev) => ({ ...prev, accessory1: item }));
