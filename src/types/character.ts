@@ -9,6 +9,13 @@ export interface CharacterStats {
   luk: number;
 }
 
+// NEW: Buff/Debuff tracking
+export interface ActiveBuff {
+  skillId: string;
+  duration: number; // seconds remaining
+  appliedAt: number; // timestamp when applied
+}
+
 export interface Character {
   level: number;
   exp: number;
@@ -26,7 +33,14 @@ export interface Character {
   jobExpToNext: number;
   skillPoints: number;
   learnedSkills: Record<string, number>;
-  autoAttackSkillId: string; // Which skill to use for auto-attack
+  autoAttackSkillId: string; // DEPRECATED: Use skillRotation instead
+  
+  // NEW: Multi-skill rotation system
+  skillRotation?: string[]; // Priority queue of skill IDs to rotate through
+  
+  // NEW: Active buff/debuff tracking
+  activeBuffs?: Record<string, ActiveBuff>; // enemy debuffs applied by player
+  
   elunium: number; // Armor refine material
   oridecon: number; // Weapon refine material
 }
