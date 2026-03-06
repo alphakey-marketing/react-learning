@@ -1,4 +1,5 @@
 import { Character } from "../types/character";
+import { HP_POTION_HEAL_FLAT, HP_POTION_HEAL_PERCENT } from "../data/constants";
 
 interface PotionBarProps {
   character: Character;
@@ -23,6 +24,8 @@ export function PotionBar({
   onSetAutoHpPercent,
   onSetAutoMpPercent,
 }: PotionBarProps) {
+  const hpHealAmount = HP_POTION_HEAL_FLAT + Math.floor(character.maxHp * HP_POTION_HEAL_PERCENT);
+
   return (
     <div
       style={{
@@ -42,6 +45,21 @@ export function PotionBar({
       >
         🧪 Potions
       </h3>
+
+      {/* HP Potion Info */}
+      <div
+        style={{
+          marginBottom: "8px",
+          padding: "6px",
+          background: "rgba(239, 68, 68, 0.15)",
+          borderRadius: "4px",
+          fontSize: "10px",
+          color: "#aaa",
+        }}
+      >
+        <div>🍖 HP Pot heals: <strong style={{ color: "#22c55e" }}>{hpHealAmount} HP</strong></div>
+        <div style={{ fontSize: "9px", marginTop: "2px" }}>({HP_POTION_HEAL_FLAT} + {Math.floor(HP_POTION_HEAL_PERCENT * 100)}% Max HP)</div>
+      </div>
 
       {/* Use Potion Buttons */}
       <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
