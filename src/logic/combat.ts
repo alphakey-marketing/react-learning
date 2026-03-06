@@ -120,8 +120,9 @@ export function calculateEnemyDamage(
   // Determine if this is a magic attack (simplified: 30% of enemy attacks are "magic")
   const isMagicAttack = Math.random() < 0.3;
   
-  const isBoss = enemy.name.includes("Boss");
-  const armorPen = isBoss ? BOSS_ARMOR_PENETRATION : 0; // Use constant from config
+  // Use explicit isBoss flag instead of name checking
+  const isBoss = enemy.isBoss || false;
+  const armorPen = isBoss ? BOSS_ARMOR_PENETRATION : 0;
   
   let rawDamage = 0;
   
