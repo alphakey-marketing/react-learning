@@ -40,6 +40,8 @@ import {
   MP_POTION_COST,
   HP_POTION_HEAL_PERCENT,
   MP_POTION_RECOVER_PERCENT,
+  REFINEMENT_MATERIAL_COSTS,
+  REFINEMENT_GOLD_MULTIPLIER,
 } from "../data/constants";
 
 interface GameCallbacks {
@@ -1007,21 +1009,24 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }
 
     const isWeapon = item.type === "weapon";
-    const materialCost = 1;
-    const hasMaterial = isWeapon ? char.oridecon >= materialCost : char.elunium >= materialCost;
-    
-    if (!hasMaterial) {
-      addLog(`❌ Not enough ${isWeapon ? "Oridecon" : "Elunium"}!`);
-      return { success: false, broken: false, message: `Need ${isWeapon ? "Oridecon" : "Elunium"}!` };
-    }
-
     const currentRefine = item.refinement || 0;
+    
     if (currentRefine >= 10) {
       addLog("❌ Item is already at maximum refinement (+10)!");
       return { success: false, broken: false, message: "Item is MAX level!" };
     }
 
-    const goldCost = 750 * (currentRefine + 1);
+    // NEW: Material costs scale with refinement bracket
+    const materialCost = REFINEMENT_MATERIAL_COSTS[currentRefine] || 1;
+    const hasMaterial = isWeapon ? char.oridecon >= materialCost : char.elunium >= materialCost;
+    
+    if (!hasMaterial) {
+      addLog(`❌ Need ${materialCost}x ${isWeapon ? "Oridecon" : "Elunium"}!`);
+      return { success: false, broken: false, message: `Need ${materialCost}x ${isWeapon ? "Oridecon" : "Elunium"}!` };
+    }
+
+    // NEW: Gold cost reduced from 750 to 250 multiplier
+    const goldCost = REFINEMENT_GOLD_MULTIPLIER * (currentRefine + 1);
     if (char.gold < goldCost) {
       addLog(`❌ Need ${goldCost}g to refine!`);
       return { success: false, broken: false, message: `Need ${goldCost}g!` };
