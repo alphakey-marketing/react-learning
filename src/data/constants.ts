@@ -1,19 +1,14 @@
-// Game balance constants
-export const KILLS_FOR_BOSS = 10;
-
-// Boss multipliers
-export const BOSS_HP_MULTIPLIER = 5;
-export const BOSS_ATK_MULTIPLIER = 1.5;
-export const BOSS_DEF_MULTIPLIER = 1.3;
-
-// Potion costs and effects
+export const CRIT_MULTIPLIER = 1.5;
 export const HP_POTION_COST = 50;
-export const MP_POTION_COST = 100;
-export const HP_POTION_HEAL_PERCENT = 0.5; // 50% of max HP
-export const MP_POTION_RECOVER_PERCENT = 0.5; // 50% of max MP
-
-// Loot drop chance
-export const DROP_CHANCE = 0.20; // 20% chance per kill
+export const MP_POTION_COST = 50;
+export const HP_POTION_HEAL_PERCENT = 0.5;
+export const MP_POTION_RECOVER_PERCENT = 0.5;
+export const KILLS_FOR_BOSS = 10;
+export const BOSS_HP_MULTIPLIER = 5;
+export const BOSS_ATK_MULTIPLIER = 2;
+export const BOSS_DEF_MULTIPLIER = 2;
+export const DROP_CHANCE = 0.2;
+export const MAX_LOGS = 50;
 
 // REFINEMENT SYSTEM
 // Material costs scale with refinement bracket
