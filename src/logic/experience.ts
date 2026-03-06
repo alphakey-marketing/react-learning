@@ -21,16 +21,18 @@ export interface JobLevelUpResult {
   leveledUp: boolean;
 }
 
+// BALANCE: Reduced Base EXP gain for slower progression
 // Base EXP scales with enemy level (for Base Level progression)
 export function calculateExpGain(enemy: Enemy): number {
-  return 20 + enemy.level * 10;
+  return 15 + enemy.level * 8;
 }
 
+// BALANCE: Reduced Job EXP gain for slower progression
 // Job EXP scales with enemy level AND current Job Level
 // This is the Classic RO system: Job EXP is always easier to gain after job change!
 export function calculateJobExpGain(enemy: Enemy, jobLevel: number): number {
   // Base job exp from enemy
-  const baseJobExp = 25 + enemy.level * 12;
+  const baseJobExp = 20 + enemy.level * 10;
   
   // Apply level difference penalty/bonus
   // If enemy is lower level than your job level, you get less exp
@@ -66,8 +68,9 @@ export function processLevelUp(char: Character, expGained: number): LevelUpResul
   while (newExp >= newExpToNext) {
     newExp -= newExpToNext;
     newLevel += 1;
-    // BALANCE: Make Base Level easier by reducing exponential growth from 1.5 to 1.35
-    newExpToNext = Math.floor(newExpToNext * 1.35);
+    // BALANCE: Steeper Base Level curve - 1.45x growth (was 1.35x)
+    // Target: ~20 minutes to Job Lv 10
+    newExpToNext = Math.floor(newExpToNext * 1.45);
     newStatPoints += STAT_POINTS_PER_LEVEL; // Phase 4 Rebalance: Now uses constant (4)
     leveledUp = true;
   }
@@ -99,8 +102,9 @@ export function processJobLevelUp(
   while (newJobExp >= newJobExpToNext) {
     newJobExp -= newJobExpToNext;
     newJobLevel += 1;
-    // BALANCE: Make Job Level harder by increasing exponential growth from 1.4 to 1.6
-    newJobExpToNext = Math.floor(newJobExpToNext * 1.6);
+    // BALANCE: Steeper Job Level curve - 1.75x growth (was 1.6x)
+    // Target: ~20 minutes to Job Lv 10
+    newJobExpToNext = Math.floor(newJobExpToNext * 1.75);
     newSkillPoints += 1;
     leveledUp = true;
   }
