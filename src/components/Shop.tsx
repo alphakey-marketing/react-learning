@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Character } from "../types/character";
 import { Equipment, getEquipmentIcon } from "../types/equipment";
-import { HP_POTION_COST, MP_POTION_COST } from "../data/constants";
+import { HP_POTION_COST, MP_POTION_COST, HP_POTION_HEAL_FLAT, HP_POTION_HEAL_PERCENT } from "../data/constants";
 
 interface ShopProps {
   character: Character;
@@ -83,6 +83,9 @@ export function Shop({
     setSelectedItems(new Set());
   };
 
+  // Calculate actual heal for this character
+  const hpHealAmount = HP_POTION_HEAL_FLAT + Math.floor(character.maxHp * HP_POTION_HEAL_PERCENT);
+
   return (
     <>
       <div
@@ -107,7 +110,10 @@ export function Shop({
         {isInTown && (
           <div style={{ marginBottom: "8px" }}>
             <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "4px" }}>
-              Buy HP Potions ({HP_POTION_COST}g each):
+              🍖 HP Potions ({HP_POTION_COST}g) - Heals {HP_POTION_HEAL_FLAT}+{Math.floor(HP_POTION_HEAL_PERCENT * 100)}% Max HP:
+            </div>
+            <div style={{ fontSize: "10px", color: "#22c55e", marginBottom: "4px", paddingLeft: "4px" }}>
+              ⚡ You: ~{hpHealAmount} HP per potion
             </div>
             <div style={{ display: "flex", gap: "4px", marginBottom: "6px" }}>
               <button
@@ -158,7 +164,7 @@ export function Shop({
             </div>
 
             <div style={{ fontSize: "11px", color: "#aaa", marginBottom: "4px" }}>
-              Buy MP Potions ({MP_POTION_COST}g each):
+              🧪 MP Potions ({MP_POTION_COST}g):
             </div>
             <div style={{ display: "flex", gap: "4px", marginBottom: "8px" }}>
               <button
