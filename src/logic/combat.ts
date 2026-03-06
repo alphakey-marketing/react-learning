@@ -12,7 +12,12 @@ export interface DamageResult {
   isAOE: boolean;
 }
 
-const MAGIC_SKILLS = ["fire_bolt", "cold_bolt", "lightning_bolt", "storm_gust", "meteor_storm"];
+export interface EnemyDamageResult {
+  hpDamage: number;
+  mpDamage: number;
+}
+
+const MAGIC_SKILLS = ["fire_bolt", "cold_bolt", "lightning_bolt", "jupitel_thunder", "storm_gust", "meteor_storm"];
 
 export function isMagicSkill(skillId: string): boolean {
   return MAGIC_SKILLS.includes(skillId);
@@ -107,22 +112,46 @@ export function calculateDamage(
 // Phase 3: Enhanced enemy damage calculation with MDEF
 export function calculateEnemyDamage(
   enemy: Enemy,
-  playerDef: PlayerDefense
-): number {
+  playerDef: PlayerDefense,
+  char: Character
+): EnemyDamageResult {
   const enemyRawDmg = enemy.atk;
   
   // Determine if this is a magic attack (simplified: 30% of enemy attacks are "magic")
   const isMagicAttack = Math.random() < 0.3;
   
+  const isBoss = enemy.name.includes("Boss");
+  const armorPen = isBoss ? 20 : 0; // Bosses ignore 20% of player DEF/MDEF
+  
+  let rawDamage = 0;
+  
   if (isMagicAttack) {
     // Phase 3: Magic damage uses player's Soft MDEF and Hard MDEF
-    const afterHardMdef = Math.floor(enemyRawDmg * (1 - playerDef.hardMdefPercent / 100));
-    const finalDamage = Math.max(1, afterHardMdef - playerDef.softMdef);
-    return finalDamage;
+    const effectiveMdef = Math.max(0, playerDef.hardMdefPercent - armorPen);
+    const afterHardMdef = Math.floor(enemyRawDmg * (1 - effectiveMdef / 100));
+    rawDamage = Math.max(1, afterHardMdef - playerDef.softMdef);
   } else {
     // Physical damage uses normal DEF
-    const afterHardDef = Math.floor(enemyRawDmg * (1 - playerDef.hardDefPercent / 100));
-    const finalDamage = Math.max(1, afterHardDef - playerDef.softDef);
-    return finalDamage;
+    const effectiveDef = Math.max(0, playerDef.hardDefPercent - armorPen);
+    const afterHardDef = Math.floor(enemyRawDmg * (1 - effectiveDef / 100));
+    rawDamage = Math.max(1, afterHardDef - playerDef.softDef);
   }
+  
+  let hpDamage = rawDamage;
+  let mpDamage = 0;
+  
+  // ENERGY COAT: If Wizard and has learned energy coat
+  if (char.jobClass === "Wizard" && char.learnedSkills["energy_coat"] > 0) {
+    const absorbed = Math.floor(rawDamage * 0.2); // Absorb 20% damage to MP
+    if (char.mp >= absorbed) {
+      hpDamage = rawDamage - absorbed;
+      mpDamage = absorbed;
+    } else if (char.mp > 0) {
+      // Drain remaining MP
+      hpDamage = rawDamage - char.mp;
+      mpDamage = char.mp;
+    }
+  }
+
+  return { hpDamage, mpDamage };
 }
