@@ -52,6 +52,64 @@ function getWeaponLevel(rarity: EquipmentRarity): number {
   }
 }
 
+// PROGRESSIVE RARITY SYSTEM: Rarity chances based on player level (zone progression)
+function determineRarity(playerLevel: number): EquipmentRarity {
+  const rarityRoll = Math.random();
+  
+  // Zone 1-2 (Lv 1-10): Common/Uncommon heavy, rare is rare, no epic/legendary
+  if (playerLevel <= 10) {
+    if (rarityRoll > 0.95) return "rare";      // 5%
+    if (rarityRoll > 0.60) return "uncommon";  // 35%
+    return "common";                           // 60%
+  }
+  
+  // Zone 3-4 (Lv 11-20): Introduce Epic, increase Rare
+  if (playerLevel <= 20) {
+    if (rarityRoll > 0.97) return "epic";      // 3%
+    if (rarityRoll > 0.75) return "rare";      // 22%
+    if (rarityRoll > 0.30) return "uncommon";  // 45%
+    return "common";                           // 30%
+  }
+  
+  // Zone 5-6 (Lv 21-30): Introduce Legendary, Epic more common
+  if (playerLevel <= 30) {
+    if (rarityRoll > 0.98) return "legendary"; // 2%
+    if (rarityRoll > 0.80) return "epic";      // 18%
+    if (rarityRoll > 0.40) return "rare";      // 40%
+    if (rarityRoll > 0.10) return "uncommon";  // 30%
+    return "common";                           // 10%
+  }
+  
+  // Zone 7+ (Lv 31+): Endgame loot, no more common drops
+  if (rarityRoll > 0.85) return "legendary";   // 15%
+  if (rarityRoll > 0.40) return "epic";        // 45%
+  if (rarityRoll > 0.10) return "rare";        // 30%
+  return "uncommon";                           // 10%
+}
+
+// Boss loot rarity based on zone
+function determineBossRarity(playerLevel: number): EquipmentRarity {
+  const rarityRoll = Math.random();
+  
+  // Zone 1-2 boss: Guaranteed Rare
+  if (playerLevel <= 10) {
+    return "rare";
+  }
+  
+  // Zone 3-4 boss: Rare 70% / Epic 30%
+  if (playerLevel <= 20) {
+    return rarityRoll > 0.70 ? "epic" : "rare";
+  }
+  
+  // Zone 5-6 boss: Epic 60% / Legendary 40%
+  if (playerLevel <= 30) {
+    return rarityRoll > 0.60 ? "legendary" : "epic";
+  }
+  
+  // Zone 7+ boss: Legendary guaranteed
+  return "legendary";
+}
+
 // Phase 3: Equipment Type Specialization
 // Different equipment types provide different bonuses matching Classic RO design
 function generateStatsByType(
@@ -63,13 +121,24 @@ function generateStatsByType(
 ): Partial<Equipment> {
   const stats: Partial<Equipment> = {};
 
+  // RARITY STAT MULTIPLIERS: Higher rarity = better base stats
+  const rarityMultiplier = {
+    common: 1.0,
+    uncommon: 1.3,
+    rare: 1.7,
+    epic: 2.2,
+    legendary: 3.0,
+  }[rarity];
+  
+  const adjustedBaseValue = Math.floor(baseValue * rarityMultiplier);
+
   switch (type) {
     case "weapon":
       // Weapons: ATK for physical, MATK for wands
       stats.weaponLevel = getWeaponLevel(rarity);
       stats.weaponType = weaponSubType || "sword";
       // Scale weapon ATK with baseValue (level-appropriate)
-      const weaponBaseValue = baseValue + (stats.weaponLevel * 3);
+      const weaponBaseValue = adjustedBaseValue + (stats.weaponLevel * 3);
       if (stats.weaponType === "wand") {
         stats.matk = weaponBaseValue + refinement * 5;
       } else {
@@ -79,7 +148,7 @@ function generateStatsByType(
 
     case "armor":
       // Armor: Primary DEF + MDEF source (highest multiplier)
-      stats.def = Math.floor(baseValue * 0.8) + refinement * 3;
+      stats.def = Math.floor(adjustedBaseValue * 0.8) + refinement * 3;
       if (stats.def === 0) stats.def = 2;
       // MDEF: roughly 60-70% of DEF value
       stats.mdef = Math.floor(stats.def * 0.65) + refinement * 1;
@@ -88,7 +157,7 @@ function generateStatsByType(
 
     case "head":
       // Headgear: Medium DEF + MDEF + stat bonuses (utility focus)
-      stats.def = Math.floor(baseValue * 0.5) + refinement * 2;
+      stats.def = Math.floor(adjustedBaseValue * 0.5) + refinement * 2;
       if (stats.def === 0) stats.def = 1;
       stats.mdef = Math.floor(stats.def * 0.6) + refinement * 1;
       // 40% chance for stat bonus (higher than other slots)
@@ -102,7 +171,7 @@ function generateStatsByType(
 
     case "garment":
       // Garment: Light DEF + MDEF + resistance/utility focus
-      stats.def = Math.floor(baseValue * 0.4) + refinement * 2;
+      stats.def = Math.floor(adjustedBaseValue * 0.4) + refinement * 2;
       if (stats.def === 0) stats.def = 1;
       stats.mdef = Math.floor(stats.def * 0.5);
       // 25% chance for stat bonus (defensive stats preferred)
@@ -116,7 +185,7 @@ function generateStatsByType(
 
     case "footgear":
       // Footgear: Minimal DEF + MDEF + mobility (AGI/DEX focus)
-      stats.def = Math.floor(baseValue * 0.3) + refinement * 1;
+      stats.def = Math.floor(adjustedBaseValue * 0.3) + refinement * 1;
       if (stats.def === 0) stats.def = 1;
       stats.mdef = Math.floor(stats.def * 0.4);
       // 30% chance for AGI/DEX bonus
@@ -172,14 +241,8 @@ export function generateLoot(playerLevel: number): Equipment {
   // Refinement chance: 15% for +1 to +4
   const refinement = Math.random() > 0.85 ? Math.floor(Math.random() * 4) + 1 : 0;
   
-  // Determine rarity
-  let rarity: EquipmentRarity;
-  const rarityRoll = Math.random();
-  if (rarityRoll > 0.95) rarity = "legendary";
-  else if (rarityRoll > 0.85) rarity = "epic";
-  else if (rarityRoll > 0.65) rarity = "rare";
-  else if (rarityRoll > 0.40) rarity = "uncommon";
-  else rarity = "common";
+  // ZONE-PROGRESSIVE RARITY
+  const rarity = determineRarity(playerLevel);
   
   // Generate base equipment
   const equipment: Equipment = {
@@ -223,9 +286,8 @@ export function generateBossLoot(playerLevel: number): Equipment {
   const baseValue = Math.floor(Math.random() * 10) + 5 + Math.floor(playerLevel * 2.5);
   const refinement = Math.floor(Math.random() * 5) + 3; // +3 to +7
   
-  // Boss drops have better rarity distribution
-  const rarityRoll = Math.random();
-  const rarity: EquipmentRarity = rarityRoll > 0.7 ? "legendary" : "epic";
+  // ZONE-PROGRESSIVE BOSS RARITY
+  const rarity = determineBossRarity(playerLevel);
   
   const equipment: Equipment = {
     id: Date.now() + Math.random(),
