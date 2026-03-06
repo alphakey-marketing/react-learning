@@ -148,17 +148,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const lastAutoPotionTimeRef = useRef<number>(0);
 
   const townHealingRef = useRef<() => void>(() => {});
-  const autoPotionRef = useRef<() => void>(() => {});
   
   const callbacksRef = useRef<GameCallbacks | undefined>(callbacks);
   const charRef = useRef<Character>(char);
   const equippedRef = useRef<EquippedItems>(equipped);
   const enemyRef = useRef<Enemy>(enemy);
   const currentZoneIdRef = useRef<number>(currentZoneId);
-  const hpPotionsRef = useRef<number>(hpPotions);
-  const mpPotionsRef = useRef<number>(mpPotions);
-  const autoHpPercentRef = useRef<number>(autoHpPercent);
-  const autoMpPercentRef = useRef<number>(autoMpPercent);
   const autoAttackEnabledRef = useRef<boolean>(autoAttackEnabled);
   const activeSelfBuffsRef = useRef<ActiveSelfBuff[]>(activeSelfBuffs);
   const activeDebuffsRef = useRef<ActiveDebuff[]>(activeDebuffs);
@@ -178,14 +173,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     equippedRef.current = equipped;
     enemyRef.current = enemy;
     currentZoneIdRef.current = currentZoneId;
-    hpPotionsRef.current = hpPotions;
-    mpPotionsRef.current = mpPotions;
-    autoHpPercentRef.current = autoHpPercent;
-    autoMpPercentRef.current = autoMpPercent;
     autoAttackEnabledRef.current = autoAttackEnabled;
     activeSelfBuffsRef.current = activeSelfBuffs;
     activeDebuffsRef.current = activeDebuffs;
-  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs]);
+  }, [callbacks, char, equipped, enemy, currentZoneId, autoAttackEnabled, activeSelfBuffs, activeDebuffs]);
 
   // PERF FIX: Only recalculate equipStats when equipment actually changes
   const equipStats = useMemo(() => {
@@ -502,39 +493,54 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   townHealingRef.current = processTownHealing;
 
-  function processAutoPotion() {
-    const currentChar = charRef.current;
-    const currentHpPotions = hpPotionsRef.current;
-    const currentMpPotions = mpPotionsRef.current;
-    const currentAutoHpPercent = autoHpPercentRef.current;
-    const currentAutoMpPercent = autoMpPercentRef.current;
-    
-    if (currentChar.hp <= 0) return;
-    
-    const now = Date.now();
-    const timeSinceLastPotion = (now - lastAutoPotionTimeRef.current) / 1000;
-    
-    if (timeSinceLastPotion < 3) return;
-    
-    if (currentAutoHpPercent > 0 && currentHpPotions > 0) {
-      const hpPercentage = (currentChar.hp / currentChar.maxHp) * 100;
-      if (hpPercentage < currentAutoHpPercent && hpPercentage < 100) {
-        useHpPotion();
-        lastAutoPotionTimeRef.current = now;
-        return;
+  // BUG FIX: Removed reliance on charRef - now reads live state directly
+  // BUG FIX: Changed < to <= for exact threshold matching
+  // BUG FIX: Reduced cooldown from 3s to 2s for burst damage scenarios
+  const useHpPotion = useCallback(() => {
+    setHpPotions((prevPotions) => {
+      if (prevPotions <= 0) {
+        addLog("❌ No HP Pots!");
+        return prevPotions;
       }
-    }
-    
-    if (currentAutoMpPercent > 0 && currentMpPotions > 0) {
-      const mpPercentage = (currentChar.mp / currentChar.maxMp) * 100;
-      if (mpPercentage < currentAutoMpPercent && mpPercentage < 100) {
-        useMpPotion();
-        lastAutoPotionTimeRef.current = now;
+      
+      setChar((prevChar) => {
+        if (prevChar.hp >= prevChar.maxHp) {
+          addLog("❤️ HP Full!");
+          return prevChar;
+        }
+        
+        const heal = Math.floor(prevChar.maxHp * HP_POTION_HEAL_PERCENT) + HP_POTION_HEAL_FLAT;
+        const newHp = Math.min(prevChar.maxHp, prevChar.hp + heal);
+        addLog(`🍖 +${heal} HP.`);
+        return { ...prevChar, hp: newHp };
+      });
+      
+      return prevPotions - 1;
+    });
+  }, [addLog]);
+
+  const useMpPotion = useCallback(() => {
+    setMpPotions((prevPotions) => {
+      if (prevPotions <= 0) {
+        addLog("❌ No MP Pots!");
+        return prevPotions;
       }
-    }
-  }
-  
-  autoPotionRef.current = processAutoPotion;
+      
+      setChar((prevChar) => {
+        if (prevChar.mp >= prevChar.maxMp) {
+          addLog("💙 MP Full!");
+          return prevChar;
+        }
+        
+        const recover = Math.floor(prevChar.maxMp * MP_POTION_RECOVER_PERCENT);
+        const newMp = Math.min(prevChar.maxMp, prevChar.mp + recover);
+        addLog(`🧪 +${recover} MP.`);
+        return { ...prevChar, mp: newMp };
+      });
+      
+      return prevPotions - 1;
+    });
+  }, [addLog]);
 
   // PERF FIX: Move debuff/buff cleanup to separate 1-second timer instead of running on every attack
   useEffect(() => {
@@ -948,12 +954,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   }, [canAttack, skillCooldowns, activeDebuffs, activeSelfBuffs, killCount, isBossFight, addLog]);
 
   // PERF FIX: Reduced interval from 50ms to 150ms (3x fewer renders, allows 60 FPS)
+  // PERF FIX: Removed char.hp from dependencies - check inside callback instead
   useEffect(() => {
-    if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
+    if (canAttack || currentZoneId === 0) return;
 
     const attackDelayMs = 1000 / attacksPerSecond;
 
     const interval = setInterval(() => {
+      // PERF FIX: Check if dead inside callback instead of dependency
+      if (charRef.current.hp <= 0) {
+        return;
+      }
+      
       const now = Date.now();
       const timePassed = now - lastAttackTime;
       
@@ -963,16 +975,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       } else {
         setAttackCooldownPercent(Math.floor((timePassed / attackDelayMs) * 100));
       }
-    }, 150); // Changed from 50ms to 150ms
+    }, 150);
 
     return () => clearInterval(interval);
-  }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId, char.hp]);
+  }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId]);
 
+  // PERF FIX: Removed char.hp from dependencies - check inside callback instead
   useEffect(() => {
     if (!autoAttackEnabled || !canAttack || currentZoneId === 0) {
       return;
     }
     
+    // PERF FIX: Check if dead inside callback instead of dependency
     if (charRef.current.hp <= 0) {
       return;
     }
@@ -982,8 +996,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }, 10);
     
     return () => clearTimeout(timer);
-  }, [autoAttackEnabled, canAttack, currentZoneId, char.hp, battleAction]);
+  }, [autoAttackEnabled, canAttack, currentZoneId, battleAction]);
 
+  // BUG FIX: Auto-potion now depends on live char/hpPotions/mpPotions state
+  // BUG FIX: Changed threshold from < to <= for exact matches
+  // BUG FIX: Reduced cooldown from 3s to 2s
   useEffect(() => {
     if (autoPotionTimerRef.current !== null) {
       clearInterval(autoPotionTimerRef.current);
@@ -994,7 +1011,29 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     if (currentZoneId === 0) return;
 
     autoPotionTimerRef.current = window.setInterval(() => {
-      autoPotionRef.current();
+      if (char.hp <= 0) return;
+      
+      const now = Date.now();
+      const timeSinceLastPotion = (now - lastAutoPotionTimeRef.current) / 1000;
+      
+      if (timeSinceLastPotion < 2) return; // Changed from 3 to 2 seconds
+      
+      if (autoHpPercent > 0 && hpPotions > 0) {
+        const hpPercentage = (char.hp / char.maxHp) * 100;
+        if (hpPercentage <= autoHpPercent && hpPercentage < 100) { // Changed from < to <=
+          useHpPotion();
+          lastAutoPotionTimeRef.current = now;
+          return;
+        }
+      }
+      
+      if (autoMpPercent > 0 && mpPotions > 0) {
+        const mpPercentage = (char.mp / char.maxMp) * 100;
+        if (mpPercentage <= autoMpPercent && mpPercentage < 100) { // Changed from < to <=
+          useMpPotion();
+          lastAutoPotionTimeRef.current = now;
+        }
+      }
     }, 1000) as unknown as number;
 
     return () => {
@@ -1002,7 +1041,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(autoPotionTimerRef.current);
       }
     };
-  }, [currentZoneId, autoHpPercent, autoMpPercent]);
+  }, [currentZoneId, autoHpPercent, autoMpPercent, char, hpPotions, mpPotions, useHpPotion, useMpPotion]);
 
   useEffect(() => {
     if (enemyAttackTimerRef.current !== null) {
@@ -1316,52 +1355,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     } else {
       addLog(`❌ Need ${totalCost}g!`);
     }
-  }
-
-  function useHpPotion() {
-    setHpPotions((prevPotions) => {
-      if (prevPotions <= 0) {
-        addLog("❌ No HP Pots!");
-        return prevPotions;
-      }
-      
-      setChar((prevChar) => {
-        if (prevChar.hp >= prevChar.maxHp) {
-          addLog("❤️ HP Full!");
-          return prevChar;
-        }
-        
-        const heal = Math.floor(prevChar.maxHp * HP_POTION_HEAL_PERCENT) + HP_POTION_HEAL_FLAT;
-        const newHp = Math.min(prevChar.maxHp, prevChar.hp + heal);
-        addLog(`🍖 +${heal} HP.`);
-        return { ...prevChar, hp: newHp };
-      });
-      
-      return prevPotions - 1;
-    });
-  }
-
-  function useMpPotion() {
-    setMpPotions((prevPotions) => {
-      if (prevPotions <= 0) {
-        addLog("❌ No MP Pots!");
-        return prevPotions;
-      }
-      
-      setChar((prevChar) => {
-        if (prevChar.mp >= prevChar.maxMp) {
-          addLog("💙 MP Full!");
-          return prevChar;
-        }
-        
-        const recover = Math.floor(prevChar.maxMp * MP_POTION_RECOVER_PERCENT);
-        const newMp = Math.min(prevChar.maxMp, prevChar.mp + recover);
-        addLog(`🧪 +${recover} MP.`);
-        return { ...prevChar, mp: newMp };
-      });
-      
-      return prevPotions - 1;
-    });
   }
 
   return {
