@@ -14,7 +14,25 @@ export function SkillWindow({
   onSetAutoAttack,
   onClose,
 }: SkillWindowProps) {
-  const availableSkills = SKILLS_DB[character.jobClass];
+  const skills = SKILLS_DB[character.jobClass] || [];
+
+  const getSkillColor = (skillId: string, learnedLevel: number) => {
+    if (learnedLevel === 0) return "#555";
+    if (character.autoAttackSkillId === skillId) return "#10b981";
+    return "#3b82f6";
+  };
+
+  const getSkillBadge = (skillId: string) => {
+    // Highlight Jupitel Thunder for Wizards as boss DPS skill
+    if (character.jobClass === "Wizard" && skillId === "jupitel_thunder") {
+      return { text: "⚡ BOSS DPS", color: "#f59e0b" };
+    }
+    // Highlight Energy Coat as defensive passive
+    if (character.jobClass === "Wizard" && skillId === "energy_coat") {
+      return { text: "🛡️ PASSIVE", color: "#8b5cf6" };
+    }
+    return null;
+  };
 
   return (
     <div
@@ -28,22 +46,21 @@ export function SkillWindow({
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        zIndex: 999,
-        backdropFilter: "blur(4px)",
+        zIndex: 1000,
       }}
       onClick={onClose}
     >
       <div
         style={{
           background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
-          border: "2px solid #7c3aed",
+          border: "2px solid #3b82f6",
           borderRadius: "12px",
           padding: "20px",
-          maxWidth: "800px",
+          maxWidth: "600px",
           width: "90%",
           maxHeight: "80vh",
-          overflow: "auto",
-          boxShadow: "0 0 40px rgba(124, 58, 237, 0.5)",
+          overflowY: "auto",
+          color: "white",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -51,21 +68,27 @@ export function SkillWindow({
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: "15px",
             alignItems: "center",
+            marginBottom: "15px",
           }}
         >
-          <h3 style={{ margin: 0, fontSize: "18px", color: "#fbbf24" }}>
-            📖 Skill Tree ({character.jobClass})
-          </h3>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "22px",
+              color: "#60a5fa",
+            }}
+          >
+            📖 Skill Window
+          </h2>
           <button
             onClick={onClose}
             style={{
+              padding: "6px 12px",
               background: "#dc2626",
               color: "white",
               border: "none",
-              borderRadius: "6px",
-              padding: "8px 16px",
+              borderRadius: "4px",
               cursor: "pointer",
               fontSize: "14px",
               fontWeight: "bold",
@@ -75,140 +98,155 @@ export function SkillWindow({
           </button>
         </div>
 
-        <div style={{ fontSize: "13px", marginBottom: "15px", color: "#aaa", background: "#111", padding: "10px", borderRadius: "6px" }}>
-          <strong style={{ color: "#fbbf24" }}>Skill Points Available: {character.skillPoints}</strong>
+        <div
+          style={{
+            marginBottom: "15px",
+            padding: "10px",
+            background: "rgba(59, 130, 246, 0.15)",
+            borderRadius: "6px",
+            border: "1px solid #3b82f6",
+            fontSize: "13px",
+          }}
+        >
+          <div style={{ marginBottom: "4px" }}>
+            💎 Skill Points: <strong>{character.skillPoints}</strong>
+          </div>
+          <div style={{ fontSize: "11px", color: "#aaa" }}>
+            Current Default: <strong>{character.autoAttackSkillId}</strong>
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {availableSkills.map((skill) => {
-            const currentLevel = character.learnedSkills[skill.id] || 0;
-            const isLearned = currentLevel > 0;
-            const isMaxed = currentLevel >= skill.maxLevel;
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {skills.map((skill) => {
+            const learnedLevel = character.learnedSkills[skill.id] || 0;
+            const canLearn = character.skillPoints > 0 && learnedLevel < skill.maxLevel;
             const isAutoAttack = character.autoAttackSkillId === skill.id;
-            const mpCost = currentLevel > 0 ? skill.mpCost(currentLevel) : skill.mpCost(1);
-            
-            const damageCheck = currentLevel > 0 ? skill.damageMultiplier(currentLevel) : skill.damageMultiplier(1);
-            const canBeAutoAttack = isLearned && damageCheck > 0;
-            const isUtility = damageCheck === 0;
+            const badge = getSkillBadge(skill.id);
 
             return (
               <div
                 key={skill.id}
                 style={{
-                  background: isAutoAttack ? "#2a1a4a" : "#2a2a2a",
-                  padding: "12px",
+                  background: "rgba(0, 0, 0, 0.3)",
+                  border: `2px solid ${getSkillColor(skill.id, learnedLevel)}`,
                   borderRadius: "8px",
-                  border: isAutoAttack ? "2px solid #7c3aed" : "1px solid #444",
-                  boxShadow: isAutoAttack ? "0 0 15px rgba(124, 58, 237, 0.5)" : "none",
+                  padding: "12px",
+                  position: "relative",
                 }}
               >
+                {/* Badge for special skills */}
+                {badge && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "-10px",
+                      right: "10px",
+                      background: badge.color,
+                      color: "white",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      boxShadow: `0 0 10px ${badge.color}`,
+                    }}
+                  >
+                    {badge.text}
+                  </div>
+                )}
+
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
+                    alignItems: "flex-start",
                     marginBottom: "8px",
-                    alignItems: "center",
                   }}
                 >
-                  <div>
-                    <strong style={{ color: "#fbbf24", fontSize: "15px" }}>{skill.nameZh}</strong>
-                    <span
-                      style={{
-                        color: "#aaa",
-                        fontSize: "12px",
-                        marginLeft: "8px",
-                      }}
-                    >
-                      Lv.{currentLevel}/{skill.maxLevel}
-                    </span>
-                    {isAutoAttack && (
-                      <span
-                        style={{
-                          color: "#fff",
-                          fontSize: "11px",
-                          marginLeft: "10px",
-                          background: "linear-gradient(45deg, #7c3aed, #a855f7)",
-                          padding: "3px 10px",
-                          borderRadius: "12px",
-                          fontWeight: "bold",
-                          boxShadow: "0 2px 8px rgba(124, 58, 237, 0.5)",
-                        }}
-                      >
-                        ⚡ AUTO ATTACK
-                      </span>
-                    )}
-                    {isUtility && (
-                      <span
-                        style={{
-                          color: "#10b981",
-                          fontSize: "10px",
-                          marginLeft: "8px",
-                          background: "rgba(16, 185, 129, 0.2)",
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          border: "1px solid #10b981",
-                        }}
-                      >
-                        🛡️ UTILITY
-                      </span>
-                    )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "4px" }}>
+                      {skill.nameZh}
+                      {isAutoAttack && (
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            fontSize: "11px",
+                            color: "#10b981",
+                            background: "rgba(16, 185, 129, 0.2)",
+                            padding: "2px 6px",
+                            borderRadius: "3px",
+                          }}
+                        >
+                          ⚡ Default
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#aaa", marginBottom: "6px" }}>
+                      {skill.description}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#888" }}>
+                      Level: {learnedLevel} / {skill.maxLevel} | MP: {skill.mpCost(learnedLevel || 1)} |
+                      DMG: {(skill.damageMultiplier(learnedLevel || 1) * 100).toFixed(0)}%
+                      {skill.cooldown > 0 && ` | CD: ${skill.cooldown}s`}
+                      {skill.targetCount && skill.targetCount > 1 && (
+                        <span style={{ color: "#f59e0b" }}> | AOE ({skill.targetCount} targets)</span>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: "6px" }}>
+                  <div
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: "bold",
+                      color: getSkillColor(skill.id, learnedLevel),
+                      minWidth: "40px",
+                      textAlign: "center",
+                    }}
+                  >
+                    {learnedLevel}/{skill.maxLevel}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button
+                    onClick={() => onLearnSkill(skill.id)}
+                    disabled={!canLearn}
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: canLearn
+                        ? "linear-gradient(to bottom, #3b82f6, #2563eb)"
+                        : "#333",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: canLearn ? "pointer" : "not-allowed",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      opacity: canLearn ? 1 : 0.5,
+                    }}
+                  >
+                    {learnedLevel === 0 ? "📖 Learn" : "⬆️ Level Up"}
+                  </button>
+                  {skill.effect !== "buff" && learnedLevel > 0 && (
                     <button
-                      onClick={() => onLearnSkill(skill.id)}
-                      disabled={isMaxed || character.skillPoints <= 0}
+                      onClick={() => onSetAutoAttack(skill.id)}
+                      disabled={isAutoAttack}
                       style={{
-                        padding: "8px 16px",
-                        fontSize: "12px",
-                        background:
-                          isMaxed || character.skillPoints <= 0 ? "#555" : "#22c55e",
+                        flex: 1,
+                        padding: "8px",
+                        background: isAutoAttack
+                          ? "#10b981"
+                          : "linear-gradient(to bottom, #f59e0b, #d97706)",
                         color: "white",
                         border: "none",
-                        borderRadius: "6px",
-                        cursor:
-                          isMaxed || character.skillPoints <= 0
-                            ? "not-allowed"
-                            : "pointer",
+                        borderRadius: "4px",
+                        cursor: isAutoAttack ? "not-allowed" : "pointer",
+                        fontSize: "12px",
                         fontWeight: "bold",
+                        opacity: isAutoAttack ? 0.6 : 1,
                       }}
                     >
-                      {isMaxed ? "MAX" : "Learn"}
+                      {isAutoAttack ? "✓ Default" : "⚡ Set Default"}
                     </button>
-                    {canBeAutoAttack && (
-                      <button
-                        onClick={() => onSetAutoAttack(skill.id)}
-                        disabled={isAutoAttack}
-                        style={{
-                          padding: "8px 16px",
-                          fontSize: "12px",
-                          background: isAutoAttack ? "#555" : "linear-gradient(45deg, #3b82f6, #2563eb)",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "6px",
-                          cursor: isAutoAttack ? "not-allowed" : "pointer",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {isAutoAttack ? "✓ Active" : "Set Auto"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#ccc",
-                    marginBottom: "6px",
-                    lineHeight: "1.5",
-                  }}
-                >
-                  {skill.description}
-                </div>
-                <div style={{ fontSize: "11px", color: "#999" }}>
-                  {isUtility ? (
-                    <span>Passive/Buff Skill - Cannot auto-attack</span>
-                  ) : (
-                    <span>MP Cost: {mpCost} | Cooldown: {skill.cooldown}s | Dmg: {(damageCheck * 100).toFixed(0)}%</span>
                   )}
                 </div>
               </div>
