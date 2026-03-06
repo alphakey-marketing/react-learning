@@ -127,6 +127,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const autoPotionTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef<boolean>(true);
   const lastPotionCheckRef = useRef<number>(0);
+  const lastAutoPotionTimeRef = useRef<number>(0);
 
   const townHealingRef = useRef<() => void>(() => {});
   const autoPotionRef = useRef<() => void>(() => {});
@@ -345,6 +346,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       initialSkills[firstJobSkill.id] = 1;
     }
 
+    // FIX: Wizard-specific - auto-learn Energy Coat passive
+    if (newJob === "Wizard") {
+      initialSkills["energy_coat"] = 1;
+    }
+
     const firstAttackSkill = newJobSkills.find(s => s.id !== "basic_attack" && s.effect !== "buff");
 
     const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
@@ -390,6 +396,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     addLog(`💫 You received 3 Skill Points to learn new skills!`);
     if (firstJobSkill) {
       addLog(`📖 You learned ${firstJobSkill.nameZh}!`);
+    }
+    if (newJob === "Wizard") {
+      addLog(`🛡️ You learned Energy Coat (passive)!`);
     }
     if (firstAttackSkill && firstAttackSkill.id === firstJobSkill?.id) {
       addLog(`⭐ ${firstAttackSkill.nameZh} is now your default skill.`);
@@ -464,10 +473,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     
     if (currentChar.hp <= 0) return;
     
+    // FIX: Add 3-second cooldown between auto-potion uses
+    const now = Date.now();
+    const timeSinceLastPotion = (now - lastAutoPotionTimeRef.current) / 1000;
+    
+    if (timeSinceLastPotion < 3) return;
+    
     if (currentAutoHpPercent > 0 && currentHpPotions > 0) {
       const hpPercentage = (currentChar.hp / currentChar.maxHp) * 100;
       if (hpPercentage < currentAutoHpPercent && hpPercentage < 100) {
         useHpPotion();
+        lastAutoPotionTimeRef.current = now;
+        return;
       }
     }
     
@@ -475,6 +492,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const mpPercentage = (currentChar.mp / currentChar.maxMp) * 100;
       if (mpPercentage < currentAutoMpPercent && mpPercentage < 100) {
         useMpPotion();
+        lastAutoPotionTimeRef.current = now;
       }
     }
   }
@@ -898,7 +916,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   function challengeBoss() {
     setIsBossFight(true);
     const bossTemplate = getRandomEnemyForZone(currentZoneId, char.level);
-    const bossEnemy = {
+    const bossEnemy: Enemy = {
       ...bossTemplate,
       name: `👹 Boss: ${bossTemplate.name}`,
       hp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
@@ -909,7 +927,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       softMdef: bossTemplate.softMdef * BOSS_DEF_MULTIPLIER,
       hardMdefPercent: Math.min(90, Math.floor(bossTemplate.hardMdefPercent * 1.5)),
       attackSpeed: bossTemplate.attackSpeed * 1.5,
-      count: 1, 
+      count: 1,
+      isBoss: true, // FIX: Set explicit boss flag
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);
