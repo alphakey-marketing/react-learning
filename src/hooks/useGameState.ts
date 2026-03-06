@@ -55,10 +55,18 @@ interface GameCallbacks {
   onEnemyKilled?: (isBoss: boolean, goldEarned: number) => void;
 }
 
-// Track active debuffs on the enemy (e.g. Provoke)
+// Track active debuffs on the enemy (e.g. Provoke, Stone Curse)
 interface ActiveDebuff {
   id: string;
   expiresAt: number;
+  skillLevel: number;
+}
+
+// Track active self-buffs (e.g. Endure)
+interface ActiveSelfBuff {
+  id: string;
+  expiresAt: number;
+  skillLevel: number;
 }
 
 export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
@@ -125,6 +133,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   // Advanced Combat tracking
   const [skillCooldowns, setSkillCooldowns] = useState<Record<string, number>>({});
   const [activeDebuffs, setActiveDebuffs] = useState<ActiveDebuff[]>([]);
+  const [activeSelfBuffs, setActiveSelfBuffs] = useState<ActiveSelfBuff[]>([]);
 
   const [lastAttackTime, setLastAttackTime] = useState<number>(0);
   const [canAttack, setCanAttack] = useState<boolean>(true);
@@ -151,6 +160,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const autoHpPercentRef = useRef<number>(autoHpPercent);
   const autoMpPercentRef = useRef<number>(autoMpPercent);
   const autoAttackEnabledRef = useRef<boolean>(autoAttackEnabled);
+  const activeSelfBuffsRef = useRef<ActiveSelfBuff[]>(activeSelfBuffs);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -169,6 +179,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   useEffect(() => { autoHpPercentRef.current = autoHpPercent; }, [autoHpPercent]);
   useEffect(() => { autoMpPercentRef.current = autoMpPercent; }, [autoMpPercent]);
   useEffect(() => { autoAttackEnabledRef.current = autoAttackEnabled; }, [autoAttackEnabled]);
+  useEffect(() => { activeSelfBuffsRef.current = activeSelfBuffs; }, [activeSelfBuffs]);
 
   const equipStats = useMemo(() => calculateEquipmentStats(equipped), [equipped]);
   const armorBonus = equipStats.totalDef;
@@ -322,8 +333,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
 
-    if (skill.effect === "buff") {
-      addLog("❌ Cannot set passive/buff skill as default attack!");
+    if (skill.effect === "buff" || skill.effect === "passive" || skill.effect === "debuff") {
+      addLog("❌ Cannot set passive/buff/debuff skill as default attack!");
       return;
     }
 
@@ -360,7 +371,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       initialSkills["energy_coat"] = 1;
     }
 
-    const firstAttackSkill = newJobSkills.find(s => s.id !== "basic_attack" && s.effect !== "buff");
+    const firstAttackSkill = newJobSkills.find(s => s.id !== "basic_attack" && s.effect !== "buff" && s.effect !== "passive" && s.effect !== "debuff");
 
     const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
     const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
@@ -400,6 +411,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setIsBossFight(false);
     setBossAvailable(false);
     setActiveDebuffs([]);
+    setActiveSelfBuffs([]);
 
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
     addLog(`🏛️ Teleported to Town for safety!`);
@@ -438,6 +450,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
     setActiveDebuffs([]);
+    setActiveSelfBuffs([]);
     
     addLog("❤️‍🩹 Respawned in Town!");
   }
@@ -454,6 +467,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setCurrentZoneId(0);
     setEnemy(getRandomEnemyForZone(0, char.level));
     setActiveDebuffs([]);
+    setActiveSelfBuffs([]);
     
     addLog("🏛️ Escaped to Town safely!");
   }
@@ -511,14 +525,16 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   autoPotionRef.current = processAutoPotion;
 
-  // Cleanup expired debuffs
+  // Cleanup expired debuffs and self-buffs
   useEffect(() => {
-    if (activeDebuffs.length === 0) return;
     const now = Date.now();
-    if (activeDebuffs.some(d => now > d.expiresAt)) {
+    if (activeDebuffs.length > 0 && activeDebuffs.some(d => now > d.expiresAt)) {
       setActiveDebuffs(prev => prev.filter(d => now <= d.expiresAt));
     }
-  }, [lastAttackTime, activeDebuffs]);
+    if (activeSelfBuffs.length > 0 && activeSelfBuffs.some(b => now > b.expiresAt)) {
+      setActiveSelfBuffs(prev => prev.filter(b => now <= b.expiresAt));
+    }
+  }, [lastAttackTime, activeDebuffs, activeSelfBuffs]);
 
   function battleAction(skillId?: string) {
     if (!isMountedRef.current) return;
@@ -529,36 +545,78 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     const now = Date.now();
 
-    // 1. BUFF/DEBUFF PHASE (e.g. Provoke)
-    // Check if we have an active debuff skill that isn't on cooldown and the enemy doesn't already have it
-    if (char.learnedSkills["provoke"] > 0) {
-      const provokeCD = SKILLS_DB[char.jobClass].find(s => s.id === "provoke")?.cooldown || 2;
-      const provokeLastUsed = skillCooldowns["provoke"] || 0;
-      const provokeReady = (now - provokeLastUsed) / 1000 >= provokeCD;
-      
-      // Check if enemy already has provoke debuff active
-      const hasProvoke = activeDebuffs.some(d => d.id === "provoke" && now <= d.expiresAt);
-      
-      if (provokeReady && !hasProvoke && char.mp >= 5) { // Provoke MP cost is 5
-        setChar(prev => ({ ...prev, mp: prev.mp - 5 }));
-        setSkillCooldowns(prev => ({ ...prev, ["provoke"]: now }));
-        setActiveDebuffs(prev => [...prev, { id: "provoke", expiresAt: now + 10000 }]); // 10s duration
+    // 1. DEBUFF PHASE (e.g. Provoke, Stone Curse)
+    // Check if we have active debuff skills to apply to the enemy
+    const debuffSkills = ["provoke", "stone_curse"];
+    for (const debuffId of debuffSkills) {
+      if (char.learnedSkills[debuffId] > 0) {
+        const debuffSkill = SKILLS_DB[char.jobClass].find(s => s.id === debuffId);
+        if (!debuffSkill) continue;
         
-        addLog(`📢 Used Provoke! Enemy DEF reduced for 10s.`);
-        setLastAttackTime(now);
-        setCanAttack(false);
-        setAttackCooldownPercent(0);
-        return; // Spend this turn applying the debuff
+        const debuffCD = debuffSkill.cooldown;
+        const debuffLastUsed = skillCooldowns[debuffId] || 0;
+        const debuffReady = (now - debuffLastUsed) / 1000 >= debuffCD;
+        
+        // Check if enemy already has this debuff active
+        const hasDebuff = activeDebuffs.some(d => d.id === debuffId && now <= d.expiresAt);
+        
+        const mpCost = debuffSkill.mpCost(char.learnedSkills[debuffId]);
+        if (debuffReady && !hasDebuff && char.mp >= mpCost) {
+          setChar(prev => ({ ...prev, mp: prev.mp - mpCost }));
+          setSkillCooldowns(prev => ({ ...prev, [debuffId]: now }));
+          const duration = (debuffSkill.debuffDuration || 10) * 1000;
+          setActiveDebuffs(prev => [...prev, { id: debuffId, expiresAt: now + duration, skillLevel: char.learnedSkills[debuffId] }]);
+          
+          addLog(`📢 Used ${debuffSkill.nameZh}! Enemy weakened for ${debuffSkill.debuffDuration}s.`);
+          setLastAttackTime(now);
+          setCanAttack(false);
+          setAttackCooldownPercent(0);
+          return; // Spend this turn applying the debuff
+        }
       }
     }
 
-    // 2. SMART SKILL ROTATION PHASE
+    // 2. SELF-BUFF PHASE (e.g. Endure)
+    // Auto-cast defensive buffs when taking damage
+    const buffSkills = ["endure"];
+    const hpPercent = (char.hp / char.maxHp) * 100;
+    if (hpPercent < 60) { // Only cast defensive buffs when below 60% HP
+      for (const buffId of buffSkills) {
+        if (char.learnedSkills[buffId] > 0) {
+          const buffSkill = SKILLS_DB[char.jobClass].find(s => s.id === buffId);
+          if (!buffSkill) continue;
+          
+          const buffCD = buffSkill.cooldown;
+          const buffLastUsed = skillCooldowns[buffId] || 0;
+          const buffReady = (now - buffLastUsed) / 1000 >= buffCD;
+          
+          // Check if we already have this buff active
+          const hasBuff = activeSelfBuffs.some(b => b.id === buffId && now <= b.expiresAt);
+          
+          const mpCost = buffSkill.mpCost(char.learnedSkills[buffId]);
+          if (buffReady && !hasBuff && char.mp >= mpCost) {
+            setChar(prev => ({ ...prev, mp: prev.mp - mpCost }));
+            setSkillCooldowns(prev => ({ ...prev, [buffId]: now }));
+            const duration = (buffSkill.buffDuration || 8) * 1000;
+            setActiveSelfBuffs(prev => [...prev, { id: buffId, expiresAt: now + duration, skillLevel: char.learnedSkills[buffId] }]);
+            
+            addLog(`🛡️ Used ${buffSkill.nameZh}! Damage reduction active for ${buffSkill.buffDuration}s.`);
+            setLastAttackTime(now);
+            setCanAttack(false);
+            setAttackCooldownPercent(0);
+            return; // Spend this turn applying the buff
+          }
+        }
+      }
+    }
+
+    // 3. SMART SKILL ROTATION PHASE
     let actualSkillId = skillId || char.autoAttackSkillId;
     let skillLevel = char.learnedSkills[actualSkillId] || 0;
     let skill = SKILLS_DB[char.jobClass].find((s) => s.id === actualSkillId);
 
     // Initial validation
-    if (!skill || skillLevel === 0 || skill.effect === "buff") {
+    if (!skill || skillLevel === 0 || skill.effect === "buff" || skill.effect === "passive" || skill.effect === "debuff") {
       actualSkillId = "basic_attack";
       skillLevel = char.learnedSkills["basic_attack"] || 1;
       skill = SKILLS_DB[char.jobClass].find((s) => s.id === "basic_attack")!;
@@ -577,9 +635,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     // Smart Rotation: If primary is unavailable, look for the next best skill
     if ((isSkillOnCooldown || isMpInsufficient) && actualSkillId !== "basic_attack") {
-      // Find all learned active skills (not buff, not basic attack, not primary)
+      // Find all learned active skills (not buff/debuff/passive, not basic attack, not primary)
       const availableSkills = SKILLS_DB[char.jobClass]
-        .filter(s => s.id !== "basic_attack" && s.id !== actualSkillId && s.effect !== "buff")
+        .filter(s => s.id !== "basic_attack" && s.id !== actualSkillId && s.effect !== "buff" && s.effect !== "passive" && s.effect !== "debuff")
         .filter(s => {
           const lvl = char.learnedSkills[s.id] || 0;
           if (lvl === 0) return false;
@@ -657,18 +715,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let nextEnemyHp = enemy.hp;
     let nextEnemy = enemy;
 
-    // Apply Provoke Debuff logic temporarily to enemy
-    const hasProvoke = activeDebuffs.some(d => d.id === "provoke" && now <= d.expiresAt);
-    let combatEnemy = enemy;
-    if (hasProvoke) {
-      const provokeLvl = char.learnedSkills["provoke"] || 1;
-      const defReduction = 0.20 + (provokeLvl * 0.05); // 25% - 45% DEF reduction
-      combatEnemy = {
-        ...enemy,
-        softDef: Math.floor(enemy.softDef * (1 - defReduction)),
-        hardDefPercent: Math.floor(enemy.hardDefPercent * (1 - defReduction))
-      };
+    // Apply active debuffs temporarily to enemy for damage calculation
+    let combatEnemy = { ...enemy };
+    
+    // Provoke: reduces enemy DEF
+    const provokeDebuff = activeDebuffs.find(d => d.id === "provoke" && now <= d.expiresAt);
+    if (provokeDebuff) {
+      const defReduction = 0.20 + (provokeDebuff.skillLevel * 0.05); // 25% - 45% DEF reduction
+      combatEnemy.softDef = Math.floor(combatEnemy.softDef * (1 - defReduction));
+      combatEnemy.hardDefPercent = Math.floor(combatEnemy.hardDefPercent * (1 - defReduction));
     }
+    
+    // Stone Curse: reduces enemy ATK (applied in enemy damage calculation, not here)
 
     const { damage, isCrit, isAOE } = calculateDamage(
       char,
@@ -876,7 +934,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   useEffect(() => {
     battleActionRef.current = battleAction;
-  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, activeDebuffs, killCount, isBossFight]);
+  }, [char, enemy, equipped, currentZoneId, canAttack, skillCooldowns, activeDebuffs, activeSelfBuffs, killCount, isBossFight]);
 
   useEffect(() => {
     if (canAttack || currentZoneId === 0 || char.hp <= 0) return;
@@ -952,12 +1010,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const currentEquipped = equippedRef.current;
       const currentZone = currentZoneIdRef.current;
       const currentCallbacks = callbacksRef.current;
+      const currentSelfBuffs = activeSelfBuffsRef.current;
       
       if (currentChar.hp <= 0 || currentZone === 0) return;
 
       const equipStats = calculateEquipmentStats(currentEquipped);
       const playerDef = calcPlayerDef(currentChar, equipStats.totalDef, equipStats.totalMdef);
-      const { hpDamage, mpDamage } = calculateEnemyDamage(currentEnemy, playerDef, currentChar);
+      
+      // Apply Stone Curse debuff to enemy ATK
+      let modifiedEnemy = { ...currentEnemy };
+      const now = Date.now();
+      const stoneCurse = activeDebuffs.find(d => d.id === "stone_curse" && now <= d.expiresAt);
+      if (stoneCurse) {
+        const atkReduction = 0.10 + (stoneCurse.skillLevel * 0.05); // 15% - 35% ATK reduction
+        modifiedEnemy.atk = Math.floor(modifiedEnemy.atk * (1 - atkReduction));
+      }
+      
+      let { hpDamage, mpDamage } = calculateEnemyDamage(modifiedEnemy, playerDef, currentChar);
+
+      // Apply Endure buff to reduce incoming damage
+      const endureBuff = currentSelfBuffs.find(b => b.id === "endure" && now <= b.expiresAt);
+      if (endureBuff) {
+        const damageReduction = 0.10 + (endureBuff.skillLevel * 0.05); // 15% - 35% damage reduction
+        hpDamage = Math.floor(hpDamage * (1 - damageReduction));
+      }
 
       currentCallbacks?.onEnemyDamageDealt?.(hpDamage);
 
@@ -989,7 +1065,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus, mdefBonus]);
+  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus, mdefBonus, activeDebuffs, activeSelfBuffs]);
 
   useEffect(() => {
     if (currentZoneId !== 0) return;
@@ -1009,6 +1085,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setCurrentZoneId(zoneId);
     setEnemy(getRandomEnemyForZone(zoneId, char.level));
     setActiveDebuffs([]);
+    setActiveSelfBuffs([]);
     addLog(`🚀 Traveled to: ${targetZone.name}!`);
   }
 
@@ -1027,11 +1104,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       hardMdefPercent: Math.min(90, Math.floor(bossTemplate.hardMdefPercent * 1.5)),
       attackSpeed: bossTemplate.attackSpeed * 1.5,
       count: 1,
-      isBoss: true, // FIX: Set explicit boss flag
+      isBoss: true,
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);
     setActiveDebuffs([]);
+    setActiveSelfBuffs([]);
     addLog(`⚔️ CHALLENGE: ${bossEnemy.name} appeared!`);
   }
 
