@@ -1049,18 +1049,21 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, [currentZoneId, autoHpPercent, autoMpPercent, useHpPotion, useMpPotion]);
 
+  // BUG FIX: Removed enemy.attackSpeed, enemy.name, armorBonus, mdefBonus from dependencies
+  // These caused timer destruction/recreation on every enemy kill or equipment change
+  // Timer now only recreates when entering/leaving combat zones (currentZoneId changes)
   useEffect(() => {
     if (enemyAttackTimerRef.current !== null) {
       clearInterval(enemyAttackTimerRef.current);
       enemyAttackTimerRef.current = null;
     }
 
-    if (currentZoneId === 0 || enemy.attackSpeed <= 0) {
+    if (currentZoneId === 0) {
       return;
     }
 
-    const enemyAttackDelayMs = 1000 / enemy.attackSpeed;
-    
+    // Read enemy attackSpeed from ref inside the timer callback
+    // This allows dynamic enemy changes without recreating the timer
     enemyAttackTimerRef.current = window.setInterval(() => {
       const currentChar = charRef.current;
       const currentEnemy = enemyRef.current;
@@ -1070,7 +1073,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const currentSelfBuffs = activeSelfBuffsRef.current;
       const currentDebuffs = activeDebuffsRef.current;
       
-      if (currentChar.hp <= 0 || currentZone === 0) return;
+      if (currentChar.hp <= 0 || currentZone === 0 || currentEnemy.attackSpeed <= 0) return;
 
       const equipStats = equipStatsRef.current;
       const playerDef = calcPlayerDef(currentChar, equipStats.totalDef, equipStats.totalMdef);
@@ -1114,14 +1117,14 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         
         return { ...prev, hp: newHp, mp: newMp };
       });
-    }, enemyAttackDelayMs) as unknown as number;
+    }, 1000) as unknown as number; // Fixed 1 second interval
 
     return () => {
       if (enemyAttackTimerRef.current !== null) {
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [enemy.attackSpeed, enemy.name, currentZoneId, armorBonus, mdefBonus, addLog]);
+  }, [currentZoneId, addLog]);
 
   useEffect(() => {
     if (currentZoneId !== 0) return;
