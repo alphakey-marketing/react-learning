@@ -1,6 +1,7 @@
 import { Equipment, EquippedItems, getRarityColor, getEquipmentIcon } from "../types/equipment";
 import { Character } from "../types/character";
 import { useState, useEffect } from "react";
+import { REFINEMENT_MATERIAL_COSTS, REFINEMENT_GOLD_MULTIPLIER, REFINEMENT_WEAPON_BONUS, REFINEMENT_ARMOR_BONUS } from "../data/constants";
 
 export interface RefineResult {
   success: boolean;
@@ -27,7 +28,12 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
   }, [selectedItem?.item.id]);
 
   const getRefineCost = (item: Equipment) => {
-    return 750 * ((item.refinement || 0) + 1); // REBALANCE: Cost increased to 750g per level
+    return REFINEMENT_GOLD_MULTIPLIER * ((item.refinement || 0) + 1); 
+  };
+
+  const getMaterialCost = (item: Equipment) => {
+    const currentRefine = item.refinement || 0;
+    return REFINEMENT_MATERIAL_COSTS[currentRefine] || 1;
   };
 
   const getSuccessRate = (currentRefine: number) => {
@@ -38,9 +44,8 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
   };
 
   const getRefineEffect = (item: Equipment) => {
-    // REBALANCE: Stronger upgrade effects
-    if (item.type === "weapon") return "+5 ATK";
-    return "+2 DEF";
+    if (item.type === "weapon") return `+${REFINEMENT_WEAPON_BONUS} ATK/MATK`;
+    return `+${REFINEMENT_ARMOR_BONUS} DEF`;
   };
 
   const handleRefine = () => {
@@ -60,7 +65,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
             ...prev,
             item: {
               ...prev.item,
-              refinement: Math.max(0, currentRefine - 2) // Level reduction penalty
+              refinement: Math.max(0, currentRefine - 1) // Level reduction penalty
             }
           };
         });
@@ -309,7 +314,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>Failure Penalty:</span>
                     <span style={{ color: (selectedItem.item.refinement || 0) >= 4 ? "#ef4444" : "#10b981", fontWeight: "bold" }}>
-                      {(selectedItem.item.refinement || 0) >= 4 ? "-2 Levels" : "Safe"}
+                      {(selectedItem.item.refinement || 0) >= 4 ? "-1 Level" : "Safe"}
                     </span>
                   </div>
                 </div>
@@ -325,8 +330,8 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span>Required Material:</span>
-                        <span style={{ color: (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) >= 1 ? (selectedItem.item.type === "weapon" ? "#f87171" : "#a78bfa") : "#ef4444" }}>
-                          1x {selectedItem.item.type === "weapon" ? "Oridecon" : "Elunium"}
+                        <span style={{ color: (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) >= getMaterialCost(selectedItem.item) ? (selectedItem.item.type === "weapon" ? "#f87171" : "#a78bfa") : "#ef4444" }}>
+                          {getMaterialCost(selectedItem.item)}x {selectedItem.item.type === "weapon" ? "Oridecon" : "Elunium"}
                         </span>
                       </div>
                     </div>
@@ -335,7 +340,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                       onClick={handleRefine}
                       disabled={
                         character.gold < getRefineCost(selectedItem.item) || 
-                        (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1 ||
+                        (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < getMaterialCost(selectedItem.item) ||
                         refineResult !== null  // Disable during refinement animation
                       }
                       style={{
@@ -347,7 +352,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                         cursor: "pointer",
                         fontWeight: "bold",
                         fontSize: "16px",
-                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < 1 || refineResult !== null) ? 0.5 : 1,
+                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < getMaterialCost(selectedItem.item) || refineResult !== null) ? 0.5 : 1,
                         transition: "transform 0.1s"
                       }}
                       onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
