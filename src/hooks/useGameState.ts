@@ -154,6 +154,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const equippedRef = useRef<EquippedItems>(equipped);
   const enemyRef = useRef<Enemy>(enemy);
   const currentZoneIdRef = useRef<number>(currentZoneId);
+  const hpPotionsRef = useRef<number>(hpPotions);
+  const mpPotionsRef = useRef<number>(mpPotions);
+  const autoHpPercentRef = useRef<number>(autoHpPercent);
+  const autoMpPercentRef = useRef<number>(autoMpPercent);
   const autoAttackEnabledRef = useRef<boolean>(autoAttackEnabled);
   const activeSelfBuffsRef = useRef<ActiveSelfBuff[]>(activeSelfBuffs);
   const activeDebuffsRef = useRef<ActiveDebuff[]>(activeDebuffs);
@@ -173,10 +177,14 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     equippedRef.current = equipped;
     enemyRef.current = enemy;
     currentZoneIdRef.current = currentZoneId;
+    hpPotionsRef.current = hpPotions;
+    mpPotionsRef.current = mpPotions;
+    autoHpPercentRef.current = autoHpPercent;
+    autoMpPercentRef.current = autoMpPercent;
     autoAttackEnabledRef.current = autoAttackEnabled;
     activeSelfBuffsRef.current = activeSelfBuffs;
     activeDebuffsRef.current = activeDebuffs;
-  }, [callbacks, char, equipped, enemy, currentZoneId, autoAttackEnabled, activeSelfBuffs, activeDebuffs]);
+  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs]);
 
   // PERF FIX: Only recalculate equipStats when equipment actually changes
   const equipStats = useMemo(() => {
@@ -493,9 +501,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   townHealingRef.current = processTownHealing;
 
-  // BUG FIX: Removed reliance on charRef - now reads live state directly
-  // BUG FIX: Changed < to <= for exact threshold matching
-  // BUG FIX: Reduced cooldown from 3s to 2s for burst damage scenarios
   const useHpPotion = useCallback(() => {
     setHpPotions((prevPotions) => {
       if (prevPotions <= 0) {
@@ -542,7 +547,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     });
   }, [addLog]);
 
-  // PERF FIX: Move debuff/buff cleanup to separate 1-second timer instead of running on every attack
   useEffect(() => {
     if (debuffCleanupTimerRef.current !== null) {
       clearInterval(debuffCleanupTimerRef.current);
@@ -572,13 +576,16 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, []);
 
-  // PERF FIX: Convert battleAction to useCallback to prevent re-creation on every render
+  // BUG FIX: Removed activeDebuffs and activeSelfBuffs from dependencies
+  // to prevent function recreation and useEffect chain reactions every second
   const battleAction = useCallback((skillId?: string) => {
     if (!isMountedRef.current) return;
     const currentChar = charRef.current;
     const currentEnemy = enemyRef.current;
     const currentEquipped = equippedRef.current;
     const currentZone = currentZoneIdRef.current;
+    const currentActiveDebuffs = activeDebuffsRef.current;
+    const currentActiveSelfBuffs = activeSelfBuffsRef.current;
     
     if (currentChar.hp <= 0) return;
     if (currentZone === 0) return;
@@ -598,7 +605,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         const debuffLastUsed = skillCooldowns[debuffId] || 0;
         const debuffReady = (now - debuffLastUsed) / 1000 >= debuffCD;
         
-        const hasDebuff = activeDebuffs.some(d => d.id === debuffId && now <= d.expiresAt);
+        const hasDebuff = currentActiveDebuffs.some(d => d.id === debuffId && now <= d.expiresAt);
         
         const mpCost = debuffSkill.mpCost(currentChar.learnedSkills[debuffId]);
         if (debuffReady && !hasDebuff && currentChar.mp >= mpCost) {
@@ -629,7 +636,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           const buffLastUsed = skillCooldowns[buffId] || 0;
           const buffReady = (now - buffLastUsed) / 1000 >= buffCD;
           
-          const hasBuff = activeSelfBuffs.some(b => b.id === buffId && now <= b.expiresAt);
+          const hasBuff = currentActiveSelfBuffs.some(b => b.id === buffId && now <= b.expiresAt);
           
           const mpCost = buffSkill.mpCost(currentChar.learnedSkills[buffId]);
           if (buffReady && !hasBuff && currentChar.mp >= mpCost) {
@@ -745,7 +752,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
     let combatEnemy = { ...currentEnemy };
     
-    const provokeDebuff = activeDebuffs.find(d => d.id === "provoke" && now <= d.expiresAt);
+    const provokeDebuff = currentActiveDebuffs.find(d => d.id === "provoke" && now <= d.expiresAt);
     if (provokeDebuff) {
       const defReduction = 0.20 + (provokeDebuff.skillLevel * 0.05);
       combatEnemy.softDef = Math.floor(combatEnemy.softDef * (1 - defReduction));
@@ -951,17 +958,14 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     });
 
     setEnemy(nextEnemy);
-  }, [canAttack, skillCooldowns, activeDebuffs, activeSelfBuffs, killCount, isBossFight, addLog]);
+  }, [canAttack, skillCooldowns, killCount, isBossFight, addLog]);
 
-  // PERF FIX: Reduced interval from 50ms to 150ms (3x fewer renders, allows 60 FPS)
-  // PERF FIX: Removed char.hp from dependencies - check inside callback instead
   useEffect(() => {
     if (canAttack || currentZoneId === 0) return;
 
     const attackDelayMs = 1000 / attacksPerSecond;
 
     const interval = setInterval(() => {
-      // PERF FIX: Check if dead inside callback instead of dependency
       if (charRef.current.hp <= 0) {
         return;
       }
@@ -980,13 +984,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId]);
 
-  // PERF FIX: Removed char.hp from dependencies - check inside callback instead
   useEffect(() => {
     if (!autoAttackEnabled || !canAttack || currentZoneId === 0) {
       return;
     }
     
-    // PERF FIX: Check if dead inside callback instead of dependency
     if (charRef.current.hp <= 0) {
       return;
     }
@@ -998,9 +1000,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearTimeout(timer);
   }, [autoAttackEnabled, canAttack, currentZoneId, battleAction]);
 
-  // BUG FIX: Auto-potion now depends on live char/hpPotions/mpPotions state
-  // BUG FIX: Changed threshold from < to <= for exact matches
-  // BUG FIX: Reduced cooldown from 3s to 2s
+  // BUG FIX: Removed char, hpPotions, mpPotions dependencies to prevent 
+  // interval destruction/recreation on every damage taken
   useEffect(() => {
     if (autoPotionTimerRef.current !== null) {
       clearInterval(autoPotionTimerRef.current);
@@ -1011,25 +1012,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     if (currentZoneId === 0) return;
 
     autoPotionTimerRef.current = window.setInterval(() => {
-      if (char.hp <= 0) return;
+      // Use refs to check state instead of depending on state changes
+      const currentChar = charRef.current;
+      const currentHpPots = hpPotionsRef.current;
+      const currentMpPots = mpPotionsRef.current;
+      
+      if (currentChar.hp <= 0) return;
       
       const now = Date.now();
       const timeSinceLastPotion = (now - lastAutoPotionTimeRef.current) / 1000;
       
-      if (timeSinceLastPotion < 2) return; // Changed from 3 to 2 seconds
+      if (timeSinceLastPotion < 2) return;
       
-      if (autoHpPercent > 0 && hpPotions > 0) {
-        const hpPercentage = (char.hp / char.maxHp) * 100;
-        if (hpPercentage <= autoHpPercent && hpPercentage < 100) { // Changed from < to <=
+      if (autoHpPercent > 0 && currentHpPots > 0) {
+        const hpPercentage = (currentChar.hp / currentChar.maxHp) * 100;
+        if (hpPercentage <= autoHpPercent && hpPercentage < 100) {
           useHpPotion();
           lastAutoPotionTimeRef.current = now;
           return;
         }
       }
       
-      if (autoMpPercent > 0 && mpPotions > 0) {
-        const mpPercentage = (char.mp / char.maxMp) * 100;
-        if (mpPercentage <= autoMpPercent && mpPercentage < 100) { // Changed from < to <=
+      if (autoMpPercent > 0 && currentMpPots > 0) {
+        const mpPercentage = (currentChar.mp / currentChar.maxMp) * 100;
+        if (mpPercentage <= autoMpPercent && mpPercentage < 100) {
           useMpPotion();
           lastAutoPotionTimeRef.current = now;
         }
@@ -1041,7 +1047,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(autoPotionTimerRef.current);
       }
     };
-  }, [currentZoneId, autoHpPercent, autoMpPercent, char, hpPotions, mpPotions, useHpPotion, useMpPotion]);
+  }, [currentZoneId, autoHpPercent, autoMpPercent, useHpPotion, useMpPotion]);
 
   useEffect(() => {
     if (enemyAttackTimerRef.current !== null) {
@@ -1066,7 +1072,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       if (currentChar.hp <= 0 || currentZone === 0) return;
 
-      // PERF FIX: Use memoized equipStatsRef instead of recalculating
       const equipStats = equipStatsRef.current;
       const playerDef = calcPlayerDef(currentChar, equipStats.totalDef, equipStats.totalMdef);
       
