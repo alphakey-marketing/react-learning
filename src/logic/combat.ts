@@ -3,7 +3,7 @@ import { Enemy } from "../types/enemy";
 import { Skill } from "../types/skill";
 import { EquippedItems, calculateEquipmentStats } from "../types/equipment";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, PlayerDefense } from "./character";
-import { CRIT_MULTIPLIER } from "../data/constants";
+import { CRIT_MULTIPLIER, BOSS_ARMOR_PENETRATION } from "../data/constants";
 
 export interface DamageResult {
   damage: number;
@@ -121,7 +121,7 @@ export function calculateEnemyDamage(
   const isMagicAttack = Math.random() < 0.3;
   
   const isBoss = enemy.name.includes("Boss");
-  const armorPen = isBoss ? 20 : 0; // Bosses ignore 20% of player DEF/MDEF
+  const armorPen = isBoss ? BOSS_ARMOR_PENETRATION : 0; // Use constant from config
   
   let rawDamage = 0;
   
