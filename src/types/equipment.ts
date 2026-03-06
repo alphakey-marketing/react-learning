@@ -1,3 +1,5 @@
+import { REFINEMENT_WEAPON_BONUS, REFINEMENT_ARMOR_BONUS, RARITY_REFINE_BONUS } from "../data/constants";
+
 export type EquipmentType = 
   | "weapon" 
   | "armor" 
@@ -102,6 +104,31 @@ export function getRarityColor(rarity: EquipmentRarity): string {
   return colors[rarity];
 }
 
+// Calculate refinement bonus with rarity multiplier
+// At +7 and above, higher rarity items get bigger bonuses
+export function calculateRefinementBonus(
+  item: Equipment,
+  baseBonus: number
+): number {
+  const refineLevel = item.refinement || 0;
+  
+  if (refineLevel === 0) return 0;
+  
+  // +0 to +6: Flat bonus for all rarities
+  if (refineLevel <= 6) {
+    return baseBonus * refineLevel;
+  }
+  
+  // +7 to +10: Apply rarity multiplier to the +7+ levels
+  const normalLevels = 6;
+  const bonusLevels = refineLevel - normalLevels;
+  
+  const rarityMultiplier = RARITY_REFINE_BONUS[item.rarity];
+  
+  // Normal bonus for +1 to +6, multiplied bonus for +7+
+  return (baseBonus * normalLevels) + (baseBonus * rarityMultiplier * bonusLevels);
+}
+
 // Phase 3: Calculate Gear Score with TYPE SPECIALIZATION
 // Only count stats that are actually relevant to each equipment type
 export function calculateGearScore(item: Equipment): number {
@@ -112,10 +139,11 @@ export function calculateGearScore(item: Equipment): number {
   const isWeapon = item.type === 'weapon';
   const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
   
-  // ATK/MATK: ONLY for weapons
+  // ATK/MATK: ONLY for weapons (includes refinement bonuses)
   if (isWeapon) {
-    score += (item.atk || 0) * 2;
-    score += (item.matk || 0) * 2;
+    const weaponRefineBonus = calculateRefinementBonus(item, REFINEMENT_WEAPON_BONUS);
+    score += ((item.atk || 0) + weaponRefineBonus) * 2;
+    score += ((item.matk || 0) + weaponRefineBonus) * 2;
     
     // Weapon level bonus (only weapons have this)
     if (item.weaponLevel) {
@@ -123,10 +151,11 @@ export function calculateGearScore(item: Equipment): number {
     }
   }
   
-  // DEF/MDEF: ONLY for armor types
+  // DEF/MDEF: ONLY for armor types (includes refinement bonuses)
   if (isArmor) {
-    score += (item.def || 0) * 1.5;
-    score += (item.mdef || 0) * 2; // MDEF is valuable
+    const armorRefineBonus = calculateRefinementBonus(item, REFINEMENT_ARMOR_BONUS);
+    score += ((item.def || 0) + armorRefineBonus) * 1.5;
+    score += ((item.mdef || 0) + Math.floor(armorRefineBonus * 0.5)) * 2; // MDEF is valuable, gets half armor bonus
   }
   
   // Bonus stats: ALL equipment types can have these
@@ -135,7 +164,7 @@ export function calculateGearScore(item: Equipment): number {
     score += (item[stat] || 0) * 5;
   });
   
-  // Refinement bonus: All equipment except accessories
+  // Refinement bonus: All equipment except accessories (already counted above in ATK/DEF calculation)
   if (item.type !== 'accessory' && item.refinement) {
     score += item.refinement * 3;
   }
@@ -163,10 +192,20 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
 } {
   const items = Object.values(equipped).filter((item): item is Equipment => item !== null);
   
-  // === WEAPONS: ATK or MATK ===
+  // === WEAPONS: ATK or MATK with refinement bonuses ===
   const weapon = equipped.weapon;
-  const weaponAtk = weapon?.weaponType !== 'wand' ? (weapon?.atk || 0) : 0;
-  const weaponMatk = weapon?.weaponType === 'wand' ? (weapon?.matk || 0) : 0;
+  let weaponAtk = 0;
+  let weaponMatk = 0;
+  
+  if (weapon) {
+    const refineBonus = calculateRefinementBonus(weapon, REFINEMENT_WEAPON_BONUS);
+    if (weapon.weaponType !== 'wand') {
+      weaponAtk = (weapon.atk || 0) + refineBonus;
+    } else {
+      weaponMatk = (weapon.matk || 0) + refineBonus;
+    }
+  }
+  
   const weaponLevel = weapon?.weaponLevel || 1;
   const weaponRefine = weapon?.refinement || 0;
   const weaponType = weapon?.weaponType || null;
@@ -175,7 +214,7 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
   // Legacy items with ATK in wrong slots are ignored
   const equipBonusAtk = 0;
 
-  // === ARMOR TYPES: DEF & MDEF ===
+  // === ARMOR TYPES: DEF & MDEF with refinement bonuses ===
   // Only armor, head, garment, footgear contribute to DEF
   // Accessories and weapons do NOT provide DEF
   const defenseSlots: EquipmentType[] = ['armor', 'head', 'garment', 'footgear'];
@@ -184,8 +223,8 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
     if (!defenseSlots.includes(item.type)) return sum;
     // Base DEF from the item
     const baseDef = item.def || 0;
-    // Refine bonus: armor slots get +3 DEF per refine (matching Phase 3 loot generation)
-    const refineBonus = (item.refinement || 0) * 3;
+    // Rarity-scaled refine bonus
+    const refineBonus = calculateRefinementBonus(item, REFINEMENT_ARMOR_BONUS);
     return sum + baseDef + refineBonus;
   }, 0);
 
@@ -193,8 +232,8 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
     if (!defenseSlots.includes(item.type)) return sum;
     // Base MDEF from the item
     const baseMdef = item.mdef || 0;
-    // MDEF refine bonus (maybe +1 MDEF per refine)
-    const refineBonus = (item.refinement || 0) * 1;
+    // MDEF gets half the armor refine bonus
+    const refineBonus = Math.floor(calculateRefinementBonus(item, REFINEMENT_ARMOR_BONUS) * 0.5);
     return sum + baseMdef + refineBonus;
   }, 0);
 
