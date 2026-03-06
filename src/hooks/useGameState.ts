@@ -39,6 +39,7 @@ import {
   HP_POTION_COST,
   MP_POTION_COST,
   HP_POTION_HEAL_PERCENT,
+  HP_POTION_HEAL_FLAT,
   MP_POTION_RECOVER_PERCENT,
   REFINEMENT_MATERIAL_COSTS,
   REFINEMENT_GOLD_MULTIPLIER,
@@ -163,9 +164,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const armorBonus = equipStats.totalDef;
   const mdefBonus = equipStats.totalMdef;
   
-  // Phase 2: Calculate ASPD with weapon passives
   const attacksPerSecond = useMemo(() => {
-    // Get weapon passives to determine ASPD modifier
     const { passives } = calcPlayerAtk(
       char,
       equipStats.weaponAtk,
@@ -351,11 +350,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     const newMaxHp = calcMaxHp(char.level, char.stats.vit, newJob);
     const newMaxMp = calcMaxMp(char.level, char.stats.int, newJob);
 
-    // Phase 1: Handle weapon equipping based on new class
     let currentWeapon = equipped.weapon;
     let newInventory = [...inventory];
     
-    // BALANCE: Use improved STARTING_WAND for Mage/Wizard job change
     if ((newJob === "Mage" || newJob === "Wizard")) {
       if (currentWeapon && currentWeapon.weaponType !== "wand") {
         newInventory.push(currentWeapon);
@@ -682,9 +679,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           addLog(`⚔️ Boss is ready! Click the button to challenge!`);
         }
 
-        // Loot drops scale with group size
         if (isGroup) {
-          // Each enemy in the group has a chance to drop loot
           for (let i = 0; i < enemyCount; i++) {
             if (shouldDropLoot()) {
               const newGear = generateLoot(nextCharLevel);
@@ -702,7 +697,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           }
         }
 
-        // BALANCE: Increased material drop rates (5%→8% Elunium, 3%→6% Oridecon)
         for (let i = 0; i < enemyCount; i++) {
           const matRoll = Math.random();
           if (matRoll < 0.08) {
@@ -847,25 +841,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
       const equipStats = calculateEquipmentStats(currentEquipped);
       const playerDef = calcPlayerDef(currentChar, equipStats.totalDef, equipStats.totalMdef);
-      const enemyDmg = calculateEnemyDamage(currentEnemy, playerDef);
+      const { hpDamage, mpDamage } = calculateEnemyDamage(currentEnemy, playerDef, currentChar);
 
-      currentCallbacks?.onEnemyDamageDealt?.(enemyDmg);
+      currentCallbacks?.onEnemyDamageDealt?.(hpDamage);
 
       if (!isMountedRef.current) return;
 
       setChar((prev) => {
         if (prev.hp <= 0) return prev;
         
-        const newHp = Math.max(0, prev.hp - enemyDmg);
+        const newHp = Math.max(0, prev.hp - hpDamage);
+        const newMp = Math.max(0, prev.mp - mpDamage);
         
         if (newHp > 0) {
-          addLog(`💥 ${currentEnemy.name} attacks! You take ${enemyDmg} dmg.`);
+          if (mpDamage > 0) {
+            addLog(`💥 ${currentEnemy.name} attacks! You take ${hpDamage} dmg (Energy Coat absorbed ${mpDamage} into MP).`);
+          } else {
+            addLog(`💥 ${currentEnemy.name} attacks! You take ${hpDamage} dmg.`);
+          }
         } else {
           addLog(`💀 You were defeated by ${currentEnemy.name}!`);
           setShowDeathModal(true);
         }
         
-        return { ...prev, hp: newHp };
+        return { ...prev, hp: newHp, mp: newMp };
       });
     }, enemyAttackDelayMs) as unknown as number;
 
@@ -906,11 +905,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       maxHp: bossTemplate.maxHp * BOSS_HP_MULTIPLIER,
       atk: bossTemplate.atk * BOSS_ATK_MULTIPLIER,
       softDef: bossTemplate.softDef * BOSS_DEF_MULTIPLIER,
-      hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)), // Bosses have higher hard def too
+      hardDefPercent: Math.min(90, Math.floor(bossTemplate.hardDefPercent * 1.5)), 
       softMdef: bossTemplate.softMdef * BOSS_DEF_MULTIPLIER,
       hardMdefPercent: Math.min(90, Math.floor(bossTemplate.hardMdefPercent * 1.5)),
       attackSpeed: bossTemplate.attackSpeed * 1.5,
-      count: 1, // Bosses are always single targets
+      count: 1, 
     };
     setEnemy(bossEnemy);
     setBossAvailable(false);
@@ -920,7 +919,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   function equipItem(itemObj: Equipment & { targetSlot?: keyof EquippedItems }) {
     const { targetSlot, ...item } = itemObj;
     
-    // Comprehensive weapon class restrictions with helpful error messages
     if (item.type === "weapon") {
       const weaponType = item.weaponType || "sword";
       
@@ -940,7 +938,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           return;
         }
       }
-      // Novices can equip any weapon type
     }
 
     if (item.type === "accessory") {
@@ -1016,7 +1013,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: false, broken: false, message: "Item is MAX level!" };
     }
 
-    // NEW: Material costs scale with refinement bracket
     const materialCost = REFINEMENT_MATERIAL_COSTS[currentRefine] || 1;
     const hasMaterial = isWeapon ? char.oridecon >= materialCost : char.elunium >= materialCost;
     
@@ -1025,7 +1021,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: false, broken: false, message: `Need ${materialCost}x ${isWeapon ? "Oridecon" : "Elunium"}!` };
     }
 
-    // NEW: Gold cost reduced from 750 to 250 multiplier
     const goldCost = REFINEMENT_GOLD_MULTIPLIER * (currentRefine + 1);
     if (char.gold < goldCost) {
       addLog(`❌ Need ${goldCost}g to refine!`);
@@ -1035,12 +1030,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     let successChance = 100;
     if (currentRefine >= 4) {
       const rates: Record<number, number> = {
-        4: 55,
-        5: 45,
-        6: 35,
-        7: 25,
-        8: 15,
-        9: 10
+        4: 55, 5: 45, 6: 35, 7: 25, 8: 15, 9: 10
       };
       successChance = rates[currentRefine];
     }
@@ -1068,7 +1058,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return { success: true, broken: false, message: `✨ SUCCESS! ${item.name} is now +${currentRefine + 1}!` };
     } else {
       if (currentRefine >= 4) {
-        // BALANCE: Reduced penalty from -2 to -1 level
         const penaltyLevels = 1;
         const newRefinement = Math.max(0, currentRefine - penaltyLevels);
         const newItem = { ...item, refinement: newRefinement };
@@ -1133,7 +1122,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           return prevChar;
         }
         
-        const heal = Math.floor(prevChar.maxHp * HP_POTION_HEAL_PERCENT);
+        const heal = Math.floor(prevChar.maxHp * HP_POTION_HEAL_PERCENT) + HP_POTION_HEAL_FLAT;
         const newHp = Math.min(prevChar.maxHp, prevChar.hp + heal);
         addLog(`🍖 +${heal} HP.`);
         return { ...prevChar, hp: newHp };
