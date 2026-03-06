@@ -104,7 +104,7 @@ function getWeaponClassPenalty(jobClass: JobClass, weaponType: WeaponType | null
 // Phase 2: Now returns weapon passives and cross-class penalty
 export function calcPlayerAtk(
   char: Character,
-  weaponAtk: number,
+  weaponAtk: number, // NOTE: This already includes rarity refinement bonus from equipment.ts
   weaponLevel: number,
   weaponRefine: number,
   equipBonusAtk: number,
@@ -115,19 +115,27 @@ export function calcPlayerAtk(
   
   let statusAtk = 0;
   
+  // Apply passive skill bonuses to base stats internally
+  let effectiveDex = dex;
+  if (char.learnedSkills["owl_eye"] > 0) {
+    // Owl's Eye grants +10% DEX per level (max 50%)
+    const owlEyeBonus = Math.floor(dex * (char.learnedSkills["owl_eye"] * 0.10));
+    effectiveDex += owlEyeBonus;
+  }
+  
   // Phase 4: Quadratic Scaling by Job Class (Classic RO Formula)
   // Each class has a primary stat that scales quadratically
   
   if (char.jobClass === "Swordsman" || char.jobClass === "Knight") {
     // Melee classes: STR quadratic, DEX/LUK linear
     const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
-    const dexBonus = Math.floor(dex / 5);
+    const dexBonus = Math.floor(effectiveDex / 5);
     const lukBonus = Math.floor(luk / 5);
     statusAtk = strBonus + dexBonus + lukBonus;
   }
   else if (char.jobClass === "Archer" || char.jobClass === "Hunter") {
     // Ranged classes: DEX quadratic, STR/AGI secondary
-    const dexBonus = Math.floor(Math.pow(Math.floor(dex / 10), 2));
+    const dexBonus = Math.floor(Math.pow(Math.floor(effectiveDex / 10), 2));
     const strBonus = Math.floor(str / 5);
     const agiBonus = Math.floor(agi / 5);
     const lukBonus = Math.floor(luk / 5);
@@ -137,14 +145,14 @@ export function calcPlayerAtk(
     // Mages: Weak physical attack (they use MATK for skills)
     // INT has no effect on physical ATK in Classic RO
     const strBonus = Math.floor(str / 5);
-    const dexBonus = Math.floor(dex / 5);
+    const dexBonus = Math.floor(effectiveDex / 5);
     const lukBonus = Math.floor(luk / 5);
     statusAtk = strBonus + dexBonus + lukBonus;
   }
   else {
     // Novice: Balanced scaling for all stats (linear only)
     const strBonus = Math.floor(str / 3);
-    const dexBonus = Math.floor(dex / 5);
+    const dexBonus = Math.floor(effectiveDex / 5);
     const lukBonus = Math.floor(luk / 5);
     statusAtk = strBonus + dexBonus + lukBonus;
   }
@@ -162,18 +170,9 @@ export function calcPlayerAtk(
     };
   }
 
-  // Phase 5: Weapon-Level Scaling Refinement (Classic RO style)
-  // Base refinement scales with weapon level
-  const refineBaseBonus = weaponRefine * weaponLevel * 2;
-  
-  // Over-refine breakpoints (+7, +8, +9, +10)
-  let refineBreakpointBonus = 0;
-  if (weaponRefine >= 7) refineBreakpointBonus += 5;
-  if (weaponRefine >= 8) refineBreakpointBonus += 10;
-  if (weaponRefine >= 9) refineBreakpointBonus += 15;
-  if (weaponRefine >= 10) refineBreakpointBonus += 15;
-  
-  const refineAtk = refineBaseBonus + refineBreakpointBonus;
+  // BUGFIX: Removed double-dipping classic RO refine formula here.
+  // We now exclusively use the rarity-based refinement added directly to `weaponAtk` in equipment.ts.
+  const refineAtk = 0; 
   
   // Variance scales with Weapon Level (10% variance per level)
   // Level 1 = 10% variance, Level 4 = 40% variance
@@ -181,7 +180,7 @@ export function calcPlayerAtk(
   const varianceAmount = Math.floor(weaponAtk * variancePercent);
 
   // High DEX reduces variance by boosting the minimum ATK floor
-  const dexBonusFloor = Math.floor(dex * 0.5);
+  const dexBonusFloor = Math.floor(effectiveDex * 0.5);
   
   let minWeaponAtk = weaponAtk - varianceAmount + dexBonusFloor;
   let maxWeaponAtk = weaponAtk + varianceAmount;
@@ -215,7 +214,7 @@ export function calcPlayerAtk(
 // Phase 2: Now returns weapon passives
 export function calcPlayerMagicAtk(
   char: Character,
-  weaponMatk: number = 0,
+  weaponMatk: number = 0, // NOTE: This already includes rarity refinement bonus from equipment.ts
   weaponLevel: number = 1,
   weaponRefine: number = 0,
   weaponType: WeaponType | null = null
@@ -223,10 +222,15 @@ export function calcPlayerMagicAtk(
   const { int, dex } = char.stats;
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
+  let effectiveDex = dex;
+  if (char.learnedSkills["owl_eye"] > 0) {
+    effectiveDex += Math.floor(dex * (char.learnedSkills["owl_eye"] * 0.10));
+  }
+
   // Quadratic INT scaling for status MATK
   const intQuadratic = Math.floor(Math.pow(Math.floor(int / 7), 2));
   const intLinear = Math.floor(int / 5);
-  const dexBonus = Math.floor(dex / 5);
+  const dexBonus = Math.floor(effectiveDex / 5);
   
   const statusMatk = intQuadratic + intLinear + dexBonus + char.level + jobBonus;
   
@@ -236,18 +240,9 @@ export function calcPlayerMagicAtk(
     return { matk: statusMatk, passives };
   }
   
-  // Phase 5: Wand Refinement (50% rate of physical weapons)
-  // Base refinement scales with weapon level at half rate
-  const refineBaseBonus = weaponRefine * weaponLevel * 1; // Half of physical (weaponLevel * 2)
-  
-  // Over-refine breakpoints at reduced rate
-  let refineBreakpointBonus = 0;
-  if (weaponRefine >= 7) refineBreakpointBonus += 3;  // Half of physical (+5)
-  if (weaponRefine >= 8) refineBreakpointBonus += 5;  // Half of physical (+10)
-  if (weaponRefine >= 9) refineBreakpointBonus += 8;  // ~Half of physical (+15)
-  if (weaponRefine >= 10) refineBreakpointBonus += 8; // ~Half of physical (+15)
-  
-  const refineMatk = refineBaseBonus + refineBreakpointBonus;
+  // BUGFIX: Removed double-dipping classic RO refine formula here.
+  // We now exclusively use the rarity-based refinement added directly to `weaponMatk` in equipment.ts.
+  const refineMatk = 0;
   
   // Phase 2: Get weapon passives (wand penetration is useful here)
   const passives = getWeaponPassives(weaponType);
@@ -268,7 +263,13 @@ export function calcPlayerDef(char: Character, armorBonus: number, mdefBonus: nu
   const baseSoft = Math.floor(vit * 0.5);
   const variableSoft = Math.floor(vit * 0.3);
   const maxVarSoft = Math.max(variableSoft, Math.floor((vit * vit) / 150) - 1);
-  const softDef = baseSoft + Math.floor(Math.random() * (Math.max(0, maxVarSoft - variableSoft) + 1)) + variableSoft;
+  let softDef = baseSoft + Math.floor(Math.random() * (Math.max(0, maxVarSoft - variableSoft) + 1)) + variableSoft;
+  
+  // Apply Knight's Peco Peco Ride passive
+  if (char.learnedSkills["peco_peco_ride"] > 0) {
+    // Gives flat 15 DEF
+    softDef += 15;
+  }
   
   // REBALANCE Phase 2: Hard DEF %
   // Instead of 1 armor = 1% reduction, make it 1 armor = 0.25% reduction
@@ -305,12 +306,17 @@ export function calcCritChance(char: Character, weaponCritBonus: number = 0): nu
 export function calcASPD(char: Character, weaponAspdModifier: number = 0): number {
   const { agi, dex } = char.stats;
   
+  let effectiveDex = dex;
+  if (char.learnedSkills["owl_eye"] > 0) {
+    effectiveDex += Math.floor(dex * (char.learnedSkills["owl_eye"] * 0.10));
+  }
+  
   // Base ASPD is 1 attack per 1.5 seconds (0.66 attacks/sec)
   // Max ASPD is roughly 3 attacks per second (like RO 190 ASPD)
   const baseASPD = 0.66; 
   
   // AGI provides the bulk of ASPD, DEX provides a small amount
-  const aspdBonus = (agi * 0.02) + (dex * 0.005);
+  const aspdBonus = (agi * 0.02) + (effectiveDex * 0.005);
   
   const rawASPD = baseASPD + aspdBonus;
   
