@@ -24,7 +24,7 @@ export interface WeaponPassives {
 }
 
 // Phase 2: Get weapon passive bonuses based on weapon type
-// BALANCE UPDATE: Added physical penetration for swords/bows, reduced bow ASPD penalty
+// KNIGHT BALANCE: Buffed sword passives to compete with bows
 function getWeaponPassives(weaponType: WeaponType | null): WeaponPassives {
   if (!weaponType) {
     return { critBonus: 0, aspdBonus: 0, penetration: 0, accuracyBonus: 0 };
@@ -32,12 +32,13 @@ function getWeaponPassives(weaponType: WeaponType | null): WeaponPassives {
   
   switch (weaponType) {
     case "sword":
-      // Swords: Balanced, slight ASPD boost + physical penetration for endgame
+      // KNIGHT BUFF: Swords now competitive with bows
+      // Balanced offense with penetration and speed
       return {
-        critBonus: 0,
-        aspdBonus: 0.1,      // +10% attack speed
-        penetration: 10,     // BALANCE: Added 10% physical DEF penetration
-        accuracyBonus: 0,
+        critBonus: 3,        // BUFFED: 0% → 3% (meaningful crit chance)
+        aspdBonus: 0.15,     // BUFFED: +10% → +15% (faster attacks)
+        penetration: 15,     // BUFFED: 10% → 15% (better armor piercing)
+        accuracyBonus: 0,    // Kept at 0 (melee doesn't need hit bonus)
       };
     
     case "bow":
@@ -381,7 +382,7 @@ export function calcASPD(char: Character, weaponAspdModifier: number = 0): numbe
   
   const rawASPD = baseASPD + aspdBonus;
   
-  // Apply weapon modifier (e.g., bow = -10%, sword = +10%)
+  // Apply weapon modifier (e.g., bow = -10%, sword = +15%)
   const finalASPD = rawASPD * (1 + weaponAspdModifier);
   
   return Math.min(3.0, Math.max(0.3, finalASPD)); // Min 0.3, max 3.0 attacks/sec
