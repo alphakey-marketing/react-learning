@@ -4,6 +4,7 @@ import { Skill } from "../types/skill";
 import { EquippedItems, calculateEquipmentStats } from "../types/equipment";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, PlayerDefense } from "./character";
 import { CRIT_MULTIPLIER, BOSS_ARMOR_PENETRATION } from "../data/constants";
+import { ActiveSelfBuff } from "../hooks/useGameState";
 
 export interface DamageResult {
   damage: number;
@@ -29,7 +30,8 @@ export function calculateDamage(
   enemy: Enemy,
   skill: Skill,
   skillLevel: number,
-  equipped: EquippedItems
+  equipped: EquippedItems,
+  activeSelfBuffs: ActiveSelfBuff[] = []
 ): DamageResult {
   const isMagic = isMagicSkill(skill.id);
   const equipStats = calculateEquipmentStats(equipped);
@@ -67,8 +69,21 @@ export function calculateDamage(
       equipStats.weaponType
     );
     
-    // Phase 2: Apply weapon crit bonus
-    const critChance = calcCritChance(char, passives.critBonus);
+    // TRUE SIGHT BUFF: Check if Hunter has True Sight active
+    const now = Date.now();
+    const trueSightBuff = activeSelfBuffs.find(b => b.id === "true_sight" && now <= b.expiresAt);
+    let trueSightCritBonus = 0;
+    let trueSightDamageBonus = 1.0;
+    
+    if (trueSightBuff) {
+      // Lv1: +1% crit chance, +2% crit damage
+      // Lv10: +10% crit chance, +20% crit damage
+      trueSightCritBonus = trueSightBuff.skillLevel * 1.0;
+      trueSightDamageBonus = 1.0 + (trueSightBuff.skillLevel * 0.02);
+    }
+    
+    // Phase 2: Apply weapon crit bonus + True Sight bonus
+    const critChance = calcCritChance(char, passives.critBonus + trueSightCritBonus);
     const roll = Math.random() * 100;
 
     if (roll < critChance) {
@@ -76,8 +91,11 @@ export function calculateDamage(
       isCrit = true;
       const rawCritDmg = Math.floor(atkRange.max * CRIT_MULTIPLIER);
       
+      // TRUE SIGHT: Apply crit damage multiplier
+      const trueSightCritDmg = Math.floor(rawCritDmg * trueSightDamageBonus);
+      
       // Phase 2: Apply cross-class penalty even to crits
-      baseDmg = Math.floor(rawCritDmg * classPenalty);
+      baseDmg = Math.floor(trueSightCritDmg * classPenalty);
     } else {
       // NORMAL HIT: Roll random damage between min and max
       const rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
