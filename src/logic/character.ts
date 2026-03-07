@@ -167,8 +167,8 @@ export function calcPlayerAtk(
   // Each class has a primary stat that scales quadratically
   
   if (char.jobClass === "Swordsman" || char.jobClass === "Knight") {
-    // Melee classes: STR quadratic, DEX/LUK linear
-    const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
+    // Melee classes: STR linear + breakpoint bonus, DEX/LUK linear
+    const strBonus = str + Math.floor(Math.pow(Math.floor(str / 10), 2));
     const dexBonus = Math.floor(effectiveDex / 5);
     const lukBonus = Math.floor(luk / 5);
     statusAtk = strBonus + dexBonus + lukBonus;
