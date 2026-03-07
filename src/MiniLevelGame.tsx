@@ -15,6 +15,7 @@ import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
 import { DevToolsPanel } from "./components/DevToolsPanel";
 import { CombatStatusDisplay } from "./components/CombatStatusDisplay";
+import { GameCompleteModal } from "./components/GameCompleteModal";
 import { Equipment } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
@@ -29,6 +30,7 @@ export function MiniLevelGame() {
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
   
   const [showRefineNPC, setShowRefineNPC] = useState(false);
+  const [showGameComplete, setShowGameComplete] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("hasSeenTutorial") !== "true";
@@ -94,7 +96,13 @@ export function MiniLevelGame() {
       });
     },
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
-      // Future achievements tracking
+      // Show game complete modal if final boss (Zone 8) is defeated
+      if (isBoss && game.currentZoneId === 8 && !showGameComplete) {
+        // We use a timeout to let the combat finish before showing the modal
+        setTimeout(() => {
+          setShowGameComplete(true);
+        }, 1000);
+      }
     },
   });
 
@@ -113,7 +121,7 @@ export function MiniLevelGame() {
         return;
       }
       
-      if (showTutorial) return;
+      if (showTutorial || showGameComplete) return;
       
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
         e.preventDefault();
@@ -123,7 +131,7 @@ export function MiniLevelGame() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial]);
+  }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial, showGameComplete]);
 
   const wrappedSellItem = (item: Equipment) => {
     game.sellItem(item);
@@ -161,6 +169,10 @@ export function MiniLevelGame() {
       }}
     >
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
+      
+      {/* UAT: Show game complete modal when final boss is defeated */}
+      {showGameComplete && <GameCompleteModal character={game.char} onClose={() => setShowGameComplete(false)} />}
+      
       {showDevTools && (
         <DevToolsPanel
           character={game.char}
