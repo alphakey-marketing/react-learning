@@ -97,6 +97,31 @@ function getWeaponClassPenalty(jobClass: JobClass, weaponType: WeaponType | null
   return 0.75;
 }
 
+// HIT/FLEE SYSTEM: Calculate player's Hit stat for accuracy
+// Formula: Level + DEX + Equipment Hit Bonus + Weapon Accuracy Bonus
+// Used in combat to determine if attacks land
+export function calcPlayerHit(
+  char: Character,
+  equipHitBonus: number = 0,
+  weaponAccuracyBonus: number = 0
+): number {
+  const { dex } = char.stats;
+  
+  // Apply Owl's Eye passive skill bonus
+  let effectiveDex = dex;
+  if (char.learnedSkills["owl_eye"] > 0) {
+    // Owl's Eye grants +10% DEX per level (max 50%)
+    const owlEyeBonus = Math.floor(dex * (char.learnedSkills["owl_eye"] * 0.10));
+    effectiveDex += owlEyeBonus;
+  }
+  
+  // Base Hit = Level + DEX
+  const baseHit = char.level + effectiveDex;
+  
+  // Total Hit = Base + Equipment + Weapon Bonus
+  return baseHit + equipHitBonus + weaponAccuracyBonus;
+}
+
 // Phase 4: Classic RO Quadratic ATK Formula
 // Physical Attack - Quadratic scaling for primary stats (Classic RO Pre-Renewal style)
 // Formula: Floor(Floor(PrimaryStat/10)^2) + Floor(SecondaryStat/5) + Floor(LUK/5) + Level
