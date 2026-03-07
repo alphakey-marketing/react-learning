@@ -347,7 +347,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     }
 
     if (skill.effect === "buff" || skill.effect === "passive" || skill.effect === "debuff") {
-      addLog("❌ Cannot set passive/buff/debuff skill as default attack!");
+      addLog("❌ Cannot set passive/buff/debuff skill as top priority!");
       return;
     }
 
@@ -356,7 +356,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       autoAttackSkillId: skillId,
     }));
 
-    addLog(`⭐ Primary skill set to: ${skill.nameZh}`);
+    addLog(`⭐ Top priority skill set to: ${skill.nameZh}`);
   }
 
   function toggleAutoAttack() {
@@ -435,7 +435,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       addLog(`🛡️ You learned Energy Coat (passive)!`);
     }
     if (firstAttackSkill && firstAttackSkill.id === firstJobSkill?.id) {
-      addLog(`⭐ ${firstAttackSkill.nameZh} is now your default skill.`);
+      addLog(`⭐ ${firstAttackSkill.nameZh} is now your priority skill.`);
     }
     addLog(`🛡️ Job Bonuses: HP ${Math.floor((jobBonuses.hpMultiplier - 1) * 100)}%, MP ${Math.floor((jobBonuses.mpMultiplier - 1) * 100)}%, +${jobBonuses.atkBonus} ATK, +${jobBonuses.defBonus} DEF`);
     setShowJobChangeNPC(false);
