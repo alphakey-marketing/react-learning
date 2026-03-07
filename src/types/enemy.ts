@@ -10,6 +10,7 @@ export interface Enemy {
   hardMdefPercent: number; // Equipment-based percentage magic reduction (0-100)
   attackSpeed: number; // Attacks per second (independent from player)
   count: number; // Number of enemies in this group (1 = single, 2+ = group)
+  flee: number; // NEW: Evasion stat - determines dodge chance vs player attacks
   isBoss?: boolean; // Flag for boss-specific mechanics (armor pen, etc.)
 }
 
