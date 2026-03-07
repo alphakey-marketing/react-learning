@@ -22,7 +22,7 @@ import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { canChangeJob } from "./data/jobs";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -31,6 +31,9 @@ export function MiniLevelGame() {
   
   const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showGameComplete, setShowGameComplete] = useState(false);
+  const [playTimeMs, setPlayTimeMs] = useState(0);
+  const startTimeRef = useRef<number>(Date.now());
+  
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("hasSeenTutorial") !== "true";
@@ -98,6 +101,7 @@ export function MiniLevelGame() {
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
       // Show game complete modal if final boss (Zone 8) is defeated
       if (isBoss && game.currentZoneId === 8 && !showGameComplete) {
+        setPlayTimeMs(Date.now() - startTimeRef.current);
         // We use a timeout to let the combat finish before showing the modal
         setTimeout(() => {
           setShowGameComplete(true);
@@ -171,7 +175,7 @@ export function MiniLevelGame() {
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       
       {/* UAT: Show game complete modal when final boss is defeated */}
-      {showGameComplete && <GameCompleteModal character={game.char} onClose={() => setShowGameComplete(false)} />}
+      {showGameComplete && <GameCompleteModal character={game.char} playTimeMs={playTimeMs} onClose={() => setShowGameComplete(false)} />}
       
       {showDevTools && (
         <DevToolsPanel
