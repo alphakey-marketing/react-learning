@@ -12,7 +12,8 @@ import {
   STARTING_WEAPON, 
   STARTING_ARMOR, 
   STARTING_FOOTGEAR,
-  STARTING_WAND
+  STARTING_WAND,
+  NOVICE_WAND
 } from "../data/startingEquipment";
 import {
   calculateDamage,
@@ -102,10 +103,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     getRandomEnemyForZone(0, 1)
   );
 
-  const [inventory, setInventory] = useState<Equipment[]>([]);
+  // BALANCE: Start with both weapons in inventory - player chooses their path
+  const [inventory, setInventory] = useState<Equipment[]>([STARTING_WEAPON, NOVICE_WAND]);
   
+  // BALANCE: Start with no weapon equipped - player must choose
   const [equipped, setEquipped] = useState<EquippedItems>({
-    weapon: STARTING_WEAPON,
+    weapon: null,
     armor: STARTING_ARMOR,
     head: null,
     garment: null,
