@@ -2,7 +2,7 @@ import { Character } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Skill } from "../types/skill";
 import { EquippedItems, calculateEquipmentStats } from "../types/equipment";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, PlayerDefense } from "./character";
+import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, calcPlayerHit, PlayerDefense } from "./character";
 import { CRIT_MULTIPLIER, BOSS_ARMOR_PENETRATION } from "../data/constants";
 import { ActiveSelfBuff } from "../hooks/useGameState";
 
@@ -11,6 +11,7 @@ export interface DamageResult {
   isCrit: boolean;
   isMagic: boolean;
   isAOE: boolean;
+  isMiss: boolean; // HIT/FLEE: New flag for missed attacks
 }
 
 export interface EnemyDamageResult {
@@ -25,6 +26,18 @@ export function isMagicSkill(skillId: string): boolean {
   return MAGIC_SKILLS.includes(skillId);
 }
 
+// HIT/FLEE SYSTEM: Calculate hit rate percentage
+// Formula: 85 + ((Player Hit - Enemy Flee) * 0.5)
+// Capped between 50% and 95%
+function calculateHitRate(playerHit: number, enemyFlee: number): number {
+  const baseHitRate = 85;
+  const hitDifference = playerHit - enemyFlee;
+  const hitRate = baseHitRate + (hitDifference * 0.5);
+  
+  // Clamp between 50% (min) and 95% (max)
+  return Math.max(50, Math.min(95, hitRate));
+}
+
 export function calculateDamage(
   char: Character,
   enemy: Enemy,
@@ -35,6 +48,31 @@ export function calculateDamage(
 ): DamageResult {
   const isMagic = isMagicSkill(skill.id);
   const equipStats = calculateEquipmentStats(equipped);
+  
+  // HIT/FLEE SYSTEM: Check if attack hits (magic attacks always hit)
+  let isMiss = false;
+  if (!isMagic) {
+    // Calculate player hit stat
+    const { passives } = calcPlayerAtk(
+      char, 
+      equipStats.weaponAtk, 
+      equipStats.weaponLevel, 
+      equipStats.weaponRefine, 
+      equipStats.equipBonusAtk,
+      equipStats.weaponType
+    );
+    
+    const playerHit = calcPlayerHit(char, 0, passives.accuracyBonus);
+    const enemyFlee = enemy.flee;
+    const hitRate = calculateHitRate(playerHit, enemyFlee);
+    
+    // Roll for hit/miss
+    const hitRoll = Math.random() * 100;
+    if (hitRoll >= hitRate) {
+      // MISS! Return 0 damage
+      return { damage: 0, isCrit: false, isMagic: false, isAOE: false, isMiss: true };
+    }
+  }
   
   let baseDmg = 0;
   let isCrit = false;
@@ -125,7 +163,7 @@ export function calculateDamage(
     damage = Math.floor(damage * aoeMultiplier);
   }
 
-  return { damage, isCrit, isMagic, isAOE };
+  return { damage, isCrit, isMagic, isAOE, isMiss };
 }
 
 // Phase 3: Enhanced enemy damage calculation with MDEF
