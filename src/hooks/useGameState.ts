@@ -245,7 +245,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     callbacks?.onJobLevelUp?.(jobLevelUpResult.newJobLevel);
     addLog(`🔧 [DEV] Job Level +1! Now Job Lv.${jobLevelUpResult.newJobLevel}`);
     
-    if (canChangeJob(char.jobClass, jobLevelUpResult.newJobLevel) && (jobLevelUpResult.newJobLevel === 10 || jobLevelUpResult.newJobLevel === 20)) {
+    if (canChangeJob(char.jobClass, jobLevelUpResult.newJobLevel) && (jobLevelUpResult.newJobLevel === 10 || jobLevelUpResult.newJobLevel === 15)) {
       addLog(`🎊 You can now change your job!`);
     }
   }
@@ -833,7 +833,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         );
         callbacksRef.current?.onJobLevelUp?.(nextJobLevel);
         
-        if (canChangeJob(currentChar.jobClass, nextJobLevel) && (nextJobLevel === 10 || nextJobLevel === 20)) {
+        if (canChangeJob(currentChar.jobClass, nextJobLevel) && (nextJobLevel === 10 || nextJobLevel === 15)) {
           addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);
         }
       }
