@@ -17,7 +17,8 @@ export interface EnemyDamageResult {
   mpDamage: number;
 }
 
-const MAGIC_SKILLS = ["fire_bolt", "cold_bolt", "lightning_bolt", "jupitel_thunder", "storm_gust", "meteor_storm"];
+// UAT FIX: Added magic_bolt for Novice INT builds
+const MAGIC_SKILLS = ["magic_bolt", "fire_bolt", "cold_bolt", "lightning_bolt", "jupitel_thunder", "storm_gust", "meteor_storm"];
 
 export function isMagicSkill(skillId: string): boolean {
   return MAGIC_SKILLS.includes(skillId);
