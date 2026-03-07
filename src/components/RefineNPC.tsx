@@ -38,7 +38,6 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
 
   const getSuccessRate = (currentRefine: number) => {
     if (currentRefine < 4) return 100;
-    // REBALANCE: Slightly lower success rates due to softer penalty
     const rates: Record<number, number> = { 4: 55, 5: 45, 6: 35, 7: 25, 8: 15, 9: 10 };
     return rates[currentRefine] || 0;
   };
@@ -56,7 +55,8 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
     if (result) {
       setRefineResult(result);
       
-      // If item failed and leveled down, keep selected but update refinement level
+      // UX FIX: Immediately update selected item to reflect changes
+      // No longer blocks rapid refinement attempts
       if (result.broken) {
         setSelectedItem(prev => {
           if (!prev) return prev;
@@ -65,17 +65,11 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
             ...prev,
             item: {
               ...prev.item,
-              refinement: Math.max(0, currentRefine - 1) // Level reduction penalty
+              refinement: Math.max(0, currentRefine - 1)
             }
           };
         });
-        
-        // Auto-dismiss failure message after 3 seconds
-        setTimeout(() => {
-          setRefineResult(null);
-        }, 3000);
       } else if (result.success) {
-        // Update selected item to reflect new refinement level for UI continuity
         setSelectedItem(prev => {
           if (!prev) return prev;
           return {
@@ -86,17 +80,12 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
             }
           };
         });
-        
-        // Auto-dismiss success message after 2 seconds
-        setTimeout(() => {
-          setRefineResult(null);
-        }, 2000);
-      } else {
-        // Failed but not broken (safe fail) - keep item selected, dismiss message after 2 seconds
-        setTimeout(() => {
-          setRefineResult(null);
-        }, 2000);
       }
+      
+      // FIX: Auto-dismiss messages quickly without blocking refinement
+      setTimeout(() => {
+        setRefineResult(null);
+      }, 1500);
     }
   };
 
@@ -250,7 +239,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
           {/* Details Section */}
           <div style={{ width: "50%", padding: "20px", display: "flex", flexDirection: "column", position: "relative" }}>
             
-            {/* Feedback Message Overlay - Always visible when exists */}
+            {/* Feedback Message Overlay */}
             {refineResult && (
               <div style={{
                 position: "absolute",
@@ -340,8 +329,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                       onClick={handleRefine}
                       disabled={
                         character.gold < getRefineCost(selectedItem.item) || 
-                        (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < getMaterialCost(selectedItem.item) ||
-                        refineResult !== null  // Disable during refinement animation
+                        (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < getMaterialCost(selectedItem.item)
                       }
                       style={{
                         padding: "12px",
@@ -352,14 +340,14 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose }:
                         cursor: "pointer",
                         fontWeight: "bold",
                         fontSize: "16px",
-                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < getMaterialCost(selectedItem.item) || refineResult !== null) ? 0.5 : 1,
+                        opacity: (character.gold < getRefineCost(selectedItem.item) || (selectedItem.item.type === "weapon" ? character.oridecon : character.elunium) < getMaterialCost(selectedItem.item)) ? 0.5 : 1,
                         transition: "transform 0.1s"
                       }}
                       onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.98)"}
                       onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
                       onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
                     >
-                      {refineResult ? "Processing..." : "Refine Item"}
+                      Refine Item
                     </button>
                   </div>
                 ) : (
