@@ -25,6 +25,9 @@ export function TrainingHut({ character, equipped, onClose }: TrainingHutProps) 
   const [enemyATK, setEnemyATK] = useState(20);
   const [enemySoftDef, setEnemySoftDef] = useState(10);
   const [enemyHardDefPercent, setEnemyHardDefPercent] = useState(20);
+  const [enemySoftMdef, setEnemySoftMdef] = useState(10);
+  const [enemyHardMdefPercent, setEnemyHardMdefPercent] = useState(20);
+  const [enemyFlee, setEnemyFlee] = useState(100);
   const [combatLogs, setCombatLogs] = useState<CombatLog[]>([]);
   const [selectedSkill, setSelectedSkill] = useState("basic_attack");
   
@@ -40,6 +43,9 @@ export function TrainingHut({ character, equipped, onClose }: TrainingHutProps) 
     atk: enemyATK,
     softDef: enemySoftDef,
     hardDefPercent: enemyHardDefPercent,
+    softMdef: enemySoftMdef,
+    hardMdefPercent: enemyHardMdefPercent,
+    flee: enemyFlee,
     attackSpeed: 0,
     count: 1,
   };
@@ -159,6 +165,21 @@ export function TrainingHut({ character, equipped, onClose }: TrainingHutProps) 
                 <label>Hard DEF %: {enemyHardDefPercent}</label>
                 <input type="range" min={0} max={99} step={1} value={enemyHardDefPercent}
                   onChange={(e) => setEnemyHardDefPercent(Number(e.target.value))} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label>Soft MDEF: {enemySoftMdef}</label>
+                <input type="range" min={0} max={200} step={5} value={enemySoftMdef}
+                  onChange={(e) => setEnemySoftMdef(Number(e.target.value))} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label>Hard MDEF %: {enemyHardMdefPercent}</label>
+                <input type="range" min={0} max={99} step={1} value={enemyHardMdefPercent}
+                  onChange={(e) => setEnemyHardMdefPercent(Number(e.target.value))} style={{ width: "100%" }} />
+              </div>
+              <div>
+                <label>Flee: {enemyFlee}</label>
+                <input type="range" min={0} max={500} step={10} value={enemyFlee}
+                  onChange={(e) => setEnemyFlee(Number(e.target.value))} style={{ width: "100%" }} />
               </div>
             </div>
           </div>
