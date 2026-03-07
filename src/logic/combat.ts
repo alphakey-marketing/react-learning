@@ -17,6 +17,7 @@ export interface DamageResult {
 export interface EnemyDamageResult {
   hpDamage: number;
   mpDamage: number;
+  counterDamage: number; // NEW: Knight Counter Strike damage
 }
 
 // UAT FIX: Added magic_bolt for Novice INT builds
@@ -156,7 +157,7 @@ export function calculateDamage(
   return { damage, isCrit, isMagic, isAOE, isMiss };
 }
 
-// Phase 3: Enhanced enemy damage calculation with MDEF
+// Phase 3: Enhanced enemy damage calculation with MDEF and Knight Counter Strike
 export function calculateEnemyDamage(
   enemy: Enemy,
   playerDef: PlayerDefense,
@@ -187,6 +188,32 @@ export function calculateEnemyDamage(
   
   let hpDamage = rawDamage;
   let mpDamage = 0;
+  let counterDamage = 0;
+  
+  // KNIGHT COUNTER STRIKE: 15% chance to counter physical attacks
+  if (!isMagicAttack && char.jobClass === "Knight" && char.learnedSkills["counter_strike"] > 0) {
+    const counterChance = 15; // 15% chance
+    const counterRoll = Math.random() * 100;
+    
+    if (counterRoll < counterChance) {
+      // Calculate counter damage as 50% of Knight's ATK
+      // Use mid-range ATK for consistency
+      const { str, dex, luk } = char.stats;
+      const strBonus = Math.floor(Math.pow(Math.floor(str / 10), 2));
+      const dexBonus = Math.floor(dex / 5);
+      const lukBonus = Math.floor(luk / 5);
+      const baseAtk = strBonus + dexBonus + lukBonus + char.level + 10; // +10 from Knight job bonus
+      
+      // Add Iron Will bonus (20% of soft DEF)
+      let ironWillBonus = 0;
+      if (char.learnedSkills["iron_will"] > 0) {
+        ironWillBonus = Math.floor(playerDef.softDef * 0.20);
+      }
+      
+      counterDamage = Math.floor((baseAtk + ironWillBonus) * 0.5);
+      counterDamage = Math.max(1, counterDamage); // Minimum 1 damage
+    }
+  }
   
   // ENERGY COAT: If Wizard and has learned energy coat
   if (char.jobClass === "Wizard" && char.learnedSkills["energy_coat"] > 0) {
@@ -201,5 +228,5 @@ export function calculateEnemyDamage(
     }
   }
 
-  return { hpDamage, mpDamage };
+  return { hpDamage, mpDamage, counterDamage };
 }
