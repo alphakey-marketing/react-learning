@@ -150,6 +150,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const isMountedRef = useRef<boolean>(true);
   const lastAutoPotionTimeRef = useRef<number>(0);
   const lastEnemyAttackTimeRef = useRef<number>(0);
+  
+  // STABILITY FIX: Prevent concurrent battleAction executions
+  const battleActionInProgressRef = useRef<boolean>(false);
+  const skillCooldownsRef = useRef<Record<string, number>>({});
 
   const townHealingRef = useRef<() => void>(() => {});
   
@@ -166,6 +170,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const activeSelfBuffsRef = useRef<ActiveSelfBuff[]>(activeSelfBuffs);
   const activeDebuffsRef = useRef<ActiveDebuff[]>(activeDebuffs);
   const equipStatsRef = useRef<ReturnType<typeof calculateEquipmentStats>>(calculateEquipmentStats(equipped));
+  const killCountRef = useRef<number>(killCount);
+  const isBossFightRef = useRef<boolean>(isBossFight);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -188,7 +194,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     autoAttackEnabledRef.current = autoAttackEnabled;
     activeSelfBuffsRef.current = activeSelfBuffs;
     activeDebuffsRef.current = activeDebuffs;
-  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs]);
+    skillCooldownsRef.current = skillCooldowns;
+    killCountRef.current = killCount;
+    isBossFightRef.current = isBossFight;
+  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs, skillCooldowns, killCount, isBossFight]);
 
   // PERF FIX: Only recalculate equipStats when equipment actually changes
   const equipStats = useMemo(() => {
@@ -427,6 +436,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setBossAvailable(false);
     setActiveDebuffs([]);
     setActiveSelfBuffs([]);
+    setSkillCooldowns({});
 
     addLog(`🎉 Congratulations! You are now a ${newJob}!`);
     addLog(`🏛️ Teleported to Town for safety!`);
@@ -466,6 +476,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setEnemy(getRandomEnemyForZone(0, char.level));
     setActiveDebuffs([]);
     setActiveSelfBuffs([]);
+    setSkillCooldowns({});
     
     addLog("❤️‍🩹 Respawned in Town!");
   }
@@ -483,6 +494,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setEnemy(getRandomEnemyForZone(0, char.level));
     setActiveDebuffs([]);
     setActiveSelfBuffs([]);
+    setSkillCooldowns({});
     
     addLog("🏛️ Escaped to Town safely!");
   }
@@ -580,76 +592,64 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, []);
 
-  // BUG FIX: Removed activeDebuffs and activeSelfBuffs from dependencies
-  // to prevent function recreation and useEffect chain reactions every second
+  // STABILITY FIX: battleAction no longer depends on state that changes during execution
+  // Instead it uses refs for real-time values
   const battleAction = useCallback((skillId?: string) => {
-    if (!isMountedRef.current) return;
-    const currentChar = charRef.current;
-    const currentEnemy = enemyRef.current;
-    const currentEquipped = equippedRef.current;
-    const currentZone = currentZoneIdRef.current;
-    const currentActiveDebuffs = activeDebuffsRef.current;
-    const currentActiveSelfBuffs = activeSelfBuffsRef.current;
-    
-    if (currentChar.hp <= 0) return;
-    if (currentZone === 0) return;
-    
-    if (!canAttack) return;
-
-    const now = Date.now();
-
-    // 1. DEBUFF PHASE
-    const debuffSkills = ["provoke", "stone_curse"];
-    for (const debuffId of debuffSkills) {
-      if (currentChar.learnedSkills[debuffId] > 0) {
-        const debuffSkill = SKILLS_DB[currentChar.jobClass].find(s => s.id === debuffId);
-        if (!debuffSkill) continue;
-        
-        const debuffCD = debuffSkill.cooldown;
-        const debuffLastUsed = skillCooldowns[debuffId] || 0;
-        const debuffReady = (now - debuffLastUsed) / 1000 >= debuffCD;
-        
-        const hasDebuff = currentActiveDebuffs.some(d => d.id === debuffId && now <= d.expiresAt);
-        
-        const mpCost = debuffSkill.mpCost(currentChar.learnedSkills[debuffId]);
-        if (debuffReady && !hasDebuff && currentChar.mp >= mpCost) {
-          setChar(prev => ({ ...prev, mp: prev.mp - mpCost }));
-          setSkillCooldowns(prev => ({ ...prev, [debuffId]: now }));
-          const duration = (debuffSkill.debuffDuration || 10) * 1000;
-          setActiveDebuffs(prev => [...prev, { id: debuffId, expiresAt: now + duration, skillLevel: currentChar.learnedSkills[debuffId] }]);
-          
-          addLog(`📢 Used ${debuffSkill.nameZh}! Enemy weakened for ${debuffSkill.debuffDuration}s.`);
-          setLastAttackTime(now);
-          setCanAttack(false);
-          setAttackCooldownPercent(0);
-          return;
-        }
-      }
+    // GUARD: Prevent concurrent executions
+    if (battleActionInProgressRef.current) {
+      return;
     }
+    battleActionInProgressRef.current = true;
+    
+    try {
+      if (!isMountedRef.current) return;
+      const currentChar = charRef.current;
+      const currentEnemy = enemyRef.current;
+      const currentEquipped = equippedRef.current;
+      const currentZone = currentZoneIdRef.current;
+      const currentActiveDebuffs = activeDebuffsRef.current;
+      const currentActiveSelfBuffs = activeSelfBuffsRef.current;
+      const currentSkillCooldowns = skillCooldownsRef.current;
+      
+      if (currentChar.hp <= 0) return;
+      if (currentZone === 0) return;
+      
+      if (!canAttack) return;
 
-    // 2. SELF-BUFF PHASE
-    const buffSkills = ["endure"];
-    const hpPercent = (currentChar.hp / currentChar.maxHp) * 100;
-    if (hpPercent < 60) {
-      for (const buffId of buffSkills) {
-        if (currentChar.learnedSkills[buffId] > 0) {
-          const buffSkill = SKILLS_DB[currentChar.jobClass].find(s => s.id === buffId);
-          if (!buffSkill) continue;
+      const now = Date.now();
+
+      // Collect all state updates to batch them
+      const stateUpdates: {
+        charUpdates?: Partial<Character>;
+        cooldownUpdates?: Record<string, number>;
+        debuffUpdates?: ActiveDebuff[];
+        buffUpdates?: ActiveSelfBuff[];
+        logMessages: string[];
+      } = {
+        logMessages: []
+      };
+
+      // 1. DEBUFF PHASE
+      const debuffSkills = ["provoke", "stone_curse"];
+      for (const debuffId of debuffSkills) {
+        if (currentChar.learnedSkills[debuffId] > 0) {
+          const debuffSkill = SKILLS_DB[currentChar.jobClass].find(s => s.id === debuffId);
+          if (!debuffSkill) continue;
           
-          const buffCD = buffSkill.cooldown;
-          const buffLastUsed = skillCooldowns[buffId] || 0;
-          const buffReady = (now - buffLastUsed) / 1000 >= buffCD;
+          const debuffCD = debuffSkill.cooldown;
+          const debuffLastUsed = currentSkillCooldowns[debuffId] || 0;
+          const debuffReady = (now - debuffLastUsed) / 1000 >= debuffCD;
           
-          const hasBuff = currentActiveSelfBuffs.some(b => b.id === buffId && now <= b.expiresAt);
+          const hasDebuff = currentActiveDebuffs.some(d => d.id === debuffId && now <= d.expiresAt);
           
-          const mpCost = buffSkill.mpCost(currentChar.learnedSkills[buffId]);
-          if (buffReady && !hasBuff && currentChar.mp >= mpCost) {
+          const mpCost = debuffSkill.mpCost(currentChar.learnedSkills[debuffId]);
+          if (debuffReady && !hasDebuff && currentChar.mp >= mpCost) {
             setChar(prev => ({ ...prev, mp: prev.mp - mpCost }));
-            setSkillCooldowns(prev => ({ ...prev, [buffId]: now }));
-            const duration = (buffSkill.buffDuration || 8) * 1000;
-            setActiveSelfBuffs(prev => [...prev, { id: buffId, expiresAt: now + duration, skillLevel: currentChar.learnedSkills[buffId] }]);
+            setSkillCooldowns(prev => ({ ...prev, [debuffId]: now }));
+            const duration = (debuffSkill.debuffDuration || 10) * 1000;
+            setActiveDebuffs(prev => [...prev, { id: debuffId, expiresAt: now + duration, skillLevel: currentChar.learnedSkills[debuffId] }]);
             
-            addLog(`🛡️ Used ${buffSkill.nameZh}! Damage reduction active for ${buffSkill.buffDuration}s.`);
+            addLog(`📢 Used ${debuffSkill.nameZh}! Enemy weakened for ${debuffSkill.debuffDuration}s.`);
             setLastAttackTime(now);
             setCanAttack(false);
             setAttackCooldownPercent(0);
@@ -657,238 +657,280 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           }
         }
       }
-    }
 
-    // 3. SMART SKILL ROTATION PHASE
-    let actualSkillId = skillId || currentChar.autoAttackSkillId;
-    let skillLevel = currentChar.learnedSkills[actualSkillId] || 0;
-    let skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === actualSkillId);
-
-    if (!skill || skillLevel === 0 || skill.effect === "buff" || skill.effect === "passive" || skill.effect === "debuff") {
-      actualSkillId = "basic_attack";
-      skillLevel = currentChar.learnedSkills["basic_attack"] || 1;
-      skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === "basic_attack")!;
-    }
-    
-    let isSkillOnCooldown = false;
-    if (skill.cooldown > 0) {
-      const lastUsed = skillCooldowns[actualSkillId] || 0;
-      if ((now - lastUsed) / 1000 < skill.cooldown) {
-        isSkillOnCooldown = true;
-      }
-    }
-
-    let mpCost = skill.mpCost(skillLevel);
-    let isMpInsufficient = currentChar.mp < mpCost;
-
-    if ((isSkillOnCooldown || isMpInsufficient) && actualSkillId !== "basic_attack") {
-      const availableSkills = SKILLS_DB[currentChar.jobClass]
-        .filter(s => s.id !== "basic_attack" && s.id !== actualSkillId && s.effect !== "buff" && s.effect !== "passive" && s.effect !== "debuff")
-        .filter(s => {
-          const lvl = currentChar.learnedSkills[s.id] || 0;
-          if (lvl === 0) return false;
-          
-          if (s.cooldown > 0) {
-            const lu = skillCooldowns[s.id] || 0;
-            if ((now - lu) / 1000 < s.cooldown) return false;
+      // 2. SELF-BUFF PHASE
+      const buffSkills = ["endure"];
+      const hpPercent = (currentChar.hp / currentChar.maxHp) * 100;
+      if (hpPercent < 60) {
+        for (const buffId of buffSkills) {
+          if (currentChar.learnedSkills[buffId] > 0) {
+            const buffSkill = SKILLS_DB[currentChar.jobClass].find(s => s.id === buffId);
+            if (!buffSkill) continue;
+            
+            const buffCD = buffSkill.cooldown;
+            const buffLastUsed = currentSkillCooldowns[buffId] || 0;
+            const buffReady = (now - buffLastUsed) / 1000 >= buffCD;
+            
+            const hasBuff = currentActiveSelfBuffs.some(b => b.id === buffId && now <= b.expiresAt);
+            
+            const mpCost = buffSkill.mpCost(currentChar.learnedSkills[buffId]);
+            if (buffReady && !hasBuff && currentChar.mp >= mpCost) {
+              setChar(prev => ({ ...prev, mp: prev.mp - mpCost }));
+              setSkillCooldowns(prev => ({ ...prev, [buffId]: now }));
+              const duration = (buffSkill.buffDuration || 8) * 1000;
+              setActiveSelfBuffs(prev => [...prev, { id: buffId, expiresAt: now + duration, skillLevel: currentChar.learnedSkills[buffId] }]);
+              
+              addLog(`🛡️ Used ${buffSkill.nameZh}! Damage reduction active for ${buffSkill.buffDuration}s.`);
+              setLastAttackTime(now);
+              setCanAttack(false);
+              setAttackCooldownPercent(0);
+              return;
+            }
           }
-          
-          if (currentChar.mp < s.mpCost(lvl)) return false;
-          
-          return true;
-        })
-        .sort((a, b) => {
-          const lvlA = currentChar.learnedSkills[a.id];
-          const lvlB = currentChar.learnedSkills[b.id];
-          return b.damageMultiplier(lvlB) - a.damageMultiplier(lvlA);
-        });
+        }
+      }
 
-      if (availableSkills.length > 0) {
-        skill = availableSkills[0];
-        actualSkillId = skill.id;
-        skillLevel = currentChar.learnedSkills[skill.id];
-        mpCost = skill.mpCost(skillLevel);
-      } else {
+      // 3. SMART SKILL ROTATION PHASE
+      let actualSkillId = skillId || currentChar.autoAttackSkillId;
+      let skillLevel = currentChar.learnedSkills[actualSkillId] || 0;
+      let skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === actualSkillId);
+
+      if (!skill || skillLevel === 0 || skill.effect === "buff" || skill.effect === "passive" || skill.effect === "debuff") {
         actualSkillId = "basic_attack";
         skillLevel = currentChar.learnedSkills["basic_attack"] || 1;
         skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === "basic_attack")!;
-        mpCost = skill.mpCost(skillLevel);
-        isMpInsufficient = currentChar.mp < mpCost;
       }
-    }
+      
+      let isSkillOnCooldown = false;
+      if (skill.cooldown > 0) {
+        const lastUsed = currentSkillCooldowns[actualSkillId] || 0;
+        if ((now - lastUsed) / 1000 < skill.cooldown) {
+          isSkillOnCooldown = true;
+        }
+      }
 
-    if (isMpInsufficient) {
+      let mpCost = skill.mpCost(skillLevel);
+      let isMpInsufficient = currentChar.mp < mpCost;
+
+      if ((isSkillOnCooldown || isMpInsufficient) && actualSkillId !== "basic_attack") {
+        const availableSkills = SKILLS_DB[currentChar.jobClass]
+          .filter(s => s.id !== "basic_attack" && s.id !== actualSkillId && s.effect !== "buff" && s.effect !== "passive" && s.effect !== "debuff")
+          .filter(s => {
+            const lvl = currentChar.learnedSkills[s.id] || 0;
+            if (lvl === 0) return false;
+            
+            if (s.cooldown > 0) {
+              const lu = currentSkillCooldowns[s.id] || 0;
+              if ((now - lu) / 1000 < s.cooldown) return false;
+            }
+            
+            if (currentChar.mp < s.mpCost(lvl)) return false;
+            
+            return true;
+          })
+          .sort((a, b) => {
+            const lvlA = currentChar.learnedSkills[a.id];
+            const lvlB = currentChar.learnedSkills[b.id];
+            return b.damageMultiplier(lvlB) - a.damageMultiplier(lvlA);
+          });
+
+        if (availableSkills.length > 0) {
+          skill = availableSkills[0];
+          actualSkillId = skill.id;
+          skillLevel = currentChar.learnedSkills[skill.id];
+          mpCost = skill.mpCost(skillLevel);
+        } else {
+          actualSkillId = "basic_attack";
+          skillLevel = currentChar.learnedSkills["basic_attack"] || 1;
+          skill = SKILLS_DB[currentChar.jobClass].find((s) => s.id === "basic_attack")!;
+          mpCost = skill.mpCost(skillLevel);
+          isMpInsufficient = currentChar.mp < mpCost;
+        }
+      }
+
+      if (isMpInsufficient) {
+        setLastAttackTime(now);
+        setCanAttack(false);
+        setAttackCooldownPercent(0);
+        
+        const mpRegen = Math.floor(currentChar.maxMp * 0.05) + 1;
+        const newMp = Math.min(currentChar.maxMp, currentChar.mp + mpRegen);
+        if (newMp > currentChar.mp) {
+          setChar((prev) => ({ ...prev, mp: newMp }));
+        }
+        return;
+      }
+
+      if (skill.cooldown > 0 && actualSkillId !== "basic_attack") {
+        setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
+      }
+
       setLastAttackTime(now);
       setCanAttack(false);
       setAttackCooldownPercent(0);
+
+      let nextCharHp = currentChar.hp;
+      let nextCharMp = currentChar.mp - mpCost;
+      let nextCharExp = currentChar.exp;
+      let nextCharLevel = currentChar.level;
+      let nextCharExpToNext = currentChar.expToNext;
+      let nextCharGold = currentChar.gold;
+      let nextStatPoints = currentChar.statPoints;
       
-      const mpRegen = Math.floor(currentChar.maxMp * 0.05) + 1;
-      const newMp = Math.min(currentChar.maxMp, currentChar.mp + mpRegen);
-      if (newMp > currentChar.mp) {
-        setChar((prev) => ({ ...prev, mp: newMp }));
-      }
-      return;
-    }
-
-    if (skill.cooldown > 0 && actualSkillId !== "basic_attack") {
-      setSkillCooldowns((prev) => ({ ...prev, [actualSkillId]: now }));
-    }
-
-    setLastAttackTime(now);
-    setCanAttack(false);
-    setAttackCooldownPercent(0);
-
-    let nextCharHp = currentChar.hp;
-    let nextCharMp = currentChar.mp - mpCost;
-    let nextCharExp = currentChar.exp;
-    let nextCharLevel = currentChar.level;
-    let nextCharExpToNext = currentChar.expToNext;
-    let nextCharGold = currentChar.gold;
-    let nextStatPoints = currentChar.statPoints;
-    
-    let nextCharElunium = currentChar.elunium;
-    let nextCharOridecon = currentChar.oridecon;
-    
-    let didLevelUp = false;
-
-    let nextEnemyHp = currentEnemy.hp;
-    let nextEnemy = currentEnemy;
-
-    let combatEnemy = { ...currentEnemy };
-    
-    const provokeDebuff = currentActiveDebuffs.find(d => d.id === "provoke" && now <= d.expiresAt);
-    if (provokeDebuff) {
-      const defReduction = 0.20 + (provokeDebuff.skillLevel * 0.05);
-      combatEnemy.softDef = Math.floor(combatEnemy.softDef * (1 - defReduction));
-      combatEnemy.hardDefPercent = Math.floor(combatEnemy.hardDefPercent * (1 - defReduction));
-    }
-
-    const { damage, isCrit, isAOE } = calculateDamage(
-      currentChar,
-      combatEnemy,
-      skill,
-      skillLevel,
-      currentEquipped
-    );
-    nextEnemyHp = currentEnemy.hp - damage;
-
-    callbacksRef.current?.onDamageDealt?.(damage, isCrit);
-
-    const critText = isCrit ? " ❗CRIT!" : "";
-    const aoeText = isAOE ? " 🔥 AOE BONUS!" : "";
-    addLog(
-      `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${currentEnemy.name} for ${damage} dmg.${critText}${aoeText} (MP-${mpCost})`
-    );
-
-    let nextJobLevel = currentChar.jobLevel;
-    let nextJobExp = currentChar.jobExp;
-    let nextJobExpToNext = currentChar.jobExpToNext;
-    let nextSkillPoints = currentChar.skillPoints;
-
-    if (nextEnemyHp <= 0) {
-      const enemyCount = currentEnemy.count || 1;
-      const isGroup = enemyCount > 1;
+      let nextCharElunium = currentChar.elunium;
+      let nextCharOridecon = currentChar.oridecon;
       
-      if (isGroup) {
-        addLog(`💀 Defeated ${enemyCount}x ${currentEnemy.name}!`);
-      } else {
-        addLog(`💀 ${currentEnemy.name} defeated!`);
+      let didLevelUp = false;
+
+      let nextEnemyHp = currentEnemy.hp;
+      let nextEnemy = currentEnemy;
+
+      let combatEnemy = { ...currentEnemy };
+      
+      const provokeDebuff = currentActiveDebuffs.find(d => d.id === "provoke" && now <= d.expiresAt);
+      if (provokeDebuff) {
+        const defReduction = 0.20 + (provokeDebuff.skillLevel * 0.05);
+        combatEnemy.softDef = Math.floor(combatEnemy.softDef * (1 - defReduction));
+        combatEnemy.hardDefPercent = Math.floor(combatEnemy.hardDefPercent * (1 - defReduction));
       }
 
-      const baseGoldGain = calculateGoldGain(currentEnemy);
-      const goldGain = baseGoldGain * enemyCount;
-      nextCharGold += goldGain;
-      addLog(`💰 Gained ${goldGain} Gold${isGroup ? ` (${baseGoldGain} × ${enemyCount})` : ''}.`);
+      const { damage, isCrit, isAOE } = calculateDamage(
+        currentChar,
+        combatEnemy,
+        skill,
+        skillLevel,
+        currentEquipped
+      );
+      nextEnemyHp = currentEnemy.hp - damage;
 
-      callbacksRef.current?.onEnemyKilled?.(isBossFight, goldGain);
+      callbacksRef.current?.onDamageDealt?.(damage, isCrit);
 
-      const baseExpGain = calculateExpGain(currentEnemy);
-      const expGain = baseExpGain * enemyCount;
-      const levelUpResult = processLevelUp(currentChar, expGain);
-      nextCharExp = levelUpResult.newExp;
-      nextCharLevel = levelUpResult.newLevel;
-      nextCharExpToNext = levelUpResult.newExpToNext;
-      nextStatPoints = levelUpResult.newStatPoints;
+      const critText = isCrit ? " ❗CRIT!" : "";
+      const aoeText = isAOE ? " 🔥 AOE BONUS!" : "";
+      addLog(
+        `🎯 ${skill.nameZh} Lv.${skillLevel}: Hit ${currentEnemy.name} for ${damage} dmg.${critText}${aoeText} (MP-${mpCost})`
+      );
 
-      addLog(`✨ Gained ${expGain} Base EXP${isGroup ? ` (${baseExpGain} × ${enemyCount})` : ''}.`);
+      let nextJobLevel = currentChar.jobLevel;
+      let nextJobExp = currentChar.jobExp;
+      let nextJobExpToNext = currentChar.jobExpToNext;
+      let nextSkillPoints = currentChar.skillPoints;
 
-      if (levelUpResult.leveledUp) {
-        nextCharHp = levelUpResult.newHp;
-        nextCharMp = levelUpResult.newMp;
-        didLevelUp = true;
-        addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +${STAT_POINTS_PER_LEVEL})`);
-        callbacksRef.current?.onLevelUp?.(nextCharLevel);
-      }
-
-      const baseJobExpGain = calculateJobExpGain(currentEnemy, currentChar.jobLevel);
-      const jobExpGain = baseJobExpGain * enemyCount;
-      const jobLevelUpResult = processJobLevelUp(currentChar, jobExpGain);
-      nextJobExp = jobLevelUpResult.newJobExp;
-      nextJobLevel = jobLevelUpResult.newJobLevel;
-      nextJobExpToNext = jobLevelUpResult.newJobExpToNext;
-      nextSkillPoints = jobLevelUpResult.newSkillPoints;
-
-      addLog(`✨ Gained ${jobExpGain} Job EXP${isGroup ? ` (${baseJobExpGain} × ${enemyCount})` : ''}.`);
-
-      if (jobLevelUpResult.leveledUp) {
-        addLog(
-          `📘 JOB LEVEL UP! Job Lv.${nextJobLevel} (Skill Points +1)`
-        );
-        callbacksRef.current?.onJobLevelUp?.(nextJobLevel);
+      if (nextEnemyHp <= 0) {
+        const enemyCount = currentEnemy.count || 1;
+        const isGroup = enemyCount > 1;
         
-        if (canChangeJob(currentChar.jobClass, nextJobLevel) && (nextJobLevel === 10 || nextJobLevel === 15)) {
-          addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);
-        }
-      }
-
-      setActiveDebuffs([]);
-
-      if (isBossFight) {
-        addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
-        setBossDefeated(true);
-        setKillCount(0);
-        setIsBossFight(false);
-
-        const currentZoneIndex = ZONES.findIndex((z) => z.id === currentZone);
-        if (currentZoneIndex < ZONES.length - 1) {
-          const nextZone = ZONES[currentZoneIndex + 1];
-          setUnlockedZoneIds((prev) => {
-            if (!prev.includes(nextZone.id)) {
-              addLog(`🔓 UNLOCKED: ${nextZone.name}!`);
-              return [...prev, nextZone.id];
-            }
-            return prev;
-          });
-        } else {
-          addLog(`🏆 You cleared all zones!`);
-        }
-
-        const bossGear = generateBossLoot(nextCharLevel);
-        setInventory((prev) => [...prev, bossGear]);
-        addLog(`🎁 Boss Drop: ${bossGear.name}!`);
-        callbacksRef.current?.onItemDrop?.(bossGear);
-
-        const numElu = Math.floor(Math.random() * 2) + 1;
-        const numOri = Math.floor(Math.random() * 2) + 1;
-        nextCharElunium += numElu;
-        nextCharOridecon += numOri;
-        addLog(`💎 Boss Drop: ${numElu}x Elunium, ${numOri}x Oridecon!`);
-        callbacksRef.current?.onMaterialDrop?.('elunium', numElu);
-        callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
-
-        nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
-        addLog(`👾 A wild ${nextEnemy.name} appeared!`);
-      } else {
-        const nextKillCount = killCount + 1;
-        setKillCount(nextKillCount);
-
-        if (nextKillCount % KILLS_FOR_BOSS === 0) {
-          setBossAvailable(true);
-          addLog(`⚔️ Boss is ready! Click the button to challenge!`);
-        }
-
         if (isGroup) {
-          for (let i = 0; i < enemyCount; i++) {
+          addLog(`💀 Defeated ${enemyCount}x ${currentEnemy.name}!`);
+        } else {
+          addLog(`💀 ${currentEnemy.name} defeated!`);
+        }
+
+        const baseGoldGain = calculateGoldGain(currentEnemy);
+        const goldGain = baseGoldGain * enemyCount;
+        nextCharGold += goldGain;
+        addLog(`💰 Gained ${goldGain} Gold${isGroup ? ` (${baseGoldGain} × ${enemyCount})` : ''}.`);
+
+        const currentKillCount = killCountRef.current;
+        const currentIsBossFight = isBossFightRef.current;
+        
+        callbacksRef.current?.onEnemyKilled?.(currentIsBossFight, goldGain);
+
+        const baseExpGain = calculateExpGain(currentEnemy);
+        const expGain = baseExpGain * enemyCount;
+        const levelUpResult = processLevelUp(currentChar, expGain);
+        nextCharExp = levelUpResult.newExp;
+        nextCharLevel = levelUpResult.newLevel;
+        nextCharExpToNext = levelUpResult.newExpToNext;
+        nextStatPoints = levelUpResult.newStatPoints;
+
+        addLog(`✨ Gained ${expGain} Base EXP${isGroup ? ` (${baseExpGain} × ${enemyCount})` : ''}.`);
+
+        if (levelUpResult.leveledUp) {
+          nextCharHp = levelUpResult.newHp;
+          nextCharMp = levelUpResult.newMp;
+          didLevelUp = true;
+          addLog(`🌟 LEVEL UP! Now Lv.${nextCharLevel} (Stat Points +${STAT_POINTS_PER_LEVEL})`);
+          callbacksRef.current?.onLevelUp?.(nextCharLevel);
+        }
+
+        const baseJobExpGain = calculateJobExpGain(currentEnemy, currentChar.jobLevel);
+        const jobExpGain = baseJobExpGain * enemyCount;
+        const jobLevelUpResult = processJobLevelUp(currentChar, jobExpGain);
+        nextJobExp = jobLevelUpResult.newJobExp;
+        nextJobLevel = jobLevelUpResult.newJobLevel;
+        nextJobExpToNext = jobLevelUpResult.newJobExpToNext;
+        nextSkillPoints = jobLevelUpResult.newSkillPoints;
+
+        addLog(`✨ Gained ${jobExpGain} Job EXP${isGroup ? ` (${baseJobExpGain} × ${enemyCount})` : ''}.`);
+
+        if (jobLevelUpResult.leveledUp) {
+          addLog(
+            `📘 JOB LEVEL UP! Job Lv.${nextJobLevel} (Skill Points +1)`
+          );
+          callbacksRef.current?.onJobLevelUp?.(nextJobLevel);
+          
+          if (canChangeJob(currentChar.jobClass, nextJobLevel) && (nextJobLevel === 10 || nextJobLevel === 15)) {
+            addLog(`🎊 You can now change your job! Talk to the Job Change Master!`);
+          }
+        }
+
+        setActiveDebuffs([]);
+
+        if (currentIsBossFight) {
+          addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
+          setBossDefeated(true);
+          setKillCount(0);
+          setIsBossFight(false);
+
+          const currentZoneIndex = ZONES.findIndex((z) => z.id === currentZone);
+          if (currentZoneIndex < ZONES.length - 1) {
+            const nextZone = ZONES[currentZoneIndex + 1];
+            setUnlockedZoneIds((prev) => {
+              if (!prev.includes(nextZone.id)) {
+                addLog(`🔓 UNLOCKED: ${nextZone.name}!`);
+                return [...prev, nextZone.id];
+              }
+              return prev;
+            });
+          } else {
+            addLog(`🏆 You cleared all zones!`);
+          }
+
+          const bossGear = generateBossLoot(nextCharLevel);
+          setInventory((prev) => [...prev, bossGear]);
+          addLog(`🎁 Boss Drop: ${bossGear.name}!`);
+          callbacksRef.current?.onItemDrop?.(bossGear);
+
+          const numElu = Math.floor(Math.random() * 2) + 1;
+          const numOri = Math.floor(Math.random() * 2) + 1;
+          nextCharElunium += numElu;
+          nextCharOridecon += numOri;
+          addLog(`💎 Boss Drop: ${numElu}x Elunium, ${numOri}x Oridecon!`);
+          callbacksRef.current?.onMaterialDrop?.('elunium', numElu);
+          callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
+
+          nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
+          addLog(`👾 A wild ${nextEnemy.name} appeared!`);
+        } else {
+          const nextKillCount = currentKillCount + 1;
+          setKillCount(nextKillCount);
+
+          if (nextKillCount % KILLS_FOR_BOSS === 0) {
+            setBossAvailable(true);
+            addLog(`⚔️ Boss is ready! Click the button to challenge!`);
+          }
+
+          if (isGroup) {
+            for (let i = 0; i < enemyCount; i++) {
+              if (shouldDropLoot()) {
+                const newGear = generateLoot(nextCharLevel);
+                setInventory((prev) => [...prev, newGear]);
+                addLog(`🎁 Looted: ${newGear.name}!`);
+                callbacksRef.current?.onItemDrop?.(newGear);
+              }
+            }
+          } else {
             if (shouldDropLoot()) {
               const newGear = generateLoot(nextCharLevel);
               setInventory((prev) => [...prev, newGear]);
@@ -896,73 +938,69 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
               callbacksRef.current?.onItemDrop?.(newGear);
             }
           }
-        } else {
-          if (shouldDropLoot()) {
-            const newGear = generateLoot(nextCharLevel);
-            setInventory((prev) => [...prev, newGear]);
-            addLog(`🎁 Looted: ${newGear.name}!`);
-            callbacksRef.current?.onItemDrop?.(newGear);
+
+          for (let i = 0; i < enemyCount; i++) {
+            const matRoll = Math.random();
+            if (matRoll < 0.08) {
+              nextCharElunium += 1;
+              addLog(`💎 Looted: 1x Elunium!`);
+              callbacksRef.current?.onMaterialDrop?.('elunium', 1);
+            } else if (matRoll < 0.14) {
+              nextCharOridecon += 1;
+              addLog(`💎 Looted: 1x Oridecon!`);
+              callbacksRef.current?.onMaterialDrop?.('oridecon', 1);
+            }
+          }
+
+          nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
+          const nextEnemyCount = nextEnemy.count || 1;
+          if (nextEnemyCount > 1) {
+            addLog(`👾 A group of ${nextEnemyCount}x ${nextEnemy.name} appeared!`);
+          } else {
+            addLog(`👾 A wild ${nextEnemy.name} appeared!`);
           }
         }
-
-        for (let i = 0; i < enemyCount; i++) {
-          const matRoll = Math.random();
-          if (matRoll < 0.08) {
-            nextCharElunium += 1;
-            addLog(`💎 Looted: 1x Elunium!`);
-            callbacksRef.current?.onMaterialDrop?.('elunium', 1);
-          } else if (matRoll < 0.14) {
-            nextCharOridecon += 1;
-            addLog(`💎 Looted: 1x Oridecon!`);
-            callbacksRef.current?.onMaterialDrop?.('oridecon', 1);
-          }
-        }
-
-        nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
-        const nextEnemyCount = nextEnemy.count || 1;
-        if (nextEnemyCount > 1) {
-          addLog(`👾 A group of ${nextEnemyCount}x ${nextEnemy.name} appeared!`);
-        } else {
-          addLog(`👾 A wild ${nextEnemy.name} appeared!`);
-        }
+      } else {
+        nextEnemy = { ...currentEnemy, hp: nextEnemyHp };
       }
-    } else {
-      nextEnemy = { ...currentEnemy, hp: nextEnemyHp };
+
+      const finalMaxHp = didLevelUp 
+        ? calcMaxHp(nextCharLevel, currentChar.stats.vit, currentChar.jobClass)
+        : currentChar.maxHp;
+      const finalMaxMp = didLevelUp
+        ? calcMaxMp(nextCharLevel, currentChar.stats.int, currentChar.jobClass)
+        : currentChar.maxMp;
+
+      if (!isMountedRef.current) return;
+
+      setChar({
+        hp: nextCharHp,
+        maxHp: finalMaxHp,
+        mp: nextCharMp,
+        maxMp: finalMaxMp,
+        level: nextCharLevel,
+        exp: nextCharExp,
+        expToNext: nextCharExpToNext,
+        gold: nextCharGold,
+        stats: currentChar.stats,
+        statPoints: nextStatPoints,
+        jobClass: currentChar.jobClass,
+        jobLevel: nextJobLevel,
+        jobExp: nextJobExp,
+        jobExpToNext: nextJobExpToNext,
+        skillPoints: nextSkillPoints,
+        learnedSkills: currentChar.learnedSkills,
+        autoAttackSkillId: currentChar.autoAttackSkillId,
+        elunium: nextCharElunium,
+        oridecon: nextCharOridecon,
+      });
+
+      setEnemy(nextEnemy);
+    } finally {
+      // GUARD: Always release the lock
+      battleActionInProgressRef.current = false;
     }
-
-    const finalMaxHp = didLevelUp 
-      ? calcMaxHp(nextCharLevel, currentChar.stats.vit, currentChar.jobClass)
-      : currentChar.maxHp;
-    const finalMaxMp = didLevelUp
-      ? calcMaxMp(nextCharLevel, currentChar.stats.int, currentChar.jobClass)
-      : currentChar.maxMp;
-
-    if (!isMountedRef.current) return;
-
-    setChar({
-      hp: nextCharHp,
-      maxHp: finalMaxHp,
-      mp: nextCharMp,
-      maxMp: finalMaxMp,
-      level: nextCharLevel,
-      exp: nextCharExp,
-      expToNext: nextCharExpToNext,
-      gold: nextCharGold,
-      stats: currentChar.stats,
-      statPoints: nextStatPoints,
-      jobClass: currentChar.jobClass,
-      jobLevel: nextJobLevel,
-      jobExp: nextJobExp,
-      jobExpToNext: nextJobExpToNext,
-      skillPoints: nextSkillPoints,
-      learnedSkills: currentChar.learnedSkills,
-      autoAttackSkillId: currentChar.autoAttackSkillId,
-      elunium: nextCharElunium,
-      oridecon: nextCharOridecon,
-    });
-
-    setEnemy(nextEnemy);
-  }, [canAttack, skillCooldowns, killCount, isBossFight, addLog]);
+  }, [canAttack, addLog]);
 
   useEffect(() => {
     if (canAttack || currentZoneId === 0) return;
@@ -988,6 +1026,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearInterval(interval);
   }, [canAttack, lastAttackTime, attacksPerSecond, currentZoneId]);
 
+  // STABILITY FIX: Auto-attack trigger no longer depends on battleAction
+  // Uses a stable function that calls battleAction directly
   useEffect(() => {
     if (!autoAttackEnabled || !canAttack || currentZoneId === 0) {
       return;
@@ -997,12 +1037,16 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
     
+    // STABILITY FIX: Removed battleAction from dependencies
+    // Instead, we call it directly without depending on its reference
     const timer = setTimeout(() => {
-      battleAction();
-    }, 10);
+      if (autoAttackEnabledRef.current && charRef.current.hp > 0 && currentZoneIdRef.current !== 0) {
+        battleAction();
+      }
+    }, 50);
     
     return () => clearTimeout(timer);
-  }, [autoAttackEnabled, canAttack, currentZoneId, battleAction]);
+  }, [autoAttackEnabled, canAttack, currentZoneId]);
 
   // BUG FIX: Removed char, hpPotions, mpPotions dependencies to prevent 
   // interval destruction/recreation on every damage taken
@@ -1159,6 +1203,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setEnemy(getRandomEnemyForZone(zoneId, char.level));
     setActiveDebuffs([]);
     setActiveSelfBuffs([]);
+    setSkillCooldowns({});
     addLog(`🚀 Traveled to: ${targetZone.name}!`);
   }
 
@@ -1183,6 +1228,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     setBossAvailable(false);
     setActiveDebuffs([]);
     setActiveSelfBuffs([]);
+    setSkillCooldowns({});
     addLog(`⚔️ CHALLENGE: ${bossEnemy.name} appeared!`);
   }
 
