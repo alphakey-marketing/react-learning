@@ -6,6 +6,7 @@ function createEnemy(
   atk: number,
   softDef: number,
   hp: number,
+  flee: number, // NEW: Enemy evasion stat
   attackSpeed: number = 0.5,
   hardDefPercent: number = 0,
   softMdef: number = -1,
@@ -22,6 +23,7 @@ function createEnemy(
     softMdef: softMdef === -1 ? Math.floor(softDef * 0.8) : softMdef, // Default MDEF is slightly lower than DEF
     hardMdefPercent: hardMdefPercent === -1 ? hardDefPercent : hardMdefPercent,
     attackSpeed,
+    flee, // NEW: Flee stat determines dodge chance
     count: 1,
   };
 }
@@ -29,6 +31,7 @@ function createEnemy(
 // Phase 4 Rebalance: Enemy stats reduced by ~40% to match quadratic player scaling
 // ATK: -40%, HP: -35%, Soft DEF: -35%, Hard DEF capped at 25% (endgame 35%)
 // Phase 5 Rebalance: Zone 7-8 Soft DEF reduced by ~20% to improve gear accessibility
+// Phase 6: Added Flee stat for hit/flee accuracy system
 export const ZONES: Zone[] = [
   {
     id: 0,
@@ -41,11 +44,11 @@ export const ZONES: Zone[] = [
     name: "Beginner Plains",
     minLevel: 1,
     enemies: [
-      // Zone 1: Tutorial enemies (very weak)
-      createEnemy("Poring", 1, 5, 1, 35, 0.4, 0),        // was: 8 ATK, 2 DEF, 50 HP
-      createEnemy("Lunatic", 2, 7, 2, 40, 0.45, 0),      // was: 12 ATK, 3 DEF, 60 HP
-      createEnemy("Fabre", 2, 6, 3, 38, 0.4, 0),         // was: 10 ATK, 4 DEF, 55 HP
-      createEnemy("Willow", 3, 9, 3, 48, 0.5, 0),        // was: 15 ATK, 4 DEF, 70 HP
+      // Zone 1: Tutorial enemies (very weak, low evasion: 8-12 flee)
+      createEnemy("Poring", 1, 5, 1, 35, 8, 0.4, 0),        // Slow blob
+      createEnemy("Lunatic", 2, 7, 2, 40, 12, 0.45, 0),     // Agile rabbit
+      createEnemy("Fabre", 2, 6, 3, 38, 10, 0.4, 0),        // Moderate insect
+      createEnemy("Willow", 3, 9, 3, 48, 11, 0.5, 0),       // Plant enemy
     ],
   },
   {
@@ -53,10 +56,11 @@ export const ZONES: Zone[] = [
     name: "Dark Forest",
     minLevel: 5,
     enemies: [
-      createEnemy("Spore", 5, 15, 5, 80, 0.5, 3),        // was: 25 ATK, 8 DEF, 120 HP, 5% Hard DEF
-      createEnemy("Rocker", 6, 18, 7, 92, 0.55, 3),      // was: 30 ATK, 10 DEF, 140 HP, 5% Hard DEF
-      createEnemy("Wolf", 7, 21, 6, 98, 0.6, 3),         // was: 35 ATK, 9 DEF, 150 HP, 5% Hard DEF
-      createEnemy("Snake", 8, 24, 8, 105, 0.5, 3),       // was: 40 ATK, 12 DEF, 160 HP, 5% Hard DEF
+      // Zone 2: Forest creatures (moderate agility: 15-22 flee)
+      createEnemy("Spore", 5, 15, 5, 80, 15, 0.5, 3),       // Slow plant
+      createEnemy("Rocker", 6, 18, 7, 92, 18, 0.55, 3),     // Mobile grasshopper
+      createEnemy("Wolf", 7, 21, 6, 98, 22, 0.6, 3),        // Fast predator
+      createEnemy("Snake", 8, 24, 8, 105, 20, 0.5, 3),      // Quick reptile
     ],
   },
   {
@@ -64,10 +68,11 @@ export const ZONES: Zone[] = [
     name: "Mountain Path",
     minLevel: 10,
     enemies: [
-      createEnemy("Orc Warrior", 10, 36, 13, 185, 0.6, 7),  // was: 60 ATK, 20 DEF, 280 HP, 10% Hard DEF
-      createEnemy("Golem", 12, 33, 20, 230, 0.5, 10),       // was: 55 ATK, 30 DEF, 350 HP, 15% Hard DEF
-      createEnemy("Hill Wind", 11, 39, 12, 165, 0.65, 7),   // was: 65 ATK, 18 DEF, 250 HP, 10% Hard DEF
-      createEnemy("Harpy", 13, 42, 14, 198, 0.7, 7),        // was: 70 ATK, 22 DEF, 300 HP, 10% Hard DEF
+      // Zone 3: Mountain enemies (varied mobility: 28-38 flee)
+      createEnemy("Orc Warrior", 10, 36, 13, 185, 30, 0.6, 7),  // Moderate warrior
+      createEnemy("Golem", 12, 33, 20, 230, 28, 0.5, 10),       // Slow tank
+      createEnemy("Hill Wind", 11, 39, 12, 165, 38, 0.65, 7),   // Aerial entity
+      createEnemy("Harpy", 13, 42, 14, 198, 36, 0.7, 7),        // Flying enemy
     ],
   },
   {
@@ -75,10 +80,11 @@ export const ZONES: Zone[] = [
     name: "Desert Ruins",
     minLevel: 15,
     enemies: [
-      createEnemy("Sand Man", 15, 54, 23, 295, 0.65, 10),    // was: 90 ATK, 35 DEF, 450 HP, 15% Hard DEF
-      createEnemy("Scorpion", 16, 60, 20, 275, 0.7, 10),     // was: 100 ATK, 30 DEF, 420 HP, 15% Hard DEF
-      createEnemy("Mummy", 17, 57, 26, 328, 0.6, 10),        // was: 95 ATK, 40 DEF, 500 HP, 15% Hard DEF
-      createEnemy("Horus", 18, 66, 25, 315, 0.75, 10),       // was: 110 ATK, 38 DEF, 480 HP, 15% Hard DEF
+      // Zone 4: Desert creatures (high evasion: 40-52 flee)
+      createEnemy("Sand Man", 15, 54, 23, 295, 42, 0.65, 10),   // Earth elemental
+      createEnemy("Scorpion", 16, 60, 20, 275, 52, 0.7, 10),    // Very agile predator
+      createEnemy("Mummy", 17, 57, 26, 328, 40, 0.6, 10),       // Slow undead
+      createEnemy("Horus", 18, 66, 25, 315, 48, 0.75, 10),      // Bird enemy
     ],
   },
   {
@@ -86,10 +92,11 @@ export const ZONES: Zone[] = [
     name: "Frozen Cavern",
     minLevel: 20,
     enemies: [
-      createEnemy("Ice Titan", 20, 78, 33, 425, 0.65, 15),   // was: 130 ATK, 50 DEF, 650 HP, 20% Hard DEF
-      createEnemy("Frost Diver", 22, 84, 29, 405, 0.75, 15), // was: 140 ATK, 45 DEF, 620 HP, 20% Hard DEF
-      createEnemy("Siroma", 21, 75, 31, 393, 0.7, 15),       // was: 125 ATK, 48 DEF, 600 HP, 20% Hard DEF
-      createEnemy("Gazeti", 23, 90, 34, 445, 0.7, 15),       // was: 150 ATK, 52 DEF, 680 HP, 20% Hard DEF
+      // Zone 5: Ice enemies (moderate to high flee: 52-68 flee)
+      createEnemy("Ice Titan", 20, 78, 33, 425, 52, 0.65, 15),  // Slow giant
+      createEnemy("Frost Diver", 22, 84, 29, 405, 68, 0.75, 15), // Agile water enemy
+      createEnemy("Siroma", 21, 75, 31, 393, 60, 0.7, 15),      // Ice sprite
+      createEnemy("Gazeti", 23, 90, 34, 445, 64, 0.7, 15),      // Ice beast
     ],
   },
   {
@@ -97,10 +104,11 @@ export const ZONES: Zone[] = [
     name: "Volcanic Depths",
     minLevel: 25,
     enemies: [
-      createEnemy("Lava Golem", 25, 138, 55, 685, 0.75, 20),  // was: 230 ATK, 85 DEF, 1050 HP, 35% Hard DEF
-      createEnemy("Fire Imp", 27, 156, 49, 640, 0.9, 20),     // was: 260 ATK, 75 DEF, 980 HP, 35% Hard DEF
-      createEnemy("Kaho", 26, 147, 52, 653, 0.85, 20),        // was: 245 ATK, 80 DEF, 1000 HP, 35% Hard DEF
-      createEnemy("Blazer", 28, 165, 57, 718, 0.85, 20),      // was: 275 ATK, 88 DEF, 1100 HP, 35% Hard DEF
+      // Zone 6: Volcanic enemies (varied evasion: 70-88 flee)
+      createEnemy("Lava Golem", 25, 138, 55, 685, 70, 0.75, 20),  // Slow elemental
+      createEnemy("Fire Imp", 27, 156, 49, 640, 88, 0.9, 20),     // Very agile demon
+      createEnemy("Kaho", 26, 147, 52, 653, 78, 0.85, 20),        // Fire spirit
+      createEnemy("Blazer", 28, 165, 57, 718, 82, 0.85, 20),      // Fire elemental
     ],
   },
   {
@@ -108,11 +116,11 @@ export const ZONES: Zone[] = [
     name: "Ancient Castle",
     minLevel: 30,
     enemies: [
-      // BALANCE: Reduced Soft DEF by ~24% (72→55, 65→50, 68→52, 75→58)
-      createEnemy("Dark Knight", 30, 210, 55, 980, 0.85, 25),  // was: 72 DEF → 55 DEF
-      createEnemy("Evil Druid", 32, 228, 50, 915, 0.95, 25),   // was: 65 DEF → 50 DEF
-      createEnemy("Wraith", 31, 219, 52, 883, 0.9, 25),        // was: 68 DEF → 52 DEF
-      createEnemy("Chimera", 33, 240, 58, 1045, 0.9, 25),      // was: 75 DEF → 58 DEF
+      // Zone 7: Castle enemies (high combat skill: 88-105 flee)
+      createEnemy("Dark Knight", 30, 210, 55, 980, 92, 0.85, 25),  // Skilled warrior
+      createEnemy("Evil Druid", 32, 228, 50, 915, 95, 0.95, 25),   // Caster with evasion
+      createEnemy("Wraith", 31, 219, 52, 883, 105, 0.9, 25),       // Ethereal ghost
+      createEnemy("Chimera", 33, 240, 58, 1045, 88, 0.9, 25),      // Multi-headed beast
     ],
   },
   {
@@ -120,11 +128,11 @@ export const ZONES: Zone[] = [
     name: "Void Dimension",
     minLevel: 35,
     enemies: [
-      // BALANCE: Reduced Soft DEF by ~23% (91→70, 85→65, 88→68, 98→75)
-      createEnemy("Void Stalker", 35, 312, 70, 1435, 1.0, 35),   // was: 91 DEF → 70 DEF
-      createEnemy("Dark Illusion", 37, 336, 65, 1305, 1.2, 35),  // was: 85 DEF → 65 DEF
-      createEnemy("Nightmare", 36, 324, 68, 1370, 1.1, 35),      // was: 88 DEF → 68 DEF
-      createEnemy("Thanatos", 38, 360, 75, 1630, 1.1, 35),       // was: 98 DEF → 75 DEF
+      // Zone 8: Void enemies (maximum evasion: 105-125 flee)
+      createEnemy("Void Stalker", 35, 312, 70, 1435, 112, 1.0, 35),  // Dimensional hunter
+      createEnemy("Dark Illusion", 37, 336, 65, 1305, 125, 1.2, 35), // Illusion entity (highest flee)
+      createEnemy("Nightmare", 36, 324, 68, 1370, 118, 1.1, 35),     // Dream demon
+      createEnemy("Thanatos", 38, 360, 75, 1630, 105, 1.1, 35),      // Death incarnate
     ],
   },
 ];
@@ -132,7 +140,7 @@ export const ZONES: Zone[] = [
 export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enemy {
   const zone = ZONES.find((z) => z.id === zoneId);
   if (!zone || zone.enemies.length === 0) {
-    return createEnemy("Training Dummy", 1, 3, 1, 20, 0.3, 0);
+    return createEnemy("Training Dummy", 1, 3, 1, 20, 5, 0.3, 0);
   }
 
   const randomIndex = Math.floor(Math.random() * zone.enemies.length);
@@ -152,6 +160,11 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
   const scaledAtk = Math.floor(baseEnemy.atk * scalingFactor);
   const scaledSoftDef = Math.floor(baseEnemy.softDef * scalingFactor);
   const scaledSoftMdef = Math.floor(baseEnemy.softMdef * scalingFactor);
+  
+  // NEW: Scale flee with level difference (but less than other stats)
+  // Flee only scales at 3% per level to keep it meaningful
+  const fleeScaling = 1 + (levelDiff * 0.03);
+  const scaledFlee = Math.floor(baseEnemy.flee * Math.max(0.9, Math.min(1.1, fleeScaling)));
   
   // Hard DEF increases slightly with level, but capped
   // Early zones: max 15%, mid zones: max 25%, endgame: max 35%
@@ -192,6 +205,7 @@ export function getRandomEnemyForZone(zoneId: number, playerLevel: number): Enem
     softMdef: scaledSoftMdef,
     hardMdefPercent: scaledHardMdefPercent,
     attackSpeed: baseEnemy.attackSpeed,
+    flee: scaledFlee, // NEW: Flee scales with level
     count,
   };
 }
