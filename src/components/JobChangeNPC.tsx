@@ -31,6 +31,49 @@ export function JobChangeNPC({
     }
   };
 
+  const renderJobMap = () => (
+    <div style={{ marginBottom: "20px", background: "#1a1a1a", padding: "15px", borderRadius: "8px", border: "1px solid #444" }}>
+      <h3 style={{ fontSize: "14px", color: "#fbbf24", margin: "0 0 10px 0", textAlign: "center" }}>Job Progression Map</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        {[
+          { base: "Novice", first: "Swordsman", second: "Knight" },
+          { base: "Novice", first: "Archer", second: "Hunter" },
+          { base: "Novice", first: "Mage", second: "Wizard" },
+        ].map((path, idx) => {
+          // Highlight logic
+          const isCurrentPath = currentJob === path.first || currentJob === path.second;
+          const isBase = currentJob === "Novice";
+          const opacity = isBase || isCurrentPath ? 1 : 0.4;
+          
+          return (
+            <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "12px", opacity }}>
+              <span style={{ 
+                color: currentJob === path.base ? "#10b981" : "#888",
+                fontWeight: currentJob === path.base ? "bold" : "normal" 
+              }}>
+                {JOB_DATA[path.base as JobClass].nameZh}
+              </span>
+              <span style={{ color: "#444" }}>→</span>
+              <span style={{ 
+                color: currentJob === path.first ? "#10b981" : availableJobs.includes(path.first as JobClass) ? "#fbbf24" : "#bbb",
+                fontWeight: currentJob === path.first || availableJobs.includes(path.first as JobClass) ? "bold" : "normal"
+              }}>
+                {JOB_DATA[path.first as JobClass].nameZh}
+              </span>
+              <span style={{ color: "#444" }}>→</span>
+              <span style={{ 
+                color: currentJob === path.second ? "#10b981" : availableJobs.includes(path.second as JobClass) ? "#fbbf24" : "#bbb",
+                fontWeight: currentJob === path.second || availableJobs.includes(path.second as JobClass) ? "bold" : "normal"
+              }}>
+                {JOB_DATA[path.second as JobClass].nameZh}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   if (availableJobs.length === 0) {
     return (
       <div
@@ -71,8 +114,11 @@ export function JobChangeNPC({
           <p style={{ fontSize: "14px", textAlign: "center", marginBottom: "20px" }}>
             Greetings, {currentJobInfo.nameZh}!
           </p>
+
+          {renderJobMap()}
+
           <p style={{ fontSize: "14px", textAlign: "center", marginBottom: "20px" }}>
-            You need to reach <strong>Job Level 10</strong> before you can change jobs.
+            You need to reach <strong>Job Level {currentJob === 'Novice' ? 10 : 15}</strong> before you can change jobs.
           </p>
           <p style={{ fontSize: "12px", textAlign: "center", color: "#aaa" }}>
             Current Job Level: {currentJobLevel}
@@ -237,6 +283,9 @@ export function JobChangeNPC({
         >
           🧙 Job Change Master
         </h2>
+        
+        {renderJobMap()}
+
         <p style={{ fontSize: "14px", textAlign: "center", marginBottom: "25px" }}>
           Congratulations on reaching <strong>Job Level {currentJobLevel}</strong>!
           <br />
