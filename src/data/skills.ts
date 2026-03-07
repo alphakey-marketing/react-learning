@@ -18,7 +18,7 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       id: "magic_bolt",
       name: "Magic Bolt",
       nameZh: "魔法彈",
-      maxLevel: 5,
+      maxLevel: 1,
       mpCost: (lv) => 6 + Math.floor(lv * 0.5),
       description: "引導魔法能量進行攻擊 (INT傷害)",
       damageMultiplier: (lv) => 1.2 + lv * 0.08,
