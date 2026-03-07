@@ -28,6 +28,11 @@ export function EquipmentComparisonModal({
     return item.type === 'weapon' ? (item.atk || 0) : 0;
   };
   
+  // UAT FIX: Add MATK extraction for wands
+  const getItemMatk = (item: Equipment): number => {
+    return item.type === 'weapon' ? (item.matk || 0) : 0;
+  };
+  
   const getItemDef = (item: Equipment): number => {
     const armorTypes = ['armor', 'head', 'garment', 'footgear'];
     return armorTypes.includes(item.type) ? (item.def || 0) : 0;
@@ -42,6 +47,7 @@ export function EquipmentComparisonModal({
   };
 
   const atkDiff = getStatDiff(getItemAtk(newItem), currentItem ? getItemAtk(currentItem) : 0);
+  const matkDiff = getStatDiff(getItemMatk(newItem), currentItem ? getItemMatk(currentItem) : 0);
   const defDiff = getStatDiff(getItemDef(newItem), currentItem ? getItemDef(currentItem) : 0);
   const strDiff = getStatDiff(newItem.str || 0, currentItem?.str || 0);
   const agiDiff = getStatDiff(newItem.agi || 0, currentItem?.agi || 0);
@@ -121,11 +127,12 @@ export function EquipmentComparisonModal({
   // Render stats for an item with type checking
   const renderItemStats = (item: Equipment, showDiff: boolean = false) => {
     const itemAtk = getItemAtk(item);
+    const itemMatk = getItemMatk(item);
     const itemDef = getItemDef(item);
     const isWeapon = item.type === 'weapon';
     const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
 
-    const hasCombatStats = (isWeapon && itemAtk > 0) || (isArmor && itemDef > 0) || (isWeapon && item.weaponLevel);
+    const hasCombatStats = (isWeapon && (itemAtk > 0 || itemMatk > 0)) || (isArmor && itemDef > 0) || (isWeapon && item.weaponLevel);
     const hasBasicStats = (item.str || 0) > 0 || (item.agi || 0) > 0 || (item.vit || 0) > 0 || 
                           (item.int || 0) > 0 || (item.dex || 0) > 0 || (item.luk || 0) > 0;
 
@@ -140,7 +147,7 @@ export function EquipmentComparisonModal({
         {hasCombatStats && (
           <>
             <div style={sectionHeaderStyle}>Combat Stats</div>
-            {/* ATK - Weapons only */}
+            {/* ATK - Physical Weapons */}
             {isWeapon && itemAtk > 0 && (
               <div style={statRowStyle}>
                 <span style={{ color: "#fca5a5" }}>⚔️ ATK:</span>
@@ -148,6 +155,19 @@ export function EquipmentComparisonModal({
                   {itemAtk}
                   {showDiff && currentItem && (
                     <span style={{ color: atkDiff.color, marginLeft: "6px" }}>({atkDiff.text})</span>
+                  )}
+                </span>
+              </div>
+            )}
+            
+            {/* UAT FIX: MATK - Magic Weapons (Wands) */}
+            {isWeapon && itemMatk > 0 && (
+              <div style={statRowStyle}>
+                <span style={{ color: "#93c5fd" }}>🪄 MATK:</span>
+                <span>
+                  {itemMatk}
+                  {showDiff && currentItem && (
+                    <span style={{ color: matkDiff.color, marginLeft: "6px" }}>({matkDiff.text})</span>
                   )}
                 </span>
               </div>
