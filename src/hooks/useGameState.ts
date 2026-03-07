@@ -56,14 +56,14 @@ interface GameCallbacks {
 }
 
 // Track active debuffs on the enemy (e.g. Provoke, Stone Curse)
-interface ActiveDebuff {
+export interface ActiveDebuff {
   id: string;
   expiresAt: number;
   skillLevel: number;
 }
 
 // Track active self-buffs (e.g. Endure)
-interface ActiveSelfBuff {
+export interface ActiveSelfBuff {
   id: string;
   expiresAt: number;
   skillLevel: number;
@@ -1395,6 +1395,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     showJobChangeNPC,
     showDeathModal,
     skillCooldowns,
+    activeDebuffs,
+    activeSelfBuffs,
     canAttack,
     attackCooldownPercent,
     autoAttackEnabled,
