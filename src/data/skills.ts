@@ -369,5 +369,18 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       cooldown: 3.0,
       targetCount: 4,
     },
+    {
+      id: "true_sight",
+      name: "True Sight",
+      nameZh: "真視之眼",
+      maxLevel: 10,
+      mpCost: (lv) => 25 + lv * 2,
+      description: "自我強化：25秒內增加暴擊率與暴擊傷害 (Lv1: +1% Crit +2% Dmg, Lv10: +10% Crit +20% Dmg)",
+      damageMultiplier: () => 0,
+      cooldown: 35,
+      effect: "buff",
+      buffDuration: 25,
+      targetCount: 0,
+    },
   ]
 };
