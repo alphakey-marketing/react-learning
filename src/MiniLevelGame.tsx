@@ -9,6 +9,7 @@ import { MapSystem } from "./components/MapSystem";
 import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
 import { RefineNPC } from "./components/RefineNPC";
+import { TrainingHut } from "./components/TrainingHut";
 import { CombatHUD } from "./components/CombatHUD";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
@@ -30,6 +31,7 @@ export function MiniLevelGame() {
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
   
   const [showRefineNPC, setShowRefineNPC] = useState(false);
+  const [showTrainingHut, setShowTrainingHut] = useState(false);
   const [showGameComplete, setShowGameComplete] = useState(false);
   const [playTimeMs, setPlayTimeMs] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
@@ -251,6 +253,26 @@ export function MiniLevelGame() {
             <span>📖</span>
             <span>How to Play</span>
           </button>
+          
+          <button
+            onClick={() => setShowTrainingHut(true)}
+            style={{
+              padding: "8px 16px",
+              background: "rgba(245, 158, 11, 0.2)",
+              color: "#fbbf24",
+              border: "1px solid #f59e0b",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span>🎯</span>
+            <span>Training Hut</span>
+          </button>
         </div>
 
         <div
@@ -425,6 +447,14 @@ export function MiniLevelGame() {
             equipped={game.equipped}
             onRefine={game.refineItem}
             onClose={() => setShowRefineNPC(false)}
+          />
+        )}
+
+        {showTrainingHut && (
+          <TrainingHut
+            character={game.char}
+            equipped={game.equipped}
+            onClose={() => setShowTrainingHut(false)}
           />
         )}
 
