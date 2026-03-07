@@ -1070,7 +1070,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       const now = Date.now();
       const timeSinceLastPotion = (now - lastAutoPotionTimeRef.current) / 1000;
       
-      if (timeSinceLastPotion < 2) return;
+      if (timeSinceLastPotion < 0.5) return;
       
       if (autoHpPercent > 0 && currentHpPots > 0) {
         const hpPercentage = (currentChar.hp / currentChar.maxHp) * 100;
