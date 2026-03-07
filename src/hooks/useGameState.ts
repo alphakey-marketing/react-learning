@@ -1192,7 +1192,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         modifiedEnemy.atk = Math.floor(modifiedEnemy.atk * (1 - atkReduction));
       }
       
-      let { hpDamage, mpDamage } = calculateEnemyDamage(modifiedEnemy, playerDef, currentChar);
+      let { hpDamage, mpDamage, counterDamage } = calculateEnemyDamage(modifiedEnemy, playerDef, currentChar);
 
       const endureBuff = currentSelfBuffs.find(b => b.id === "endure" && now <= b.expiresAt);
       if (endureBuff) {
@@ -1216,12 +1216,29 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           } else {
             addLog(`💥 ${currentEnemy.name} attacks! You take ${hpDamage} dmg.`);
           }
+
+          if (counterDamage > 0) {
+            addLog(`🛡️ Counter Strike activates! ${currentEnemy.name} takes ${counterDamage} reflected damage.`);
+          }
         } else {
           addLog(`💀 You were defeated by ${currentEnemy.name}!`);
-          setShowDeathModal(true);
         }
         
         return { ...prev, hp: newHp, mp: newMp };
+      });
+
+      if (counterDamage > 0) {
+        setEnemy(prevEnemy => ({
+          ...prevEnemy,
+          hp: Math.max(0, prevEnemy.hp - counterDamage),
+        }));
+      }
+
+      setChar(prev => {
+        if (prev.hp <= 0 && !showDeathModal) {
+          setShowDeathModal(true);
+        }
+        return prev;
       });
     }, 50) as unknown as number; // Heartbeat: check every 50ms
 
@@ -1230,7 +1247,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         clearInterval(enemyAttackTimerRef.current);
       }
     };
-  }, [currentZoneId, addLog]);
+  }, [currentZoneId, addLog, showDeathModal]);
 
   useEffect(() => {
     if (currentZoneId !== 0) return;
