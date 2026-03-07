@@ -14,6 +14,7 @@ import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
 import { DevToolsPanel } from "./components/DevToolsPanel";
+import { CombatStatusDisplay } from "./components/CombatStatusDisplay";
 import { Equipment } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
@@ -320,6 +321,14 @@ export function MiniLevelGame() {
               attackCooldownPercent={game.attackCooldownPercent}
               autoAttackEnabled={game.autoAttackEnabled}
               onToggleAutoAttack={game.toggleAutoAttack}
+            />
+            
+            <CombatStatusDisplay
+              character={game.char}
+              skillCooldowns={game.skillCooldowns}
+              activeDebuffs={game.activeDebuffs}
+              activeSelfBuffs={game.activeSelfBuffs}
+              inTown={game.currentZoneId === 0}
             />
             
             <BossChallenge
