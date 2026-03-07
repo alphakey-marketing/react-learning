@@ -5,10 +5,15 @@ export const HP_POTION_HEAL_PERCENT = 0.2; // 20% of Max HP
 export const HP_POTION_HEAL_FLAT = 50; // Flat 50 HP (was 200, reduced for early-game balance)
 export const MP_POTION_RECOVER_PERCENT = 0.5;
 export const KILLS_FOR_BOSS = 10;
-export const BOSS_HP_MULTIPLIER = 5;
-export const BOSS_ATK_MULTIPLIER = 1.5; // Reduced from 2.0 to 1.5
-export const BOSS_ARMOR_PENETRATION = 15; // Boss ignores 15% of player DEF/MDEF (balanced for Knight vs Wizard)
-export const BOSS_DEF_MULTIPLIER = 2;
+
+// BALANCE: Drastically increased boss difficulty for proper endgame challenge
+// Final boss (Thanatos) should REQUIRE legendary equipment with +8-10 refinement
+export const BOSS_HP_MULTIPLIER = 8;         // Was 5 - Now 13,040 HP (was 8,150)
+export const BOSS_ATK_MULTIPLIER = 2.5;       // Was 1.5 - Now 900 ATK (was 540)
+export const BOSS_ARMOR_PENETRATION = 25;     // Was 15% - Now ignores 25% of player DEF/MDEF
+export const BOSS_DEF_MULTIPLIER = 2.8;       // Was 2 - Now 274 Soft DEF (was 196)
+// Boss Hard DEF will be capped at 70% in useGameState.ts (up from 52%)
+
 export const DROP_CHANCE = 0.2;
 export const MAX_LOGS = 50;
 
