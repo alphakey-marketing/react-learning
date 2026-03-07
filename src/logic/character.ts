@@ -199,6 +199,28 @@ export function calcPlayerAtk(
   // Add level and job bonus
   statusAtk += char.level + jobBonus + equipBonusAtk;
 
+  // BALANCE: Knight Iron Will passive - Convert 20% of total DEF to ATK
+  // This makes VIT investment contribute to damage output
+  if (char.jobClass === "Knight" && char.learnedSkills["iron_will"] > 0) {
+    // Calculate total DEF (we need to import this or pass it)
+    // For now, approximate from VIT and job bonus
+    const { vit } = char.stats;
+    const jobDefBonus = JOB_DATA[char.jobClass]?.bonuses.defBonus || 0;
+    
+    // Approximate soft DEF (VIT * 0.5 + variance avg)
+    let approximateSoftDef = Math.floor(vit * 0.5) + Math.floor(vit * 0.3);
+    
+    // Add Peco Peco Ride bonus if learned
+    if (char.learnedSkills["peco_peco_ride"] > 0) {
+      approximateSoftDef += 15;
+    }
+    
+    // Note: This doesn't include equipment DEF, which will be added in combat calculation
+    // The full Iron Will bonus is calculated there with complete DEF values
+    const ironWillBonus = Math.floor(approximateSoftDef * 0.20);
+    statusAtk += ironWillBonus;
+  }
+
   // If no weapon is equipped, attack is just status ATK (bare hands)
   if (weaponAtk === 0) {
     const passives = getWeaponPassives(null);
