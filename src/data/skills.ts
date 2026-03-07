@@ -14,6 +14,17 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       cooldown: 0,
       targetCount: 1,
     },
+    {
+      id: "magic_bolt",
+      name: "Magic Bolt",
+      nameZh: "魔法彈",
+      maxLevel: 5,
+      mpCost: (lv) => 6 + Math.floor(lv * 0.5),
+      description: "引導魔法能量進行攻擊 (INT傷害)",
+      damageMultiplier: (lv) => 1.2 + lv * 0.08,
+      cooldown: 1.5,
+      targetCount: 1,
+    },
   ],
   Swordsman: [
     {
