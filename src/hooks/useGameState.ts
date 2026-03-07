@@ -827,8 +827,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         combatEnemy.hardDefPercent = Math.floor(combatEnemy.hardDefPercent * (1 - defReduction));
       }
 
-      // TRUE SIGHT FIX: Pass activeSelfBuffs to calculateDamage so it can apply crit bonuses
-      const { damage, isCrit, isAOE } = calculateDamage(
+      // HIT/FLEE FIX: Destructure isMiss and handle miss before damage processing
+      const { damage, isCrit, isAOE, isMiss } = calculateDamage(
         currentChar,
         combatEnemy,
         skill,
@@ -836,6 +836,19 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         currentEquipped,
         currentActiveSelfBuffs
       );
+      
+      // HIT/FLEE FIX: Handle miss - consume MP, show feedback, exit early
+      if (isMiss) {
+        addLog(`⚪ ${skill.nameZh} Lv.${skillLevel}: MISS! (MP-${mpCost})`);
+        setLastAttackTime(now);
+        setCanAttack(false);
+        setAttackCooldownPercent(0);
+        
+        // Update MP after miss
+        setChar((prev) => ({ ...prev, mp: nextCharMp }));
+        return;
+      }
+      
       nextEnemyHp = currentEnemy.hp - damage;
 
       callbacksRef.current?.onDamageDealt?.(damage, isCrit);
