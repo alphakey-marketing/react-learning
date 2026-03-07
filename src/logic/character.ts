@@ -97,6 +97,45 @@ function getWeaponClassPenalty(jobClass: JobClass, weaponType: WeaponType | null
   return 0.75;
 }
 
+// NEW: Hit Rate Calculation (RO-inspired but player-friendly)
+// Formula: Level + DEX + Equipment Hit Bonus
+// This determines the player's accuracy against enemy flee
+export function calcPlayerHit(
+  char: Character,
+  weaponAccuracyBonus: number = 0,
+  equipmentHitBonus: number = 0
+): number {
+  const { dex } = char.stats;
+  
+  // Apply Owl's Eye passive skill bonus to DEX
+  let effectiveDex = dex;
+  if (char.learnedSkills["owl_eye"] > 0) {
+    // Owl's Eye grants +10% DEX per level (max 50%)
+    const owlEyeBonus = Math.floor(dex * (char.learnedSkills["owl_eye"] * 0.10));
+    effectiveDex += owlEyeBonus;
+  }
+  
+  // Hit = Level + DEX + Weapon Accuracy + Equipment Bonuses
+  const baseHit = char.level + effectiveDex + weaponAccuracyBonus + equipmentHitBonus;
+  
+  return baseHit;
+}
+
+// NEW: Player Flee Calculation (for enemy accuracy vs player)
+// Formula: Level + (AGI * 0.8) + Equipment Flee Bonus
+// AGI slightly nerfed to prevent excessive dodge rates
+export function calcPlayerFlee(
+  char: Character,
+  equipmentFleeBonus: number = 0
+): number {
+  const { agi } = char.stats;
+  
+  // Flee = Level + (AGI * 0.8) + Equipment Bonuses
+  const baseFlee = char.level + Math.floor(agi * 0.8) + equipmentFleeBonus;
+  
+  return baseFlee;
+}
+
 // Phase 4: Classic RO Quadratic ATK Formula
 // Physical Attack - Quadratic scaling for primary stats (Classic RO Pre-Renewal style)
 // Formula: Floor(Floor(PrimaryStat/10)^2) + Floor(SecondaryStat/5) + Floor(LUK/5) + Level
