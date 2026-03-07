@@ -2,7 +2,7 @@ import { Character } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Skill } from "../types/skill";
 import { EquippedItems, calculateEquipmentStats } from "../types/equipment";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, PlayerDefense } from "./character";
+import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, calcPlayerHit, PlayerDefense } from "./character";
 import { CRIT_MULTIPLIER, BOSS_ARMOR_PENETRATION } from "../data/constants";
 import { ActiveSelfBuff } from "../hooks/useGameState";
 
@@ -11,6 +11,7 @@ export interface DamageResult {
   isCrit: boolean;
   isMagic: boolean;
   isAOE: boolean;
+  isMiss: boolean; // NEW: Track if attack missed
 }
 
 export interface EnemyDamageResult {
@@ -23,6 +24,18 @@ const MAGIC_SKILLS = ["magic_bolt", "fire_bolt", "cold_bolt", "lightning_bolt", 
 
 export function isMagicSkill(skillId: string): boolean {
   return MAGIC_SKILLS.includes(skillId);
+}
+
+// NEW: Calculate hit rate percentage
+// Player-friendly formula: 85 + ((Hit - Flee) * 0.5)
+// Capped between 50% minimum and 95% maximum
+function calculateHitRate(playerHit: number, enemyFlee: number): number {
+  const baseHitRate = 85;
+  const hitDifference = playerHit - enemyFlee;
+  const hitRate = baseHitRate + (hitDifference * 0.5);
+  
+  // Cap between 50% and 95%
+  return Math.max(50, Math.min(95, hitRate));
 }
 
 export function calculateDamage(
@@ -38,8 +51,10 @@ export function calculateDamage(
   
   let baseDmg = 0;
   let isCrit = false;
+  let isMiss = false;
   
   if (isMagic) {
+    // MAGIC ATTACKS: Always hit (no accuracy check for magic)
     // Phase 2 & 3: Magic damage with wand passives and MDEF
     const { matk, passives } = calcPlayerMagicAtk(
       char, 
@@ -59,7 +74,7 @@ export function calculateDamage(
     
     baseDmg = Math.max(1, afterHardMdef - enemy.softMdef);
   } else {
-    // Phase 2: Physical Attack with Weapon Passives and Cross-Class Penalty
+    // PHYSICAL ATTACKS: Check hit rate first
     const { attack: atkRange, passives, classPenalty } = calcPlayerAtk(
       char, 
       equipStats.weaponAtk, 
@@ -69,44 +84,57 @@ export function calculateDamage(
       equipStats.weaponType
     );
     
-    // TRUE SIGHT BUFF: Check if Hunter has True Sight active
-    const now = Date.now();
-    const trueSightBuff = activeSelfBuffs.find(b => b.id === "true_sight" && now <= b.expiresAt);
-    let trueSightCritBonus = 0;
-    let trueSightDamageBonus = 1.0;
+    // NEW: Hit/Flee Accuracy Check
+    const playerHit = calcPlayerHit(char, passives.accuracyBonus, 0); // TODO: Add equipment hit bonus
+    const hitRate = calculateHitRate(playerHit, enemy.flee);
+    const hitRoll = Math.random() * 100;
     
-    if (trueSightBuff) {
-      // Lv1: +1% crit chance, +2% crit damage
-      // Lv10: +10% crit chance, +20% crit damage
-      trueSightCritBonus = trueSightBuff.skillLevel * 1.0;
-      trueSightDamageBonus = 1.0 + (trueSightBuff.skillLevel * 0.02);
-    }
-    
-    // Phase 2: Apply weapon crit bonus + True Sight bonus
-    const critChance = calcCritChance(char, passives.critBonus + trueSightCritBonus);
-    const roll = Math.random() * 100;
-
-    if (roll < critChance) {
-      // CRITICAL HIT: Bypass variance (use max ATK) and bypass DEF entirely
-      isCrit = true;
-      const rawCritDmg = Math.floor(atkRange.max * CRIT_MULTIPLIER);
-      
-      // TRUE SIGHT: Apply crit damage multiplier
-      const trueSightCritDmg = Math.floor(rawCritDmg * trueSightDamageBonus);
-      
-      // Phase 2: Apply cross-class penalty even to crits
-      baseDmg = Math.floor(trueSightCritDmg * classPenalty);
+    // Check if attack misses
+    if (hitRoll >= hitRate) {
+      // MISS! Return 0 damage
+      isMiss = true;
+      baseDmg = 0;
     } else {
-      // NORMAL HIT: Roll random damage between min and max
-      const rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
+      // HIT! Calculate damage normally
+      // TRUE SIGHT BUFF: Check if Hunter has True Sight active
+      const now = Date.now();
+      const trueSightBuff = activeSelfBuffs.find(b => b.id === "true_sight" && now <= b.expiresAt);
+      let trueSightCritBonus = 0;
+      let trueSightDamageBonus = 1.0;
       
-      // Phase 2: Apply cross-class penalty BEFORE defense calculation
-      const penalizedDmg = Math.floor(rawDmg * classPenalty);
+      if (trueSightBuff) {
+        // Lv1: +1% crit chance, +2% crit damage
+        // Lv10: +10% crit chance, +20% crit damage
+        trueSightCritBonus = trueSightBuff.skillLevel * 1.0;
+        trueSightDamageBonus = 1.0 + (trueSightBuff.skillLevel * 0.02);
+      }
       
-      // BALANCE: Apply physical penetration to reduce enemy DEF effectiveness
-      const effectiveDefPercent = Math.max(0, enemy.hardDefPercent - passives.penetration);
-      const afterHardDef = Math.floor(penalizedDmg * (1 - effectiveDefPercent / 100));
-      baseDmg = Math.max(1, afterHardDef - enemy.softDef);
+      // Phase 2: Apply weapon crit bonus + True Sight bonus
+      const critChance = calcCritChance(char, passives.critBonus + trueSightCritBonus);
+      const roll = Math.random() * 100;
+
+      if (roll < critChance) {
+        // CRITICAL HIT: Bypass variance (use max ATK) and bypass DEF entirely
+        isCrit = true;
+        const rawCritDmg = Math.floor(atkRange.max * CRIT_MULTIPLIER);
+        
+        // TRUE SIGHT: Apply crit damage multiplier
+        const trueSightCritDmg = Math.floor(rawCritDmg * trueSightDamageBonus);
+        
+        // Phase 2: Apply cross-class penalty even to crits
+        baseDmg = Math.floor(trueSightCritDmg * classPenalty);
+      } else {
+        // NORMAL HIT: Roll random damage between min and max
+        const rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
+        
+        // Phase 2: Apply cross-class penalty BEFORE defense calculation
+        const penalizedDmg = Math.floor(rawDmg * classPenalty);
+        
+        // BALANCE: Apply physical penetration to reduce enemy DEF effectiveness
+        const effectiveDefPercent = Math.max(0, enemy.hardDefPercent - passives.penetration);
+        const afterHardDef = Math.floor(penalizedDmg * (1 - effectiveDefPercent / 100));
+        baseDmg = Math.max(1, afterHardDef - enemy.softDef);
+      }
     }
   }
 
@@ -125,7 +153,7 @@ export function calculateDamage(
     damage = Math.floor(damage * aoeMultiplier);
   }
 
-  return { damage, isCrit, isMagic, isAOE };
+  return { damage, isCrit, isMagic, isAOE, isMiss };
 }
 
 // Phase 3: Enhanced enemy damage calculation with MDEF
