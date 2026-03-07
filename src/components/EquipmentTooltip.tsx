@@ -31,13 +31,18 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
   const currentAtk = currentIsWeapon ? (currentItem?.atk || 0) : 0;
   const atkDiff = getStatDiff(itemAtk, currentAtk);
   
+  // UAT FIX: Add MATK display for wands
+  const itemMatk = isWeapon ? (item.matk || 0) : 0;
+  const currentMatk = currentIsWeapon ? (currentItem?.matk || 0) : 0;
+  const matkDiff = getStatDiff(itemMatk, currentMatk);
+  
   const itemDef = isArmor ? (item.def || 0) : 0;
   const currentDef = currentIsArmor ? (currentItem?.def || 0) : 0;
   const defDiff = getStatDiff(itemDef, currentDef);
   
   const hasBasicStats = (item.str || 0) > 0 || (item.agi || 0) > 0 || (item.vit || 0) > 0 || 
                         (item.int || 0) > 0 || (item.dex || 0) > 0 || (item.luk || 0) > 0;
-  const hasCombatStats = (isWeapon && itemAtk > 0) || (isArmor && itemDef > 0) || (isWeapon && item.weaponLevel);
+  const hasCombatStats = (isWeapon && (itemAtk > 0 || itemMatk > 0)) || (isArmor && itemDef > 0) || (isWeapon && item.weaponLevel);
 
   // Smart positioning - prevent tooltip from going off screen
   const padding = 15;
@@ -138,6 +143,19 @@ export function EquipmentTooltip({ item, currentItem, position }: EquipmentToolt
                 {itemAtk}
                 {currentItem && (
                   <span style={{ color: atkDiff.color, marginLeft: "6px" }}>({atkDiff.text})</span>
+                )}
+              </span>
+            </div>
+          )}
+          
+          {/* UAT FIX: Display MATK for wands */}
+          {isWeapon && itemMatk > 0 && (
+            <div style={statRowStyle}>
+              <span style={{ color: "#93c5fd" }}>🪄 MATK:</span>
+              <span>
+                {itemMatk}
+                {currentItem && (
+                  <span style={{ color: matkDiff.color, marginLeft: "6px" }}>({matkDiff.text})</span>
                 )}
               </span>
             </div>
