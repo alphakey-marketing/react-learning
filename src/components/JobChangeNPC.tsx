@@ -71,6 +71,21 @@ export function JobChangeNPC({
           );
         })}
       </div>
+      
+      {/* Job Level Requirements Legend */}
+      <div style={{ 
+        marginTop: "12px", 
+        paddingTop: "12px", 
+        borderTop: "1px solid #333", 
+        display: "flex", 
+        justifyContent: "center", 
+        gap: "20px",
+        fontSize: "11px", 
+        color: "#aaa" 
+      }}>
+        <span><strong style={{ color: "#bbb" }}>1st Job Change:</strong> Requires Job Lv 10</span>
+        <span><strong style={{ color: "#bbb" }}>2nd Job Change:</strong> Requires Job Lv 15</span>
+      </div>
     </div>
   );
 
