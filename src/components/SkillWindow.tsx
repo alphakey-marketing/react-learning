@@ -112,7 +112,10 @@ export function SkillWindow({
             💎 Skill Points: <strong>{character.skillPoints}</strong>
           </div>
           <div style={{ fontSize: "11px", color: "#aaa" }}>
-            Current Default: <strong>{character.autoAttackSkillId}</strong>
+            Top Priority Skill: <strong>{character.autoAttackSkillId.replace('_', ' ').toUpperCase()}</strong>
+          </div>
+          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", fontStyle: "italic" }}>
+            (Smart rotation will attempt to use this skill first, then fallback to other available skills if on CD/no MP)
           </div>
         </div>
 
@@ -176,7 +179,7 @@ export function SkillWindow({
                             borderRadius: "3px",
                           }}
                         >
-                          ⚡ Default
+                          ⭐ Priority
                         </span>
                       )}
                     </div>
@@ -226,7 +229,7 @@ export function SkillWindow({
                   >
                     {learnedLevel === 0 ? "📖 Learn" : "⬆️ Level Up"}
                   </button>
-                  {skill.effect !== "buff" && learnedLevel > 0 && (
+                  {skill.effect !== "buff" && skill.effect !== "passive" && skill.effect !== "debuff" && learnedLevel > 0 && (
                     <button
                       onClick={() => onSetAutoAttack(skill.id)}
                       disabled={isAutoAttack}
@@ -245,7 +248,7 @@ export function SkillWindow({
                         opacity: isAutoAttack ? 0.6 : 1,
                       }}
                     >
-                      {isAutoAttack ? "✓ Default" : "⚡ Set Default"}
+                      {isAutoAttack ? "✓ Priority" : "⭐ Set Priority"}
                     </button>
                   )}
                 </div>
