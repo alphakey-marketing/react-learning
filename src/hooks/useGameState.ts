@@ -63,7 +63,7 @@ export interface ActiveDebuff {
   skillLevel: number;
 }
 
-// Track active self-buffs (e.g. Endure)
+// Track active self-buffs (e.g. Endure, True Sight)
 export interface ActiveSelfBuff {
   id: string;
   expiresAt: number;
@@ -659,10 +659,43 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       }
 
       // 2. SELF-BUFF PHASE
-      const buffSkills = ["endure"];
+      // TRUE SIGHT FIX: Added true_sight to buff skills array
+      // Offensive buffs (true_sight) are cast proactively, defensive buffs (endure) only when HP < 60%
+      const offensiveBuffSkills = ["true_sight"];
+      const defensiveBuffSkills = ["endure"];
+      
+      // Cast offensive buffs proactively (always when off CD)
+      for (const buffId of offensiveBuffSkills) {
+        if (currentChar.learnedSkills[buffId] > 0) {
+          const buffSkill = SKILLS_DB[currentChar.jobClass].find(s => s.id === buffId);
+          if (!buffSkill) continue;
+          
+          const buffCD = buffSkill.cooldown;
+          const buffLastUsed = currentSkillCooldowns[buffId] || 0;
+          const buffReady = (now - buffLastUsed) / 1000 >= buffCD;
+          
+          const hasBuff = currentActiveSelfBuffs.some(b => b.id === buffId && now <= b.expiresAt);
+          
+          const mpCost = buffSkill.mpCost(currentChar.learnedSkills[buffId]);
+          if (buffReady && !hasBuff && currentChar.mp >= mpCost) {
+            setChar(prev => ({ ...prev, mp: prev.mp - mpCost }));
+            setSkillCooldowns(prev => ({ ...prev, [buffId]: now }));
+            const duration = (buffSkill.buffDuration || 25) * 1000;
+            setActiveSelfBuffs(prev => [...prev, { id: buffId, expiresAt: now + duration, skillLevel: currentChar.learnedSkills[buffId] }]);
+            
+            addLog(`👁️ Used ${buffSkill.nameZh}! Crit power increased for ${buffSkill.buffDuration}s.`);
+            setLastAttackTime(now);
+            setCanAttack(false);
+            setAttackCooldownPercent(0);
+            return;
+          }
+        }
+      }
+      
+      // Cast defensive buffs only when HP < 60%
       const hpPercent = (currentChar.hp / currentChar.maxHp) * 100;
       if (hpPercent < 60) {
-        for (const buffId of buffSkills) {
+        for (const buffId of defensiveBuffSkills) {
           if (currentChar.learnedSkills[buffId] > 0) {
             const buffSkill = SKILLS_DB[currentChar.jobClass].find(s => s.id === buffId);
             if (!buffSkill) continue;
@@ -794,12 +827,14 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         combatEnemy.hardDefPercent = Math.floor(combatEnemy.hardDefPercent * (1 - defReduction));
       }
 
+      // TRUE SIGHT FIX: Pass activeSelfBuffs to calculateDamage so it can apply crit bonuses
       const { damage, isCrit, isAOE } = calculateDamage(
         currentChar,
         combatEnemy,
         skill,
         skillLevel,
-        currentEquipped
+        currentEquipped,
+        currentActiveSelfBuffs
       );
       nextEnemyHp = currentEnemy.hp - damage;
 
