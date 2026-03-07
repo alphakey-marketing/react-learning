@@ -3,10 +3,11 @@ import { Character } from "../types/character";
 
 interface GameCompleteModalProps {
   character: Character;
+  playTimeMs: number;
   onClose: () => void;
 }
 
-export function GameCompleteModal({ character, onClose }: GameCompleteModalProps) {
+export function GameCompleteModal({ character, playTimeMs, onClose }: GameCompleteModalProps) {
   const overlayStyle: CSSProperties = {
     position: "fixed",
     top: 0,
@@ -39,6 +40,17 @@ export function GameCompleteModal({ character, onClose }: GameCompleteModalProps
     position: "absolute",
     fontSize: "24px",
     animation: "twinkle 2s infinite alternate",
+  };
+
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
   };
 
   return (
@@ -98,6 +110,10 @@ export function GameCompleteModal({ character, onClose }: GameCompleteModalProps
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <span style={{ color: "#9ca3af", fontSize: "12px", textTransform: "uppercase" }}>Wealth</span>
               <span style={{ fontWeight: "bold", color: "#fbbf24" }}>{character.gold}g</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <span style={{ color: "#9ca3af", fontSize: "12px", textTransform: "uppercase" }}>Play Time</span>
+              <span style={{ fontWeight: "bold", color: "#fbbf24" }}>{formatTime(playTimeMs)}</span>
             </div>
           </div>
         </div>
