@@ -146,6 +146,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const debuffCleanupTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef<boolean>(true);
   const lastAutoPotionTimeRef = useRef<number>(0);
+  const lastEnemyAttackTimeRef = useRef<number>(0);
 
   const townHealingRef = useRef<() => void>(() => {});
   
@@ -1049,9 +1050,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, [currentZoneId, autoHpPercent, autoMpPercent, useHpPotion, useMpPotion]);
 
-  // BUG FIX: Removed enemy.attackSpeed, enemy.name, armorBonus, mdefBonus from dependencies
-  // These caused timer destruction/recreation on every enemy kill or equipment change
-  // Timer now only recreates when entering/leaving combat zones (currentZoneId changes)
+  // FIX: Enemy attack timer now uses heartbeat approach with attackSpeed calculation
+  // This syncs perfectly with the visual timer in EnemyDisplay.tsx
   useEffect(() => {
     if (enemyAttackTimerRef.current !== null) {
       clearInterval(enemyAttackTimerRef.current);
@@ -1062,8 +1062,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
 
-    // Read enemy attackSpeed from ref inside the timer callback
-    // This allows dynamic enemy changes without recreating the timer
+    // Initialize the last attack time
+    lastEnemyAttackTimeRef.current = Date.now();
+
+    // Heartbeat timer: checks every 50ms if it's time to attack
     enemyAttackTimerRef.current = window.setInterval(() => {
       const currentChar = charRef.current;
       const currentEnemy = enemyRef.current;
@@ -1075,11 +1077,20 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       if (currentChar.hp <= 0 || currentZone === 0 || currentEnemy.attackSpeed <= 0) return;
 
+      const now = Date.now();
+      const attackDelayMs = 1000 / currentEnemy.attackSpeed;
+      const elapsed = now - lastEnemyAttackTimeRef.current;
+
+      // Only attack when enough time has passed based on enemy's attackSpeed
+      if (elapsed < attackDelayMs) return;
+
+      // Reset timer for next attack
+      lastEnemyAttackTimeRef.current = now;
+
       const equipStats = equipStatsRef.current;
       const playerDef = calcPlayerDef(currentChar, equipStats.totalDef, equipStats.totalMdef);
       
       let modifiedEnemy = { ...currentEnemy };
-      const now = Date.now();
       const stoneCurse = currentDebuffs.find(d => d.id === "stone_curse" && now <= d.expiresAt);
       if (stoneCurse) {
         const atkReduction = 0.10 + (stoneCurse.skillLevel * 0.05);
@@ -1117,7 +1128,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         
         return { ...prev, hp: newHp, mp: newMp };
       });
-    }, 1000) as unknown as number; // Fixed 1 second interval
+    }, 50) as unknown as number; // Heartbeat: check every 50ms
 
     return () => {
       if (enemyAttackTimerRef.current !== null) {
