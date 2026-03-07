@@ -23,7 +23,7 @@ export const STARTING_WEAPON: Equipment = {
 
 /**
  * BALANCE: Novice Wand for INT-based builds
- * Provides 8 MATK to match Training Knife's 8 ATK
+ * Provides 7 MATK (slightly lower than Training Knife's 8 ATK)
  * Allows magic-focused Novices to be viable before job change
  */
 export const NOVICE_WAND: Equipment = {
@@ -32,7 +32,7 @@ export const NOVICE_WAND: Equipment = {
   type: "weapon",
   weaponType: "wand",
   rarity: "common",
-  matk: 8,
+  matk: 7,
   weaponLevel: 1,
   refinement: 0,
   slots: 0,
