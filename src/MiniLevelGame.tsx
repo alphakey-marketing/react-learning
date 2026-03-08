@@ -169,14 +169,13 @@ export function MiniLevelGame() {
         justifyContent: "center",
         alignItems: "flex-start",
         fontFamily: "system-ui, sans-serif",
-        padding: "10px", // Reduced for mobile
-        paddingTop: "20px", // Reduced for mobile
+        padding: "10px",
+        paddingTop: "20px",
         paddingBottom: "20px",
       }}
     >
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       
-      {/* UAT: Show game complete modal when final boss is defeated */}
       {showGameComplete && <GameCompleteModal character={game.char} playTimeMs={playTimeMs} onClose={() => setShowGameComplete(false)} />}
       
       {showDevTools && (
@@ -210,7 +209,7 @@ export function MiniLevelGame() {
         id="game-container"
         style={{
           border: "2px solid gold",
-          padding: "15px", // Reduced for mobile
+          padding: "15px",
           borderRadius: "12px",
           width: "100%",
           maxWidth: "1200px",
@@ -219,19 +218,31 @@ export function MiniLevelGame() {
           backdropFilter: "blur(10px)",
         }}
       >
-        <h1
-          style={{
-            textAlign: "center",
-            margin: "0 0 15px 0", // Reduced for mobile
-            fontSize: "clamp(18px, 5vw, 28px)", // Responsive font size
-            background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            fontWeight: "bold",
-          }}
-        >
-          ⚔️ Mini RPG - RO Style
-        </h1>
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <h1
+            style={{
+              margin: "0 0 8px 0",
+              fontSize: "clamp(24px, 6vw, 32px)",
+              background: "linear-gradient(45deg, #fbbf24, #f59e0b, #fbbf24)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              fontWeight: "bold",
+              letterSpacing: "1px",
+            }}
+          >
+            ⚔️ Mini RPG Adventure
+          </h1>
+          <p
+            style={{
+              margin: "0",
+              fontSize: "clamp(12px, 3vw, 14px)",
+              color: "#94a3b8",
+              fontStyle: "italic",
+            }}
+          >
+            A nostalgic Ragnarok Online inspired idle RPG • Battle monsters, level up, and conquer epic bosses
+          </p>
+        </div>
 
         <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
           <button
@@ -244,7 +255,7 @@ export function MiniLevelGame() {
               borderRadius: "8px",
               cursor: "pointer",
               fontWeight: "bold",
-              fontSize: "clamp(12px, 3vw, 14px)", // Responsive font
+              fontSize: "clamp(12px, 3vw, 14px)",
               display: "flex",
               alignItems: "center",
               gap: "6px",
@@ -254,7 +265,6 @@ export function MiniLevelGame() {
             <span>How to Play</span>
           </button>
           
-          {/* UAT: Hide Training Hut button - only useful for dev, confusing for players */}
           {showDevTools && (
             <button
               onClick={() => setShowTrainingHut(true)}
@@ -266,7 +276,7 @@ export function MiniLevelGame() {
                 borderRadius: "8px",
                 cursor: "pointer",
                 fontWeight: "bold",
-                fontSize: "clamp(12px, 3vw, 14px)", // Responsive font
+                fontSize: "clamp(12px, 3vw, 14px)",
                 display: "flex",
                 alignItems: "center",
                 gap: "6px",
@@ -281,8 +291,8 @@ export function MiniLevelGame() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: window.innerWidth < 768 ? "1fr" : "1fr 1fr", // Stack on mobile
-            gap: "15px", // Reduced for mobile
+            gridTemplateColumns: window.innerWidth < 768 ? "1fr" : "1fr 1fr",
+            gap: "15px",
             marginBottom: "12px",
           }}
         >
@@ -311,7 +321,7 @@ export function MiniLevelGame() {
                   borderRadius: "6px",
                   cursor: "pointer",
                   fontWeight: "bold",
-                  fontSize: "clamp(11px, 3vw, 13px)", // Responsive font
+                  fontSize: "clamp(11px, 3vw, 13px)",
                   boxShadow: canChangeJobNow
                     ? "0 0 15px rgba(251, 191, 36, 0.5)"
                     : "none",
@@ -343,7 +353,7 @@ export function MiniLevelGame() {
                   borderRadius: "6px",
                   cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
                   fontWeight: "bold",
-                  fontSize: "clamp(11px, 3vw, 13px)", // Responsive font
+                  fontSize: "clamp(11px, 3vw, 13px)",
                   boxShadow: game.char.hp > 0 
                     ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
                     : "none",
@@ -482,7 +492,7 @@ export function MiniLevelGame() {
                 background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
                 border: "3px solid #dc2626",
                 borderRadius: "16px",
-                padding: "30px", // Reduced for mobile
+                padding: "30px",
                 maxWidth: "500px",
                 width: "100%",
                 color: "white",
