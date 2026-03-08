@@ -414,9 +414,9 @@ export function EnemyDisplay({
         </div>
       </div>
       
+      {/* UAT: Hide 'A' key instruction - confusing for players */}
       <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", marginTop: "12px", position: "relative", zIndex: 1 }}>
         {isGroup && "Tip: AOE skills deal bonus damage to groups!"}
-        {!isGroup && "Tip: Press 'A' key to attack manually"}
       </div>
 
       <style>{`

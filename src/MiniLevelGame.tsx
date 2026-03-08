@@ -254,25 +254,28 @@ export function MiniLevelGame() {
             <span>How to Play</span>
           </button>
           
-          <button
-            onClick={() => setShowTrainingHut(true)}
-            style={{
-              padding: "8px 16px",
-              background: "rgba(245, 158, 11, 0.2)",
-              color: "#fbbf24",
-              border: "1px solid #f59e0b",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "clamp(12px, 3vw, 14px)", // Responsive font
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <span>🎯</span>
-            <span>Training Hut</span>
-          </button>
+          {/* UAT: Hide Training Hut button - only useful for dev, confusing for players */}
+          {showDevTools && (
+            <button
+              onClick={() => setShowTrainingHut(true)}
+              style={{
+                padding: "8px 16px",
+                background: "rgba(245, 158, 11, 0.2)",
+                color: "#fbbf24",
+                border: "1px solid #f59e0b",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                fontSize: "clamp(12px, 3vw, 14px)", // Responsive font
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <span>🎯</span>
+              <span>Training Hut</span>
+            </button>
+          )}
         </div>
 
         <div
