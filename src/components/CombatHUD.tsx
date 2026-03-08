@@ -1,4 +1,5 @@
 import { Character } from "../types/character";
+import { useState } from "react";
 
 interface CombatHUDProps {
   character: Character;
@@ -21,11 +22,103 @@ export function CombatHUD({
   onUseMpPotion,
   inTown,
 }: CombatHUDProps) {
+  const [isMinimized, setIsMinimized] = useState(false);
+  
   if (inTown) return null;
 
   const hpPercent = (character.hp / character.maxHp) * 100;
   const mpPercent = (character.mp / character.maxMp) * 100;
   const isHpLow = hpPercent < 30;
+
+  // Minimized view - just show compact bars and toggle button
+  if (isMinimized) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          left: "20px",
+          background: "rgba(17, 24, 39, 0.95)",
+          border: "2px solid #374151",
+          borderRadius: "12px",
+          padding: "8px",
+          minWidth: "120px",
+          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)",
+          backdropFilter: "blur(10px)",
+          zIndex: 999,
+        }}
+      >
+        {/* Compact HP Bar */}
+        <div style={{ marginBottom: "6px" }}>
+          <div
+            style={{
+              width: "100%",
+              height: "12px",
+              background: "#1f2937",
+              borderRadius: "6px",
+              overflow: "hidden",
+              border: isHpLow ? "1px solid #ef4444" : "1px solid #374151",
+            }}
+          >
+            <div
+              style={{
+                width: `${hpPercent}%`,
+                height: "100%",
+                background:
+                  hpPercent > 50
+                    ? "linear-gradient(to right, #10b981, #22c55e)"
+                    : hpPercent > 20
+                    ? "linear-gradient(to right, #f59e0b, #fbbf24)"
+                    : "linear-gradient(to right, #ef4444, #dc2626)",
+                transition: "width 0.3s ease-out",
+              }}
+            />
+          </div>
+        </div>
+        
+        {/* Compact MP Bar */}
+        <div style={{ marginBottom: "6px" }}>
+          <div
+            style={{
+              width: "100%",
+              height: "12px",
+              background: "#1f2937",
+              borderRadius: "6px",
+              overflow: "hidden",
+              border: "1px solid #374151",
+            }}
+          >
+            <div
+              style={{
+                width: `${mpPercent}%`,
+                height: "100%",
+                background: "linear-gradient(to right, #3b82f6, #60a5fa)",
+                transition: "width 0.3s ease-out",
+              }}
+            />
+          </div>
+        </div>
+        
+        {/* Expand Button */}
+        <button
+          onClick={() => setIsMinimized(false)}
+          style={{
+            width: "100%",
+            padding: "6px",
+            background: "#374151",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "12px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          ➕ Expand
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -38,11 +131,33 @@ export function CombatHUD({
         borderRadius: "12px",
         padding: "15px",
         minWidth: "280px",
+        maxWidth: "90vw", // Mobile responsive
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)",
         backdropFilter: "blur(10px)",
         zIndex: 999,
       }}
     >
+      {/* Minimize Button */}
+      <button
+        onClick={() => setIsMinimized(true)}
+        style={{
+          position: "absolute",
+          top: "8px",
+          right: "8px",
+          background: "#374151",
+          color: "#9ca3af",
+          border: "none",
+          borderRadius: "4px",
+          padding: "4px 8px",
+          fontSize: "12px",
+          cursor: "pointer",
+          fontWeight: "bold",
+        }}
+        title="Minimize"
+      >
+        ➖
+      </button>
+      
       {/* HP Bar */}
       <div style={{ marginBottom: "12px" }}>
         <div
