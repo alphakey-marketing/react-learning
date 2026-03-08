@@ -20,7 +20,9 @@ const steps: TutorialStep[] = [
     icon: "⚔️",
     description: (
       <>
-        Start by selecting a zone in the <b>Map System</b> (like Beginner Plains). 
+        <b>First, equip your free Novice weapon from Inventory!</b>
+        <br/><br/>
+        Then select a zone in the <b>Map System</b> (like Beginner Plains). 
         <br/><br/>
         To fight, click the <b>Attack</b> button or press <b>'A'</b> on your keyboard. You can also turn on <b>Auto-Attack</b> for idle farming!
       </>
@@ -48,7 +50,7 @@ const steps: TutorialStep[] = [
       <>
         <b>1st Job Change</b>: At Job Level 10 as a Novice, become a Swordsman, Mage, or Archer!
         <br/><br/>
-        <b>2nd Job Change</b>: At Job Level 10 in your 1st job, advance to Knight, Wizard, or Hunter for powerful skills and bonuses!
+        <b>2nd Job Change</b>: At Job Level 15 in your 1st job, advance to Knight, Wizard, or Hunter for powerful skills and bonuses!
         <br/><br/>
         Visit the <b>Job Master</b> in Town when you're ready.
       </>
