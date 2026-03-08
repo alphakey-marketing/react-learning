@@ -167,8 +167,10 @@ export function calcPlayerAtk(
   // Each class has a primary stat that scales quadratically
   
   if (char.jobClass === "Swordsman" || char.jobClass === "Knight") {
-    // Melee classes: STR linear + breakpoint bonus, DEX/LUK linear
-    const strBonus = str + Math.floor(Math.pow(Math.floor(str / 10), 2));
+    // Melee classes: Half-STR linear + breakpoint bonus, DEX/LUK linear
+    // BALANCE (Lv 18-20 Cap): str + breakpoint is too strong for low levels. 
+    // Using str/2 + breakpoint keeps incremental growth without overpowering end-game.
+    const strBonus = Math.floor(str / 2) + Math.floor(Math.pow(Math.floor(str / 10), 2));
     const dexBonus = Math.floor(effectiveDex / 5);
     const lukBonus = Math.floor(luk / 5);
     statusAtk = strBonus + dexBonus + lukBonus;
