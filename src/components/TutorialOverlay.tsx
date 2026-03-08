@@ -75,10 +75,13 @@ const steps: TutorialStep[] = [
 export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const step = steps[currentStep];
 
   const updateHighlight = () => {
+    setIsMobile(window.innerWidth < 768);
+    
     if (step.highlightSelector) {
       const element = document.querySelector(step.highlightSelector) as HTMLElement;
       if (element) {
@@ -119,7 +122,9 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   };
 
   const getBoxPosition = (): React.CSSProperties => {
-    if (!highlightRect || step.position === 'center') {
+    // Force center position on mobile devices because directional positioning
+    // breaks when UI elements stack vertically, causing overflow or off-screen bugs.
+    if (!highlightRect || step.position === 'center' || isMobile) {
       return {
         top: '50%',
         left: '50%',
@@ -129,7 +134,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
 
     const padding = 20;
     const boxWidth = 380;
-    const boxHeight = 450; // Increased to accommodate longer content
+    const boxHeight = 450; 
 
     switch (step.position) {
       case 'right': {
@@ -284,8 +289,8 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         )}
       </svg>
       
-      {/* Pulsing arrows */}
-      {highlightRect && (
+      {/* Pulsing arrows - Hide on mobile since the box is centered */}
+      {highlightRect && !isMobile && (
         <>
           {step.position === 'right' && highlightRect.right + 80 < window.innerWidth && (
             <div style={{
@@ -334,32 +339,42 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         position: "fixed",
         ...getBoxPosition(),
         zIndex: 10003,
-        padding: "20px",
-        maxWidth: step.position === 'center' ? "500px" : "380px",
-        width: step.position === 'center' ? "90%" : "auto",
-        maxHeight: "90vh", // Prevent overflow on short screens
-        overflow: "auto", // Enable scrolling if needed
+        padding: "15px",
+        maxWidth: step.position === 'center' || isMobile ? "500px" : "380px",
+        width: "90%", // Always use 90% width to prevent overflow
+        maxHeight: "90vh",
+        overflow: "auto",
       }}>
         <div style={{
           background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
           border: "2px solid #3b82f6",
           borderRadius: "16px",
-          padding: "30px",
+          padding: "clamp(15px, 4vw, 30px)", // Responsive padding
           color: "white",
           boxShadow: "0 10px 40px rgba(59, 130, 246, 0.5)",
           animation: "popupFadeIn 0.3s ease-out",
         }}>
-          <div style={{ fontSize: "48px", textAlign: "center", marginBottom: "10px" }}>
+          <div style={{ 
+            fontSize: "clamp(32px, 8vw, 48px)", // Responsive icon
+            textAlign: "center", 
+            marginBottom: "10px" 
+          }}>
             {step.icon}
           </div>
-          <h2 style={{ textAlign: "center", color: "#60a5fa", marginTop: 0, marginBottom: "20px", fontSize: "20px" }}>
+          <h2 style={{ 
+            textAlign: "center", 
+            color: "#60a5fa", 
+            marginTop: 0, 
+            marginBottom: "clamp(10px, 3vw, 20px)", 
+            fontSize: "clamp(18px, 5vw, 20px)" // Responsive title
+          }}>
             {step.title}
           </h2>
           <div style={{ 
-            fontSize: "15px", 
+            fontSize: "clamp(13px, 3.5vw, 15px)", // Responsive description text
             lineHeight: "1.6", 
             color: "#e2e8f0", 
-            minHeight: "80px", // Reduced from 100px
+            minHeight: "60px",
             textAlign: "center",
             display: "flex",
             flexDirection: "column",
@@ -369,10 +384,12 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
           </div>
           
           {/* Progress Dots */}
-          <div style={{ display: "flex", justifyContent: "center", gap: "8px", margin: "25px 0" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: "8px", margin: "clamp(15px, 4vw, 25px) 0" }}>
             {steps.map((_, idx) => (
               <div key={idx} style={{
-                width: "10px", height: "10px", borderRadius: "50%",
+                width: "clamp(8px, 2vw, 10px)", 
+                height: "clamp(8px, 2vw, 10px)", 
+                borderRadius: "50%",
                 background: idx === currentStep ? "#3b82f6" : "#475569",
                 transition: "background 0.3s",
                 boxShadow: idx === currentStep ? "0 0 8px #3b82f6" : "none"
@@ -381,18 +398,23 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Buttons */}
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "15px", marginTop: "20px" }}>
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            gap: "clamp(10px, 3vw, 15px)", 
+            marginTop: "15px" 
+          }}>
             <button 
               onClick={handleClose}
               style={{
-                padding: "10px 16px",
+                padding: "clamp(8px, 2vw, 10px) clamp(10px, 3vw, 16px)",
                 background: "transparent",
                 color: "#94a3b8",
                 border: "1px solid #475569",
                 borderRadius: "8px",
                 cursor: "pointer",
                 fontWeight: "bold",
-                fontSize: "13px",
+                fontSize: "clamp(11px, 3vw, 13px)",
                 flex: 1,
                 transition: "all 0.2s",
                 pointerEvents: "auto",
@@ -405,14 +427,14 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
             <button 
               onClick={handleNext}
               style={{
-                padding: "10px 16px",
+                padding: "clamp(8px, 2vw, 10px) clamp(10px, 3vw, 16px)",
                 background: "linear-gradient(45deg, #3b82f6, #2563eb)", 
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
                 cursor: "pointer",
                 fontWeight: "bold",
-                fontSize: "13px",
+                fontSize: "clamp(11px, 3vw, 13px)",
                 flex: 2,
                 boxShadow: "0 4px 12px rgba(59, 130, 246, 0.4)",
                 transition: "transform 0.1s",
