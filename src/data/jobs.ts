@@ -31,7 +31,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
   Novice: {
     id: "Novice",
     name: "Novice",
-    nameZh: "初心者",
+    nameZh: "Novice",
     description: "A beginner adventurer with unlimited potential.",
     tier: 1,
     canChangeTo: ["Swordsman", "Mage", "Archer"],
@@ -52,7 +52,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
   Swordsman: {
     id: "Swordsman",
     name: "Swordsman",
-    nameZh: "劍士",
+    nameZh: "Swordsman",
     description: "A melee warrior specializing in close combat and high HP.",
     tier: 2,
     canChangeTo: ["Knight"],
@@ -73,7 +73,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
   Mage: {
     id: "Mage",
     name: "Mage",
-    nameZh: "魔法師",
+    nameZh: "Mage",
     description: "A magic user with powerful elemental spells.",
     tier: 2,
     canChangeTo: ["Wizard"],
@@ -94,7 +94,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
   Archer: {
     id: "Archer",
     name: "Archer",
-    nameZh: "弓箭手",
+    nameZh: "Archer",
     description: "A ranged attacker with high accuracy and critical rate.",
     tier: 2,
     canChangeTo: ["Hunter"],
@@ -115,7 +115,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
   Knight: {
     id: "Knight",
     name: "Knight",
-    nameZh: "騎士",
+    nameZh: "Knight",
     description: "An advanced warrior with powerful melee skills and party support.",
     tier: 3,
     canChangeTo: [],
@@ -136,7 +136,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
   Wizard: {
     id: "Wizard",
     name: "Wizard",
-    nameZh: "巫師",
+    nameZh: "Wizard",
     description: "A master of magic with devastating AoE spells.",
     tier: 3,
     canChangeTo: [],
@@ -157,7 +157,7 @@ export const JOB_DATA: Record<JobClass, JobInfo> = {
   Hunter: {
     id: "Hunter",
     name: "Hunter",
-    nameZh: "獵人",
+    nameZh: "Hunter",
     description: "An expert marksman with traps and enhanced mobility.",
     tier: 3,
     canChangeTo: [],
