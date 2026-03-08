@@ -129,7 +129,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
 
     const padding = 20;
     const boxWidth = 380;
-    const boxHeight = 400;
+    const boxHeight = 450; // Increased to accommodate longer content
 
     switch (step.position) {
       case 'right': {
@@ -174,11 +174,12 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         const top = highlightRect.bottom + padding;
         const left = highlightRect.left + highlightRect.width / 2;
         
+        // If box would overflow bottom, fallback to center
         if (top + boxHeight > window.innerHeight) {
           return {
-            bottom: `${window.innerHeight - highlightRect.top + padding}px`,
-            left: `${left}px`,
-            transform: 'translateX(-50%)',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
           };
         }
         
@@ -336,6 +337,8 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
         padding: "20px",
         maxWidth: step.position === 'center' ? "500px" : "380px",
         width: step.position === 'center' ? "90%" : "auto",
+        maxHeight: "90vh", // Prevent overflow on short screens
+        overflow: "auto", // Enable scrolling if needed
       }}>
         <div style={{
           background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
@@ -356,7 +359,7 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
             fontSize: "15px", 
             lineHeight: "1.6", 
             color: "#e2e8f0", 
-            minHeight: "100px", 
+            minHeight: "80px", // Reduced from 100px
             textAlign: "center",
             display: "flex",
             flexDirection: "column",
