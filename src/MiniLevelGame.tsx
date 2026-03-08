@@ -169,9 +169,9 @@ export function MiniLevelGame() {
         justifyContent: "center",
         alignItems: "flex-start",
         fontFamily: "system-ui, sans-serif",
-        padding: "20px",
-        paddingTop: "40px",
-        paddingBottom: "40px", // Reduced padding bottom since floating bar is removed
+        padding: "10px", // Reduced for mobile
+        paddingTop: "20px", // Reduced for mobile
+        paddingBottom: "20px",
       }}
     >
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
@@ -210,7 +210,7 @@ export function MiniLevelGame() {
         id="game-container"
         style={{
           border: "2px solid gold",
-          padding: "20px",
+          padding: "15px", // Reduced for mobile
           borderRadius: "12px",
           width: "100%",
           maxWidth: "1200px",
@@ -222,8 +222,8 @@ export function MiniLevelGame() {
         <h1
           style={{
             textAlign: "center",
-            margin: "0 0 20px 0",
-            fontSize: "28px",
+            margin: "0 0 15px 0", // Reduced for mobile
+            fontSize: "clamp(18px, 5vw, 28px)", // Responsive font size
             background: "linear-gradient(45deg, #fbbf24, #f59e0b)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
@@ -233,7 +233,7 @@ export function MiniLevelGame() {
           ⚔️ Mini RPG - RO Style
         </h1>
 
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "15px" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
           <button
             onClick={() => setShowTutorial(true)}
             style={{
@@ -244,7 +244,7 @@ export function MiniLevelGame() {
               borderRadius: "8px",
               cursor: "pointer",
               fontWeight: "bold",
-              fontSize: "14px",
+              fontSize: "clamp(12px, 3vw, 14px)", // Responsive font
               display: "flex",
               alignItems: "center",
               gap: "6px",
@@ -264,7 +264,7 @@ export function MiniLevelGame() {
               borderRadius: "8px",
               cursor: "pointer",
               fontWeight: "bold",
-              fontSize: "14px",
+              fontSize: "clamp(12px, 3vw, 14px)", // Responsive font
               display: "flex",
               alignItems: "center",
               gap: "6px",
@@ -278,9 +278,9 @@ export function MiniLevelGame() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "20px",
-            marginBottom: "15px",
+            gridTemplateColumns: window.innerWidth < 768 ? "1fr" : "1fr 1fr", // Stack on mobile
+            gap: "15px", // Reduced for mobile
+            marginBottom: "12px",
           }}
         >
           <div style={{ minWidth: 0 }}>
@@ -308,7 +308,7 @@ export function MiniLevelGame() {
                   borderRadius: "6px",
                   cursor: "pointer",
                   fontWeight: "bold",
-                  fontSize: "13px",
+                  fontSize: "clamp(11px, 3vw, 13px)", // Responsive font
                   boxShadow: canChangeJobNow
                     ? "0 0 15px rgba(251, 191, 36, 0.5)"
                     : "none",
@@ -340,7 +340,7 @@ export function MiniLevelGame() {
                   borderRadius: "6px",
                   cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
                   fontWeight: "bold",
-                  fontSize: "13px",
+                  fontSize: "clamp(11px, 3vw, 13px)", // Responsive font
                   boxShadow: game.char.hp > 0 
                     ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
                     : "none",
@@ -471,6 +471,7 @@ export function MiniLevelGame() {
               justifyContent: "center",
               alignItems: "center",
               zIndex: 1000,
+              padding: "20px",
             }}
           >
             <div
@@ -478,21 +479,21 @@ export function MiniLevelGame() {
                 background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
                 border: "3px solid #dc2626",
                 borderRadius: "16px",
-                padding: "40px",
+                padding: "30px", // Reduced for mobile
                 maxWidth: "500px",
-                width: "90%",
+                width: "100%",
                 color: "white",
                 textAlign: "center",
                 boxShadow: "0 0 50px rgba(220, 38, 38, 0.5)",
               }}
             >
-              <div style={{ fontSize: "72px", marginBottom: "20px" }}>
+              <div style={{ fontSize: "clamp(48px, 15vw, 72px)", marginBottom: "20px" }}>
                 💀
               </div>
               <h2
                 style={{
                   margin: "0 0 20px 0",
-                  fontSize: "32px",
+                  fontSize: "clamp(24px, 7vw, 32px)",
                   color: "#dc2626",
                   fontWeight: "bold",
                 }}
@@ -501,7 +502,7 @@ export function MiniLevelGame() {
               </h2>
               <p
                 style={{
-                  fontSize: "16px",
+                  fontSize: "clamp(14px, 4vw, 16px)",
                   marginBottom: "10px",
                   color: "#bbb",
                 }}
@@ -510,7 +511,7 @@ export function MiniLevelGame() {
               </p>
               <p
                 style={{
-                  fontSize: "14px",
+                  fontSize: "clamp(12px, 3.5vw, 14px)",
                   marginBottom: "30px",
                   color: "#888",
                 }}
@@ -527,7 +528,7 @@ export function MiniLevelGame() {
                   border: "2px solid #ef4444",
                   borderRadius: "8px",
                   cursor: "pointer",
-                  fontSize: "18px",
+                  fontSize: "clamp(16px, 4.5vw, 18px)",
                   fontWeight: "bold",
                   boxShadow: "0 4px 15px rgba(220, 38, 38, 0.4)",
                   transition: "all 0.2s",
@@ -574,6 +575,13 @@ export function MiniLevelGame() {
         }
         .crit-shake {
           animation: critShake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+          body {
+            font-size: 14px;
+          }
         }
       `}</style>
     </div>
