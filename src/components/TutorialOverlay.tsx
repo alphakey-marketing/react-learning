@@ -24,7 +24,7 @@ const steps: TutorialStep[] = [
         <br/><br/>
         Then select a zone in the <b>Map System</b> (like Beginner Plains). 
         <br/><br/>
-        To fight, click the <b>Attack</b> button or press <b>'A'</b> on your keyboard. You can also turn on <b>Auto-Attack</b> for idle farming!
+        To fight, click the <b>Attack</b> button. You can also turn on <b>Auto-Attack</b> for idle farming!
       </>
     ),
     highlightSelector: '[data-tutorial="map-system"]',
