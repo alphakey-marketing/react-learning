@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems, calculateGearScore, calculateEquipmentStats } from "../types/equipment";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp, getTotalStats } from "../logic/character";
+import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
 
 interface CharacterStatsProps {
   character: Character;
@@ -69,7 +69,7 @@ export function CharacterStats({
   // Calculate derived stats
   const equipStats = calculateEquipmentStats(equipped);
   const armorBonus = equipStats.totalDef;
-  const totalStats = getTotalStats(character, equipStats);
+  const mdefBonus = equipStats.totalMdef;
   
   // Debug logging
   console.log('[CharacterStats] Equipment stats:', {
@@ -96,7 +96,7 @@ export function CharacterStats({
     equipStats.weaponLevel, 
     equipStats.weaponRefine, 
     equipStats.equipBonusAtk,
-    equipStats
+    equipStats.weaponType
   );
   
   console.log('[CharacterStats] ATK Range:', atkRange);
@@ -105,10 +105,22 @@ export function CharacterStats({
     ? `${atkRange.max}` 
     : `${atkRange.min} ~ ${atkRange.max}`;
   
-  const matk = calcPlayerMagicAtk(character, equipStats);
-  const def = calcPlayerDef(character, armorBonus, equipStats);
-  const crit = calcCritChance(character, equipStats);
-  const aspd = calcASPD(character, equipStats).toFixed(2);
+  // Phase 2: Extract MATK from new return type
+  const { matk } = calcPlayerMagicAtk(
+    character,
+    equipStats.weaponMatk,
+    equipStats.weaponLevel,
+    equipStats.weaponRefine,
+    equipStats.weaponType
+  );
+  
+  const def = calcPlayerDef(character, armorBonus, mdefBonus);
+  
+  // Phase 2: Use weapon crit bonus
+  const crit = calcCritChance(character, passives.critBonus);
+  
+  // Phase 2: Use weapon ASPD modifier
+  const aspd = calcASPD(character, passives.aspdBonus).toFixed(2);
 
   // Format DEF and MDEF strings
   const defDisplay = `${def.softDef} + ${def.hardDefPercent}%`;
@@ -129,8 +141,6 @@ export function CharacterStats({
         luk: character.stats.luk + pendingStats.luk,
       },
     };
-    
-    const previewTotalStats = getTotalStats(previewChar, equipStats);
 
     // Phase 2: Extract attack range from new return type
     const { attack: previewAtkRange, passives: previewPassives } = calcPlayerAtk(
@@ -139,18 +149,31 @@ export function CharacterStats({
       equipStats.weaponLevel, 
       equipStats.weaponRefine, 
       equipStats.equipBonusAtk,
-      equipStats
+      equipStats.weaponType
     );
     const previewAtkDisplay = previewAtkRange.min === previewAtkRange.max 
       ? `${previewAtkRange.max}` 
       : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
     
-    const previewMatk = calcPlayerMagicAtk(previewChar, equipStats);
-    const previewDef = calcPlayerDef(previewChar, armorBonus, equipStats);
-    const previewCrit = calcCritChance(previewChar, equipStats);
-    const previewAspd = calcASPD(previewChar, equipStats).toFixed(2);
-    const previewMaxHp = calcMaxHp(character.level, previewTotalStats.vit, character.jobClass);
-    const previewMaxMp = calcMaxMp(character.level, previewTotalStats.int, character.jobClass);
+    // Phase 2: Extract MATK from new return type
+    const { matk: previewMatk } = calcPlayerMagicAtk(
+      previewChar,
+      equipStats.weaponMatk,
+      equipStats.weaponLevel,
+      equipStats.weaponRefine,
+      equipStats.weaponType
+    );
+    
+    const previewDef = calcPlayerDef(previewChar, armorBonus, mdefBonus);
+    
+    // Phase 2: Use weapon crit bonus
+    const previewCrit = calcCritChance(previewChar, previewPassives.critBonus);
+    
+    // Phase 2: Use weapon ASPD modifier
+    const previewAspd = calcASPD(previewChar, previewPassives.aspdBonus).toFixed(2);
+    
+    const previewMaxHp = calcMaxHp(character.level, previewChar.stats.vit, character.jobClass);
+    const previewMaxMp = calcMaxMp(character.level, previewChar.stats.int, character.jobClass);
 
     return {
       atk: previewAtkDisplay,

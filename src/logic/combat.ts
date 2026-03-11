@@ -55,7 +55,16 @@ export function calculateDamage(
   let isMiss = false;
   
   if (isMagic) {
-    const baseAtk = calcPlayerMagicAtk(char, equipStats);
+    // MAGIC ATTACKS: Always hit (no accuracy check for magic)
+    // Phase 2 & 3: Magic damage with wand passives and MDEF
+    const { matk, passives } = calcPlayerMagicAtk(
+      char, 
+      equipStats.weaponMatk,
+      equipStats.weaponLevel,
+      equipStats.weaponRefine,
+      equipStats.weaponType
+    );
+    
     const randomVar = Math.floor(Math.random() * 5);
     const rawDmg = matk + randomVar;
     
@@ -66,28 +75,44 @@ export function calculateDamage(
     
     baseDmg = Math.max(1, afterHardMdef - enemy.softMdef);
   } else {
-    // Physical Attack with Weapon Variance
-    const atkRange = calcPlayerAtk(
+    // PHYSICAL ATTACKS: Check hit rate first
+    const { attack: atkRange, passives, classPenalty } = calcPlayerAtk(
       char, 
       equipStats.weaponAtk, 
       equipStats.weaponLevel, 
       equipStats.weaponRefine, 
       equipStats.equipBonusAtk,
-      equipStats
+      equipStats.weaponType
     );
     
-    // Roll random damage between min and max
-    rawDmg = Math.floor(Math.random() * (atkRange.max - atkRange.min + 1)) + atkRange.min;
-  }
-
-  // RO DEF Formula: damage * (1 - hardDEF%) - softDEF
-  // Apply Enemy Defense
-  const afterHardDef = Math.floor(rawDmg * (1 - enemy.hardDefPercent / 100));
-  let baseDmg = Math.max(1, afterHardDef - enemy.softDef);
-
-  const critChance = isMagic ? 0 : calcCritChance(char, equipStats);
-  const roll = Math.random() * 100;
-  let isCrit = false;
+    // NEW: Hit/Flee Accuracy Check
+    const playerHit = calcPlayerHit(char, passives.accuracyBonus, 0); // TODO: Add equipment hit bonus
+    const hitRate = calculateHitRate(playerHit, enemy.flee);
+    const hitRoll = Math.random() * 100;
+    
+    // Check if attack misses
+    if (hitRoll >= hitRate) {
+      // MISS! Return 0 damage
+      isMiss = true;
+      baseDmg = 0;
+    } else {
+      // HIT! Calculate damage normally
+      // TRUE SIGHT BUFF: Check if Hunter has True Sight active
+      const now = Date.now();
+      const trueSightBuff = activeSelfBuffs.find(b => b.id === "true_sight" && now <= b.expiresAt);
+      let trueSightCritBonus = 0;
+      let trueSightDamageBonus = 1.0;
+      
+      if (trueSightBuff) {
+        // Lv1: +1% crit chance, +2% crit damage
+        // Lv10: +10% crit chance, +20% crit damage
+        trueSightCritBonus = trueSightBuff.skillLevel * 1.0;
+        trueSightDamageBonus = 1.0 + (trueSightBuff.skillLevel * 0.02);
+      }
+      
+      // Phase 2: Apply weapon crit bonus + True Sight bonus
+      const critChance = calcCritChance(char, passives.critBonus + trueSightCritBonus);
+      const roll = Math.random() * 100;
 
       if (roll < critChance) {
         // CRITICAL HIT: Bypass variance (use max ATK) and bypass DEF entirely
