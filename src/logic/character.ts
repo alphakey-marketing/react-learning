@@ -1,4 +1,4 @@
-import { Character } from "../types/character";
+import { Character, CharacterStats } from "../types/character";
 import { JobClass, JOB_DATA } from "../data/jobs";
 import { WeaponType } from "../types/equipment";
 
@@ -14,127 +14,26 @@ export interface PlayerAttack {
   max: number;
 }
 
-// Phase 2: Weapon Type Passive Bonuses
-// Each weapon type provides unique benefits
-export interface WeaponPassives {
-  critBonus: number;      // Extra crit chance
-  aspdBonus: number;      // Attack speed modifier
-  penetration: number;    // Ignore % of enemy defense
-  accuracyBonus: number;  // Hit rate increase
+export interface EquipBonusStats {
+  bonusStr: number;
+  bonusAgi: number;
+  bonusVit: number;
+  bonusInt: number;
+  bonusDex: number;
+  bonusLuk: number;
 }
 
-// Phase 2: Get weapon passive bonuses based on weapon type
-// KNIGHT BALANCE: Buffed sword passives to compete with bows
-function getWeaponPassives(weaponType: WeaponType | null): WeaponPassives {
-  if (!weaponType) {
-    return { critBonus: 0, aspdBonus: 0, penetration: 0, accuracyBonus: 0 };
-  }
-  
-  switch (weaponType) {
-    case "sword":
-      // KNIGHT BUFF: Swords now competitive with bows
-      // Balanced offense with penetration and speed
-      return {
-        critBonus: 3,        // BUFFED: 0% → 3% (meaningful crit chance)
-        aspdBonus: 0.15,     // BUFFED: +10% → +15% (faster attacks)
-        penetration: 15,     // BUFFED: 10% → 15% (better armor piercing)
-        accuracyBonus: 0,    // Kept at 0 (melee doesn't need hit bonus)
-      };
-    
-    case "bow":
-      // Bows: High crit, accuracy, penetration, reduced ASPD penalty
-      return {
-        critBonus: 5,        // +5% base crit chance
-        aspdBonus: -0.10,    // BALANCE: Reduced from -15% to -10%
-        penetration: 5,      // BALANCE: Added 5% physical DEF penetration
-        accuracyBonus: 10,   // +10% hit rate
-      };
-    
-    case "wand":
-      // Wands: Defense penetration for magic
-      return {
-        critBonus: 0,
-        aspdBonus: 0,
-        penetration: 15,     // Ignore 15% of enemy MDEF
-        accuracyBonus: 0,
-      };
-    
-    default:
-      return { critBonus: 0, aspdBonus: 0, penetration: 0, accuracyBonus: 0 };
-  }
-}
-
-// Phase 2: Cross-class weapon penalty
-// Returns a damage multiplier (1.0 = no penalty, 0.7 = 30% damage loss)
-function getWeaponClassPenalty(jobClass: JobClass, weaponType: WeaponType | null): number {
-  if (!weaponType) return 1.0; // No weapon, no penalty
-  
-  // Define optimal weapon types per class
-  const classWeaponMatch: Record<JobClass, WeaponType[]> = {
-    "Novice": ["sword"], // Novices prefer swords
-    "Swordsman": ["sword"],
-    "Knight": ["sword"],
-    "Archer": ["bow"],
-    "Hunter": ["bow"],
-    "Mage": ["wand"],
-    "Wizard": ["wand"],
+// Helper to get total stats (base + equipment)
+export function getTotalStats(char: Character, equipStats?: EquipBonusStats): CharacterStats {
+  if (!equipStats) return char.stats;
+  return {
+    str: char.stats.str + equipStats.bonusStr,
+    agi: char.stats.agi + equipStats.bonusAgi,
+    vit: char.stats.vit + equipStats.bonusVit,
+    int: char.stats.int + equipStats.bonusInt,
+    dex: char.stats.dex + equipStats.bonusDex,
+    luk: char.stats.luk + equipStats.bonusLuk,
   };
-  
-  const optimalWeapons = classWeaponMatch[jobClass];
-  
-  // If using optimal weapon type, no penalty
-  if (optimalWeapons.includes(weaponType)) {
-    return 1.0;
-  }
-  
-  // Mages/Wizards CANNOT use non-wands (enforced in equipment system)
-  // This should never happen, but return 0 if it does
-  if ((jobClass === "Mage" || jobClass === "Wizard") && weaponType !== "wand") {
-    return 0.0;
-  }
-  
-  // Cross-class usage: 25% damage penalty
-  // Example: Knight with Bow, Archer with Sword
-  return 0.75;
-}
-
-// NEW: Hit Rate Calculation (RO-inspired but player-friendly)
-// Formula: Level + DEX + Equipment Hit Bonus
-// This determines the player's accuracy against enemy flee
-export function calcPlayerHit(
-  char: Character,
-  weaponAccuracyBonus: number = 0,
-  equipmentHitBonus: number = 0
-): number {
-  const { dex } = char.stats;
-  
-  // Apply Owl's Eye passive skill bonus to DEX
-  let effectiveDex = dex;
-  if (char.learnedSkills["owl_eye"] > 0) {
-    // Owl's Eye grants +10% DEX per level (max 50%)
-    const owlEyeBonus = Math.floor(dex * (char.learnedSkills["owl_eye"] * 0.10));
-    effectiveDex += owlEyeBonus;
-  }
-  
-  // Hit = Level + DEX + Weapon Accuracy + Equipment Bonuses
-  const baseHit = char.level + effectiveDex + weaponAccuracyBonus + equipmentHitBonus;
-  
-  return baseHit;
-}
-
-// NEW: Player Flee Calculation (for enemy accuracy vs player)
-// Formula: Level + (AGI * 0.8) + Equipment Flee Bonus
-// AGI slightly nerfed to prevent excessive dodge rates
-export function calcPlayerFlee(
-  char: Character,
-  equipmentFleeBonus: number = 0
-): number {
-  const { agi } = char.stats;
-  
-  // Flee = Level + (AGI * 0.8) + Equipment Bonuses
-  const baseFlee = char.level + Math.floor(agi * 0.8) + equipmentFleeBonus;
-  
-  return baseFlee;
 }
 
 // Phase 4: Classic RO Quadratic ATK Formula
@@ -148,9 +47,9 @@ export function calcPlayerAtk(
   weaponLevel: number,
   weaponRefine: number,
   equipBonusAtk: number,
-  weaponType: WeaponType | null = null
-): { attack: PlayerAttack; passives: WeaponPassives; classPenalty: number } {
-  const { str, agi, dex, luk } = char.stats;
+  equipStats?: EquipBonusStats
+): PlayerAttack {
+  const { str, agi, dex, luk } = getTotalStats(char, equipStats);
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
   let statusAtk = 0;
@@ -274,16 +173,8 @@ export function calcPlayerAtk(
 
 // Phase 5: Magic Attack with Wand Refinement Support
 // Classic RO Formula: Floor(Floor(INT/7)^2) + Floor(INT/5) + Floor(DEX/5) + Level
-// Wands provide MATK instead of ATK, and benefit from refinement at 50% rate
-// Phase 2: Now returns weapon passives
-export function calcPlayerMagicAtk(
-  char: Character,
-  weaponMatk: number = 0, // NOTE: This already includes rarity refinement bonus from equipment.ts
-  weaponLevel: number = 1,
-  weaponRefine: number = 0,
-  weaponType: WeaponType | null = null
-): { matk: number; passives: WeaponPassives } {
-  const { int, dex } = char.stats;
+export function calcPlayerMagicAtk(char: Character, equipStats?: EquipBonusStats): number {
+  const { int, dex } = getTotalStats(char, equipStats);
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.atkBonus || 0;
   
   let effectiveDex = dex;
@@ -318,9 +209,8 @@ export function calcPlayerMagicAtk(
 }
 
 // Defense - Split into Soft DEF (flat, from VIT) and Hard DEF (%, from equipment)
-// Phase 3: Add Soft MDEF calculation
-export function calcPlayerDef(char: Character, armorBonus: number, mdefBonus: number = 0): PlayerDefense {
-  const { vit, int } = char.stats;
+export function calcPlayerDef(char: Character, armorBonus: number, equipStats?: EquipBonusStats): PlayerDefense {
+  const { vit } = getTotalStats(char, equipStats);
   const jobBonus = JOB_DATA[char.jobClass]?.bonuses.defBonus || 0;
   
   // Soft DEF: VIT*0.5 + random variance based on VIT (RO style approximation)
@@ -357,18 +247,15 @@ export function calcPlayerDef(char: Character, armorBonus: number, mdefBonus: nu
 }
 
 // Critical Rate - LUK based (all physical classes)
-// Phase 2: Now accepts weapon passive bonus
-export function calcCritChance(char: Character, weaponCritBonus: number = 0): number {
-  const { luk } = char.stats;
-  const baseCrit = Math.floor(luk / 3);
-  return Math.min(50, baseCrit + weaponCritBonus);
+export function calcCritChance(char: Character, equipStats?: EquipBonusStats): number {
+  const { luk } = getTotalStats(char, equipStats);
+  return Math.min(50, Math.floor(luk / 3));
 }
 
 // Attack Speed (ASPD) - AGI and DEX based
 // Returns attacks per second (e.g., 1.5 means 1.5 attacks every second)
-// Phase 2: Now accepts weapon ASPD modifier
-export function calcASPD(char: Character, weaponAspdModifier: number = 0): number {
-  const { agi, dex } = char.stats;
+export function calcASPD(char: Character, equipStats?: EquipBonusStats): number {
+  const { agi, dex } = getTotalStats(char, equipStats);
   
   let effectiveDex = dex;
   if (char.learnedSkills["owl_eye"] > 0) {
