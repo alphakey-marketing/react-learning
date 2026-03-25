@@ -149,16 +149,16 @@ export function MiniLevelGame() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial, showGameComplete]);
 
-  // BGM: switch track based on zone and boss state
-  useEffect(() => {
-    if (game.currentZoneId === 0) {
-      audio.playBGM("town");
-    } else if (game.bossAvailable) {
-      audio.playBGM("boss");
-    } else {
-      audio.playBGM("fight");
-    }
-  }, [game.currentZoneId, game.bossAvailable]);
+ // AFTER — catches both "boss ready" and "actively fighting boss"
+useEffect(() => {
+  if (game.currentZoneId === 0) {
+    audio.playBGM("town");
+  } else if (game.bossAvailable || game.isBossFight) {
+    audio.playBGM("boss");
+  } else {
+    audio.playBGM("fight");
+  }
+}, [game.currentZoneId, game.bossAvailable, game.isBossFight]);
 
   // SFX: play death sound when HP hits 0
   useEffect(() => {
