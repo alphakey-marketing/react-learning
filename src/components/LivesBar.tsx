@@ -11,6 +11,7 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
   const [timeToNextLife, setTimeToNextLife] = useState("");
 
   const LIFE_REGEN_MS = 30 * 60 * 1000;
+  const DISPLAY_HEARTS = 5; // always show 5 heart slots visually
 
   useEffect(() => {
     if (lives >= maxLives) {
@@ -27,6 +28,10 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
     return () => clearInterval(interval);
   }, [lives, maxLives, lastLifeRegenTime]);
 
+  // For display: cap at 5 hearts visually, show number badge if premium (max 10)
+  const filledHearts = Math.min(lives, DISPLAY_HEARTS);
+  const extraLives = lives > DISPLAY_HEARTS ? lives - DISPLAY_HEARTS : 0;
+
   return (
     <div style={{
       display: "flex",
@@ -40,18 +45,32 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
       flexWrap: "wrap",
     }}>
 
-      {/* Hearts */}
-      <div style={{ display: "flex", gap: "3px" }}>
-        {Array.from({ length: maxLives }).map((_, i) => (
-          <span key={i} style={{ fontSize: "18px", opacity: i < lives ? 1 : 0.25 }}>
+      {/* 5 Heart slots */}
+      <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
+        {Array.from({ length: DISPLAY_HEARTS }).map((_, i) => (
+          <span key={i} style={{ fontSize: "18px", opacity: i < filledHearts ? 1 : 0.25 }}>
             ❤️
           </span>
         ))}
+        {/* Extra lives badge — only shows when premium gives >5 lives */}
+        {extraLives > 0 && (
+          <span style={{
+            marginLeft: "4px",
+            background: "#fbbf24",
+            color: "#000",
+            fontWeight: "bold",
+            fontSize: "11px",
+            padding: "1px 6px",
+            borderRadius: "999px",
+          }}>
+            +{extraLives}
+          </span>
+        )}
       </div>
 
-      {/* Lives count label */}
+      {/* Lives count */}
       <span style={{ color: "#aaa", fontSize: "12px" }}>
-        {lives}/{maxLives} Lives
+        {lives}/{maxLives}
       </span>
 
       {/* Regen timer — only when not full */}
@@ -99,7 +118,7 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
               fontWeight: "bold",
             }}
           >
-             👑 VIP Store
+            👑 VIP Store
           </button>
         </div>
       )}

@@ -86,7 +86,8 @@ export function MiniLevelGame() {
       coins_5000: 5000,
       coins_10000: 10000,
     };
-    addCoins(packMap[packId] ?? 0); // UAT: instant. Production: RevenueCat purchase first
+    const amount = packMap[packId] ?? 0;
+    game.devAddGold(amount); // ← adds to char.gold (visible in CharacterStats)
     setShowShop(false);
   }
 
@@ -374,7 +375,7 @@ export function MiniLevelGame() {
             }}
           >
             <span>👑</span><span>VIP Store</span>          </button>
-            
+
           {showDevTools && (
             <button
               onClick={() => setShowTrainingHut(true)}

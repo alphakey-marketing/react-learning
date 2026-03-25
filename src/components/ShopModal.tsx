@@ -53,7 +53,7 @@ export function ShopModal({ onClose, onPurchasePremium, onPurchaseCoins }: ShopM
 
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
-          <h2 style={{ margin: 0, fontSize: "24px", color: "#fbbf24" }}>🏪 Shop</h2>
+          <h2 style={{ margin: 0, fontSize: "24px", color: "#fbbf24" }}>👑 VIP Store</h2>
           <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: "13px" }}>
             Support the adventure & unlock the full story
           </p>
