@@ -7,7 +7,7 @@ const BGM_TRACKS: Record<string, string> = {
 };
 
 const SFX_TRACKS: Record<string, string> = {
-  death: "/audio/death.mp3",
+  death: "/audio/death.ogg",
   levelup: "/audio/levelup.mp3",
 };
 
