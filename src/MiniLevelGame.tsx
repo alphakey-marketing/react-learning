@@ -25,7 +25,6 @@ import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { useGameAudio } from "./hooks/useGameAudio";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState, useRef } from "react";
-// ── NEW: Monetization imports ──────────────────────────────────────────────
 import { useMonetization } from "./context/MonetizationContext";
 import { LivesBar } from "./components/LivesBar";
 import { ShopModal } from "./components/ShopModal";
@@ -51,13 +50,20 @@ export function MiniLevelGame() {
   });
   const [showDevTools, setShowDevTools] = useState(false);
 
-  // ── NEW: Monetization state ──────────────────────────────────────────────
-  const { isPremium, addCoins, addLives, spendLife, activatePremium, isChapterFree } = useMonetization();
+  // ── Monetization ──────────────────────────────────────────────────────────
+  const {
+    isPremium,
+    lives,
+    addCoins,
+    addLives,
+    spendLife,
+    activatePremium,
+    isChapterFree,
+  } = useMonetization();
   const [showShop, setShowShop] = useState(false);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [pendingChapterUnlock, setPendingChapterUnlock] = useState<number | null>(null);
 
-  // Gate Zone 4+ behind interstitial ad for free players
   function handleZoneTravel(zoneId: number) {
     if (zoneId >= 4 && !isChapterFree(zoneId)) {
       setPendingChapterUnlock(zoneId);
@@ -76,7 +82,7 @@ export function MiniLevelGame() {
   }
 
   function handlePurchasePremium() {
-    activatePremium(); // UAT: instant. Production: RevenueCat purchase first
+    activatePremium();
     setShowShop(false);
   }
 
@@ -87,14 +93,14 @@ export function MiniLevelGame() {
       coins_10000: 10000,
     };
     const amount = packMap[packId] ?? 0;
-    game.devAddGold(amount); // ← adds to char.gold (visible in CharacterStats)
+    game.devAddGold(amount);
     setShowShop(false);
   }
 
   function handleWatchAdForLife() {
-    addLives(1); // UAT: instant. Production: AdMob rewarded callback
+    addLives(1);
   }
-  // ── END Monetization state ───────────────────────────────────────────────
+  // ── END Monetization ──────────────────────────────────────────────────────
 
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
@@ -102,7 +108,6 @@ export function MiniLevelGame() {
         color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
       });
-
       if (isCrit) {
         const gameContainer = document.getElementById('game-container');
         if (gameContainer) {
@@ -172,6 +177,7 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
+  // ── Keyboard shortcut — gated behind lives > 0 ───────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -183,14 +189,15 @@ export function MiniLevelGame() {
         return;
       }
       if (showTutorial || showGameComplete) return;
-      if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
+      // FIX: block keyboard attack at 0 lives
+      if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack && lives > 0) {
         e.preventDefault();
         game.battleAction();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial, showGameComplete]);
+  }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial, showGameComplete, lives]);
 
   useEffect(() => {
     if (game.currentZoneId === 0) {
@@ -211,10 +218,12 @@ export function MiniLevelGame() {
   const wrappedSellItem = (item: Equipment) => { game.sellItem(item); };
   const wrappedUseHpPotion = () => { game.useHpPotion(); };
   const wrappedUseMpPotion = () => { game.useMpPotion(); };
+  // FIX: spendLife called on every respawn
   const wrappedHandleRespawn = () => {
-  spendLife(); // ← deduct 1 life on death before respawning
-  game.handleRespawn();
-};  const wrappedHandleJobChange = (newJob: any) => { game.handleJobChange(newJob); };
+    spendLife();
+    game.handleRespawn();
+  };
+  const wrappedHandleJobChange = (newJob: any) => { game.handleJobChange(newJob); };
 
   return (
     <div
@@ -290,7 +299,6 @@ export function MiniLevelGame() {
       >
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
 
-          {/* ── NEW: Lives Bar ── */}
           <div style={{ marginBottom: "12px" }}>
             <LivesBar
               onWatchAd={handleWatchAdForLife}
@@ -359,7 +367,6 @@ export function MiniLevelGame() {
             <span>{audio.isMuted ? "Muted" : "Music"}</span>
           </button>
 
-          {/* ── NEW: Shop button ── */}
           <button
             onClick={() => setShowShop(true)}
             style={{
@@ -374,7 +381,8 @@ export function MiniLevelGame() {
               display: "flex", alignItems: "center", gap: "6px",
             }}
           >
-            <span>👑</span><span>VIP Store</span>          </button>
+            <span>👑</span><span>VIP Store</span>
+          </button>
 
           {showDevTools && (
             <button
@@ -458,15 +466,71 @@ export function MiniLevelGame() {
               </button>
             </div>
 
+            {/* FIX: No Lives overlay — shown above EnemyDisplay when lives === 0 in a zone */}
+            {lives === 0 && game.currentZoneId !== 0 && (
+              <div style={{
+                background: "rgba(0,0,0,0.85)",
+                border: "2px solid #c0392b",
+                borderRadius: "10px",
+                padding: "20px",
+                textAlign: "center",
+                marginBottom: "10px",
+              }}>
+                <div style={{ fontSize: "36px", marginBottom: "8px" }}>💔</div>
+                <p style={{ margin: "0 0 4px 0", fontWeight: "bold", color: "#f87171", fontSize: "16px" }}>
+                  No Lives Remaining
+                </p>
+                <p style={{ margin: "0 0 12px 0", color: "#94a3b8", fontSize: "13px" }}>
+                  Watch an ad or visit the VIP Store to keep playing.
+                </p>
+                <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                  <button
+                    onClick={handleWatchAdForLife}
+                    style={{
+                      padding: "8px 14px",
+                      background: "rgba(16,185,129,0.2)",
+                      color: "#10b981",
+                      border: "1px solid #10b981",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                    }}
+                  >
+                    📺 Watch Ad (+1 ❤️)
+                  </button>
+                  <button
+                    onClick={() => setShowShop(true)}
+                    style={{
+                      padding: "8px 14px",
+                      background: "rgba(251,191,36,0.2)",
+                      color: "#fbbf24",
+                      border: "1px solid #fbbf24",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                    }}
+                  >
+                    👑 VIP Store
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* FIX: canAttack and autoAttack both gated behind lives > 0 */}
             <EnemyDisplay
               enemy={game.enemy}
               currentZoneId={game.currentZoneId}
-              onAttack={() => game.battleAction()}
-              canAttack={game.canAttack}
+              onAttack={() => lives > 0 && game.battleAction()}
+              canAttack={game.canAttack && lives > 0}
               inTown={game.currentZoneId === 0}
               attackCooldownPercent={game.attackCooldownPercent}
-              autoAttackEnabled={game.autoAttackEnabled}
-              onToggleAutoAttack={game.toggleAutoAttack}
+              autoAttackEnabled={game.autoAttackEnabled && lives > 0}
+              onToggleAutoAttack={() => {
+                if (lives === 0) return;
+                game.toggleAutoAttack();
+              }}
             />
 
             <CombatStatusDisplay
@@ -501,7 +565,6 @@ export function MiniLevelGame() {
             />
 
             <div data-tutorial="map-system">
-              {/* ── UPDATED: onTravel now uses handleZoneTravel ── */}
               <MapSystem
                 currentZoneId={game.currentZoneId}
                 unlockedZoneIds={game.unlockedZoneIds}
@@ -567,7 +630,6 @@ export function MiniLevelGame() {
           />
         )}
 
-        {/* ── NEW: Monetization Modals ── */}
         {showShop && (
           <ShopModal
             onClose={() => setShowShop(false)}
