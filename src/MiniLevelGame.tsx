@@ -25,6 +25,11 @@ import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { useGameAudio } from "./hooks/useGameAudio";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState, useRef } from "react";
+// ── NEW: Monetization imports ──────────────────────────────────────────────
+import { useMonetization } from "./context/MonetizationContext";
+import { LivesBar } from "./components/LivesBar";
+import { ShopModal } from "./components/ShopModal";
+import { InterstitialAd } from "./components/InterstitialAd";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -46,6 +51,50 @@ export function MiniLevelGame() {
   });
   const [showDevTools, setShowDevTools] = useState(false);
 
+  // ── NEW: Monetization state ──────────────────────────────────────────────
+  const { isPremium, addCoins, addLives, activatePremium, isChapterFree } = useMonetization();
+  const [showShop, setShowShop] = useState(false);
+  const [showInterstitialAd, setShowInterstitialAd] = useState(false);
+  const [pendingChapterUnlock, setPendingChapterUnlock] = useState<number | null>(null);
+
+  // Gate Zone 4+ behind interstitial ad for free players
+  function handleZoneTravel(zoneId: number) {
+    if (zoneId >= 4 && !isChapterFree(zoneId)) {
+      setPendingChapterUnlock(zoneId);
+      setShowInterstitialAd(true);
+    } else {
+      game.travelToZone(zoneId);
+    }
+  }
+
+  function handleAdComplete() {
+    setShowInterstitialAd(false);
+    if (pendingChapterUnlock !== null) {
+      game.travelToZone(pendingChapterUnlock);
+      setPendingChapterUnlock(null);
+    }
+  }
+
+  function handlePurchasePremium() {
+    activatePremium(); // UAT: instant. Production: RevenueCat purchase first
+    setShowShop(false);
+  }
+
+  function handlePurchaseCoins(packId: string) {
+    const packMap: Record<string, number> = {
+      coins_1000: 1000,
+      coins_5000: 5000,
+      coins_10000: 10000,
+    };
+    addCoins(packMap[packId] ?? 0); // UAT: instant. Production: RevenueCat purchase first
+    setShowShop(false);
+  }
+
+  function handleWatchAdForLife() {
+    addLives(1); // UAT: instant. Production: AdMob rewarded callback
+  }
+  // ── END Monetization state ───────────────────────────────────────────────
+
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
       addFloatingText(`-${damage}`, {
@@ -59,7 +108,6 @@ export function MiniLevelGame() {
           gameContainer.classList.remove('crit-shake');
           void gameContainer.offsetWidth;
           gameContainer.classList.add('crit-shake');
-
           setTimeout(() => {
             gameContainer.classList.remove('crit-shake');
           }, 300);
@@ -105,7 +153,6 @@ export function MiniLevelGame() {
     onMaterialDrop: (material: 'elunium' | 'oridecon', amount: number) => {
       const materialText = material === 'elunium' ? `💎 +${amount} Elunium` : `🔥 +${amount} Oridecon`;
       const materialColor = material === 'elunium' ? '#a78bfa' : '#f87171';
-
       addFloatingText(materialText, {
         color: materialColor,
         fontSize: 28,
@@ -124,68 +171,47 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
-
       if (e.ctrlKey && e.key === 'd') {
         e.preventDefault();
         setShowDevTools(prev => !prev);
         return;
       }
-
       if (showTutorial || showGameComplete) return;
-
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
         e.preventDefault();
         game.battleAction();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial, showGameComplete]);
 
- // AFTER — catches both "boss ready" and "actively fighting boss"
-useEffect(() => {
-  if (game.currentZoneId === 0) {
-    audio.playBGM("town");
-  } else if (game.bossAvailable || game.isBossFight) {
-    audio.playBGM("boss");
-  } else {
-    audio.playBGM("fight");
-  }
-}, [game.currentZoneId, game.bossAvailable, game.isBossFight]);
+  useEffect(() => {
+    if (game.currentZoneId === 0) {
+      audio.playBGM("town");
+    } else if (game.bossAvailable || game.isBossFight) {
+      audio.playBGM("boss");
+    } else {
+      audio.playBGM("fight");
+    }
+  }, [game.currentZoneId, game.bossAvailable, game.isBossFight]);
 
-  // SFX: play death sound when HP hits 0
   useEffect(() => {
     if (game.char.hp <= 0) {
       audio.playSFX("death");
     }
   }, [game.char.hp]);
 
-  const wrappedSellItem = (item: Equipment) => {
-    game.sellItem(item);
-  };
-
-  const wrappedUseHpPotion = () => {
-    game.useHpPotion();
-  };
-
-  const wrappedUseMpPotion = () => {
-    game.useMpPotion();
-  };
-
-  const wrappedHandleRespawn = () => {
-    game.handleRespawn();
-  };
-
-  const wrappedHandleJobChange = (newJob: any) => {
-    game.handleJobChange(newJob);
-  };
+  const wrappedSellItem = (item: Equipment) => { game.sellItem(item); };
+  const wrappedUseHpPotion = () => { game.useHpPotion(); };
+  const wrappedUseMpPotion = () => { game.useMpPotion(); };
+  const wrappedHandleRespawn = () => { game.handleRespawn(); };
+  const wrappedHandleJobChange = (newJob: any) => { game.handleJobChange(newJob); };
 
   return (
     <div
@@ -206,7 +232,6 @@ useEffect(() => {
         <TutorialOverlay
           onClose={() => {
             setShowTutorial(false);
-            // First user interaction unlocks browser autoplay
             audio.playBGM(game.currentZoneId === 0 ? "town" : "fight");
           }}
         />
@@ -261,6 +286,15 @@ useEffect(() => {
         }}
       >
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
+
+          {/* ── NEW: Lives Bar ── */}
+          <div style={{ marginBottom: "12px" }}>
+            <LivesBar
+              onWatchAd={handleWatchAdForLife}
+              onBuyCoins={() => setShowShop(true)}
+            />
+          </div>
+
           <h1
             style={{
               margin: "0 0 8px 0",
@@ -298,16 +332,12 @@ useEffect(() => {
               cursor: "pointer",
               fontWeight: "bold",
               fontSize: "clamp(12px, 3vw, 14px)",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
+              display: "flex", alignItems: "center", gap: "6px",
             }}
           >
-            <span>📖</span>
-            <span>How to Play</span>
+            <span>📖</span><span>How to Play</span>
           </button>
 
-          {/* Mute / Music toggle button */}
           <button
             onClick={audio.toggleMute}
             style={{
@@ -319,13 +349,29 @@ useEffect(() => {
               cursor: "pointer",
               fontWeight: "bold",
               fontSize: "clamp(12px, 3vw, 14px)",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
+              display: "flex", alignItems: "center", gap: "6px",
             }}
           >
             <span>{audio.isMuted ? "🔇" : "🔊"}</span>
             <span>{audio.isMuted ? "Muted" : "Music"}</span>
+          </button>
+
+          {/* ── NEW: Shop button ── */}
+          <button
+            onClick={() => setShowShop(true)}
+            style={{
+              padding: "8px 16px",
+              background: "rgba(251, 191, 36, 0.2)",
+              color: "#fbbf24",
+              border: "1px solid #fbbf24",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "clamp(12px, 3vw, 14px)",
+              display: "flex", alignItems: "center", gap: "6px",
+            }}
+          >
+            <span>🏪</span><span>Shop</span>
           </button>
 
           {showDevTools && (
@@ -340,13 +386,10 @@ useEffect(() => {
                 cursor: "pointer",
                 fontWeight: "bold",
                 fontSize: "clamp(12px, 3vw, 14px)",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
+                display: "flex", alignItems: "center", gap: "6px",
               }}
             >
-              <span>🎯</span>
-              <span>Training Hut</span>
+              <span>🎯</span><span>Training Hut</span>
             </button>
           )}
         </div>
@@ -374,20 +417,13 @@ useEffect(() => {
                 data-tutorial="job-master"
                 onClick={game.openJobChangeNPC}
                 style={{
-                  flex: 1,
-                  padding: "10px",
-                  background: canChangeJobNow
-                    ? "linear-gradient(45deg, #f59e0b, #d97706)"
-                    : "#555",
+                  flex: 1, padding: "10px",
+                  background: canChangeJobNow ? "linear-gradient(45deg, #f59e0b, #d97706)" : "#555",
                   color: "white",
                   border: canChangeJobNow ? "2px solid #fbbf24" : "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
+                  borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
                   fontSize: "clamp(11px, 3vw, 13px)",
-                  boxShadow: canChangeJobNow
-                    ? "0 0 15px rgba(251, 191, 36, 0.5)"
-                    : "none",
+                  boxShadow: canChangeJobNow ? "0 0 15px rgba(251, 191, 36, 0.5)" : "none",
                   animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
                 }}
               >
@@ -404,17 +440,13 @@ useEffect(() => {
                 }}
                 disabled={game.char.hp <= 0}
                 style={{
-                  flex: 1,
-                  padding: "10px",
+                  flex: 1, padding: "10px",
                   background: game.currentZoneId !== 0
                     ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
                     : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
+                  color: "white", border: "none", borderRadius: "6px",
                   cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
-                  fontWeight: "bold",
-                  fontSize: "clamp(11px, 3vw, 13px)",
+                  fontWeight: "bold", fontSize: "clamp(11px, 3vw, 13px)",
                   boxShadow: game.char.hp > 0
                     ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
                     : "none",
@@ -467,10 +499,11 @@ useEffect(() => {
             />
 
             <div data-tutorial="map-system">
+              {/* ── UPDATED: onTravel now uses handleZoneTravel ── */}
               <MapSystem
                 currentZoneId={game.currentZoneId}
                 unlockedZoneIds={game.unlockedZoneIds}
-                onTravel={game.travelToZone}
+                onTravel={handleZoneTravel}
               />
             </div>
 
@@ -532,80 +565,56 @@ useEffect(() => {
           />
         )}
 
+        {/* ── NEW: Monetization Modals ── */}
+        {showShop && (
+          <ShopModal
+            onClose={() => setShowShop(false)}
+            onPurchasePremium={handlePurchasePremium}
+            onPurchaseCoins={handlePurchaseCoins}
+          />
+        )}
+
+        {showInterstitialAd && (
+          <InterstitialAd onAdComplete={handleAdComplete} />
+        )}
+
         {game.showDeathModal && (
           <div
             style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
               background: "rgba(0, 0, 0, 0.9)",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              zIndex: 1000,
-              padding: "20px",
+              display: "flex", justifyContent: "center", alignItems: "center",
+              zIndex: 1000, padding: "20px",
             }}
           >
             <div
               style={{
                 background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
-                border: "3px solid #dc2626",
-                borderRadius: "16px",
-                padding: "30px",
-                maxWidth: "500px",
-                width: "100%",
-                color: "white",
-                textAlign: "center",
+                border: "3px solid #dc2626", borderRadius: "16px",
+                padding: "30px", maxWidth: "500px", width: "100%",
+                color: "white", textAlign: "center",
                 boxShadow: "0 0 50px rgba(220, 38, 38, 0.5)",
               }}
             >
-              <div style={{ fontSize: "clamp(48px, 15vw, 72px)", marginBottom: "20px" }}>
-                💀
-              </div>
-              <h2
-                style={{
-                  margin: "0 0 20px 0",
-                  fontSize: "clamp(24px, 7vw, 32px)",
-                  color: "#dc2626",
-                  fontWeight: "bold",
-                }}
-              >
+              <div style={{ fontSize: "clamp(48px, 15vw, 72px)", marginBottom: "20px" }}>💀</div>
+              <h2 style={{ margin: "0 0 20px 0", fontSize: "clamp(24px, 7vw, 32px)", color: "#dc2626", fontWeight: "bold" }}>
                 You Were Defeated!
               </h2>
-              <p
-                style={{
-                  fontSize: "clamp(14px, 4vw, 16px)",
-                  marginBottom: "10px",
-                  color: "#bbb",
-                }}
-              >
+              <p style={{ fontSize: "clamp(14px, 4vw, 16px)", marginBottom: "10px", color: "#bbb" }}>
                 Your adventure has ended...
               </p>
-              <p
-                style={{
-                  fontSize: "clamp(12px, 3.5vw, 14px)",
-                  marginBottom: "30px",
-                  color: "#888",
-                }}
-              >
+              <p style={{ fontSize: "clamp(12px, 3.5vw, 14px)", marginBottom: "30px", color: "#888" }}>
                 You will respawn at town with 50% HP and MP.
               </p>
               <button
                 onClick={wrappedHandleRespawn}
                 style={{
-                  width: "100%",
-                  padding: "15px",
+                  width: "100%", padding: "15px",
                   background: "linear-gradient(45deg, #dc2626, #991b1b)",
-                  color: "white",
-                  border: "2px solid #ef4444",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "clamp(16px, 4.5vw, 18px)",
-                  fontWeight: "bold",
-                  boxShadow: "0 4px 15px rgba(220, 38, 38, 0.4)",
-                  transition: "all 0.2s",
+                  color: "white", border: "2px solid #ef4444",
+                  borderRadius: "8px", cursor: "pointer",
+                  fontSize: "clamp(16px, 4.5vw, 18px)", fontWeight: "bold",
+                  boxShadow: "0 4px 15px rgba(220, 38, 38, 0.4)", transition: "all 0.2s",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "scale(1.05)";
@@ -644,12 +653,8 @@ useEffect(() => {
         .crit-shake {
           animation: critShake 0.3s cubic-bezier(.36,.07,.19,.97) both;
         }
-
-        /* Mobile responsive adjustments */
         @media (max-width: 768px) {
-          body {
-            font-size: 14px;
-          }
+          body { font-size: 14px; }
         }
       `}</style>
     </div>
