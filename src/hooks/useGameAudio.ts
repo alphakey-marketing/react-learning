@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const BGM_TRACKS: Record<string, string> = {
   town: "/audio/town.mp3",
-  fight: "/audio/fight.mp3",
+  fight: "/audio/fight.ogg",
   boss: "/audio/boss.ogg",
 };
 
