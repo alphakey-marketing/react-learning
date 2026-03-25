@@ -61,10 +61,16 @@ export function MiniLevelGame() {
     isChapterFree,
   } = useMonetization();
   const [showShop, setShowShop] = useState(false);
+  const [showNoLivesGate, setShowNoLivesGate] = useState(false);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [pendingChapterUnlock, setPendingChapterUnlock] = useState<number | null>(null);
 
+  // FIX: Block zone entry at 0 lives — gate at the door, not inside the battle
   function handleZoneTravel(zoneId: number) {
+    if (lives === 0) {
+      setShowNoLivesGate(true);
+      return;
+    }
     if (zoneId >= 4 && !isChapterFree(zoneId)) {
       setPendingChapterUnlock(zoneId);
       setShowInterstitialAd(true);
@@ -177,7 +183,7 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // ── Keyboard shortcut — gated behind lives > 0 ───────────────────────────
+  // Keyboard shortcut — gated behind lives > 0
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -189,7 +195,6 @@ export function MiniLevelGame() {
         return;
       }
       if (showTutorial || showGameComplete) return;
-      // FIX: block keyboard attack at 0 lives
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack && lives > 0) {
         e.preventDefault();
         game.battleAction();
@@ -218,7 +223,6 @@ export function MiniLevelGame() {
   const wrappedSellItem = (item: Equipment) => { game.sellItem(item); };
   const wrappedUseHpPotion = () => { game.useHpPotion(); };
   const wrappedUseMpPotion = () => { game.useMpPotion(); };
-  // FIX: spendLife called on every respawn
   const wrappedHandleRespawn = () => {
     spendLife();
     game.handleRespawn();
@@ -466,59 +470,7 @@ export function MiniLevelGame() {
               </button>
             </div>
 
-            {/* FIX: No Lives overlay — shown above EnemyDisplay when lives === 0 in a zone */}
-            {lives === 0 && game.currentZoneId !== 0 && (
-              <div style={{
-                background: "rgba(0,0,0,0.85)",
-                border: "2px solid #c0392b",
-                borderRadius: "10px",
-                padding: "20px",
-                textAlign: "center",
-                marginBottom: "10px",
-              }}>
-                <div style={{ fontSize: "36px", marginBottom: "8px" }}>💔</div>
-                <p style={{ margin: "0 0 4px 0", fontWeight: "bold", color: "#f87171", fontSize: "16px" }}>
-                  No Lives Remaining
-                </p>
-                <p style={{ margin: "0 0 12px 0", color: "#94a3b8", fontSize: "13px" }}>
-                  Watch an ad or visit the VIP Store to keep playing.
-                </p>
-                <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                  <button
-                    onClick={handleWatchAdForLife}
-                    style={{
-                      padding: "8px 14px",
-                      background: "rgba(16,185,129,0.2)",
-                      color: "#10b981",
-                      border: "1px solid #10b981",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      fontWeight: "bold",
-                      fontSize: "13px",
-                    }}
-                  >
-                    📺 Watch Ad (+1 ❤️)
-                  </button>
-                  <button
-                    onClick={() => setShowShop(true)}
-                    style={{
-                      padding: "8px 14px",
-                      background: "rgba(251,191,36,0.2)",
-                      color: "#fbbf24",
-                      border: "1px solid #fbbf24",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      fontWeight: "bold",
-                      fontSize: "13px",
-                    }}
-                  >
-                    👑 VIP Store
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* FIX: canAttack and autoAttack both gated behind lives > 0 */}
+            {/* EnemyDisplay — attack/auto gated behind lives > 0 */}
             <EnemyDisplay
               enemy={game.enemy}
               currentZoneId={game.currentZoneId}
@@ -630,6 +582,8 @@ export function MiniLevelGame() {
           />
         )}
 
+        {/* ── Monetization Modals ─────────────────────────────────────────── */}
+
         {showShop && (
           <ShopModal
             onClose={() => setShowShop(false)}
@@ -642,6 +596,97 @@ export function MiniLevelGame() {
           <InterstitialAd onAdComplete={handleAdComplete} />
         )}
 
+        {/* FIX: No Lives Gate — blocks zone entry, shown as full-screen modal */}
+        {showNoLivesGate && (
+          <div
+            style={{
+              position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+              background: "rgba(0,0,0,0.88)",
+              display: "flex", justifyContent: "center", alignItems: "center",
+              zIndex: 1500, padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
+                border: "3px solid #c0392b",
+                borderRadius: "16px",
+                padding: "30px",
+                maxWidth: "400px",
+                width: "100%",
+                color: "white",
+                textAlign: "center",
+                boxShadow: "0 0 50px rgba(192, 57, 43, 0.5)",
+              }}
+            >
+              <div style={{ fontSize: "56px", marginBottom: "12px" }}>💔</div>
+              <h2 style={{ margin: "0 0 8px 0", fontSize: "22px", color: "#f87171", fontWeight: "bold" }}>
+                No Lives Remaining
+              </h2>
+              <p style={{ margin: "0 0 20px 0", color: "#94a3b8", fontSize: "14px", lineHeight: "1.6" }}>
+                You need at least 1 life to enter battle.<br />
+                Watch an ad for a free life, or visit the VIP Store.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <button
+                  onClick={() => {
+                    handleWatchAdForLife();
+                    setShowNoLivesGate(false);
+                  }}
+                  style={{
+                    padding: "12px",
+                    background: "rgba(16,185,129,0.2)",
+                    color: "#10b981",
+                    border: "2px solid #10b981",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    fontSize: "15px",
+                  }}
+                >
+                  📺 Watch Ad — Get +1 ❤️ Free
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNoLivesGate(false);
+                    setShowShop(true);
+                  }}
+                  style={{
+                    padding: "12px",
+                    background: "rgba(251,191,36,0.2)",
+                    color: "#fbbf24",
+                    border: "2px solid #fbbf24",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    fontSize: "15px",
+                  }}
+                >
+                  👑 VIP Store
+                </button>
+                <button
+                  onClick={() => setShowNoLivesGate(false)}
+                  style={{
+                    padding: "10px",
+                    background: "transparent",
+                    color: "#64748b",
+                    border: "1px solid #1e293b",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                  }}
+                >
+                  ✕ Stay in Town
+                </button>
+              </div>
+              <p style={{ margin: "16px 0 0 0", color: "#475569", fontSize: "11px" }}>
+                ⏱ Lives regenerate automatically over time
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Death Modal */}
         {game.showDeathModal && (
           <div
             style={{
