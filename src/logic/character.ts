@@ -137,6 +137,30 @@ export function calcPlayerFlee(
   return baseFlee;
 }
 
+// NEW: Evasion Stance Dodge Chance Calculation (Hunter exclusive passive)
+// Base dodge: skillLevel * 3% (e.g., Lv1 = 3%, Lv5 = 15%)
+// AGI bonus: each AGI point above 30 grants +0.1% per skill level
+// Hard cap at 40% to prevent full immunity
+// Returns the extra dodge % to be checked BEFORE the normal hit/flee system
+export function calcEvasionStanceDodge(
+  char: Character
+): number {
+  const skillLevel = char.learnedSkills["evasion_stance"] ?? 0;
+  if (skillLevel <= 0) return 0;
+
+  const { agi } = char.stats;
+
+  // Base dodge from skill level: +3% per level
+  const baseDodge = skillLevel * 3;
+
+  // AGI scaling: each point of AGI above 30 grants +0.1% per skill level
+  const agiAboveThreshold = Math.max(0, agi - 30);
+  const agiDodgeBonus = agiAboveThreshold * 0.1 * skillLevel;
+
+  // Cap at 40% to keep the game balanced
+  return Math.min(40, baseDodge + agiDodgeBonus);
+}
+
 // Phase 4: Classic RO Quadratic ATK Formula
 // Physical Attack - Quadratic scaling for primary stats (Classic RO Pre-Renewal style)
 // Formula: Floor(Floor(PrimaryStat/10)^2) + Floor(SecondaryStat/5) + Floor(LUK/5) + Level
