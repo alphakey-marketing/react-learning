@@ -52,7 +52,7 @@ export function MiniLevelGame() {
   const [showDevTools, setShowDevTools] = useState(false);
 
   // ── NEW: Monetization state ──────────────────────────────────────────────
-  const { isPremium, addCoins, addLives, activatePremium, isChapterFree } = useMonetization();
+  const { isPremium, addCoins, addLives, spendLife, activatePremium, isChapterFree } = useMonetization();
   const [showShop, setShowShop] = useState(false);
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [pendingChapterUnlock, setPendingChapterUnlock] = useState<number | null>(null);
@@ -210,8 +210,10 @@ export function MiniLevelGame() {
   const wrappedSellItem = (item: Equipment) => { game.sellItem(item); };
   const wrappedUseHpPotion = () => { game.useHpPotion(); };
   const wrappedUseMpPotion = () => { game.useMpPotion(); };
-  const wrappedHandleRespawn = () => { game.handleRespawn(); };
-  const wrappedHandleJobChange = (newJob: any) => { game.handleJobChange(newJob); };
+  const wrappedHandleRespawn = () => {
+  spendLife(); // ← deduct 1 life on death before respawning
+  game.handleRespawn();
+};  const wrappedHandleJobChange = (newJob: any) => { game.handleJobChange(newJob); };
 
   return (
     <div
@@ -371,9 +373,8 @@ export function MiniLevelGame() {
               display: "flex", alignItems: "center", gap: "6px",
             }}
           >
-            <span>🏪</span><span>Shop</span>
-          </button>
-
+            <span>👑</span><span>VIP Store</span>          </button>
+            
           {showDevTools && (
             <button
               onClick={() => setShowTrainingHut(true)}

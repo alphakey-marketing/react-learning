@@ -7,7 +7,7 @@ interface LivesBarProps {
 }
 
 export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
-  const { lives, maxLives, isPremium, lastLifeRegenTime, coins } = useMonetization();
+  const { lives, maxLives, isPremium, lastLifeRegenTime } = useMonetization();
   const [timeToNextLife, setTimeToNextLife] = useState("");
 
   const LIFE_REGEN_MS = 30 * 60 * 1000;
@@ -39,6 +39,7 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
       padding: "8px 14px",
       flexWrap: "wrap",
     }}>
+
       {/* Hearts */}
       <div style={{ display: "flex", gap: "3px" }}>
         {Array.from({ length: maxLives }).map((_, i) => (
@@ -48,10 +49,15 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
         ))}
       </div>
 
-      {/* Regen timer */}
+      {/* Lives count label */}
+      <span style={{ color: "#aaa", fontSize: "12px" }}>
+        {lives}/{maxLives} Lives
+      </span>
+
+      {/* Regen timer — only when not full */}
       {lives < maxLives && (
         <span style={{ color: "#aaa", fontSize: "12px" }}>
-          ⏱ <strong style={{ color: "#fff" }}>{timeToNextLife}</strong>
+          ⏱ next in <strong style={{ color: "#fff" }}>{timeToNextLife}</strong>
         </span>
       )}
 
@@ -62,12 +68,7 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
         </span>
       )}
 
-      {/* Coin balance */}
-      <span style={{ fontSize: "13px", color: "#fbbf24" }}>
-        🪙 {coins.toLocaleString()}
-      </span>
-
-      {/* Refill buttons — only when lives are low and not premium */}
+      {/* Refill buttons — only when lives are low AND not premium */}
       {lives < maxLives && !isPremium && (
         <div style={{ display: "flex", gap: "6px" }}>
           <button
@@ -98,7 +99,7 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
               fontWeight: "bold",
             }}
           >
-            🪙 Buy Lives
+             👑 VIP Store
           </button>
         </div>
       )}
