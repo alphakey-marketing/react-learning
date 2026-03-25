@@ -406,5 +406,18 @@ export const SKILLS_DB: Record<JobClass, Skill[]> = {
       buffDuration: 25,
       targetCount: 0,
     },
+    // NEW: Evasion Stance - Hunter AGI-based dodge passive
+    {
+      id: "evasion_stance",
+      name: "Evasion Stance",
+      nameZh: "Evasion Stance",
+      maxLevel: 5,
+      mpCost: () => 0,
+      description: "Permanently increases dodge chance based on AGI (Passive). Lv1: +3% dodge, Lv5: +15% dodge. Each point of AGI above 30 grants +0.1% extra dodge per skill level.",
+      damageMultiplier: () => 0,
+      cooldown: 0,
+      effect: "passive",
+      targetCount: 0,
+    },
   ]
 };
