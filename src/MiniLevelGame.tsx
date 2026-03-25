@@ -22,6 +22,7 @@ import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
+import { useGameAudio } from "./hooks/useGameAudio";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState, useRef } from "react";
 
@@ -29,13 +30,14 @@ export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
-  
+  const audio = useGameAudio();
+
   const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showTrainingHut, setShowTrainingHut] = useState(false);
   const [showGameComplete, setShowGameComplete] = useState(false);
   const [playTimeMs, setPlayTimeMs] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
-  
+
   const [showTutorial, setShowTutorial] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("hasSeenTutorial") !== "true";
@@ -43,21 +45,21 @@ export function MiniLevelGame() {
     return true;
   });
   const [showDevTools, setShowDevTools] = useState(false);
-  
+
   const game = useGameState(addLog, {
     onDamageDealt: (damage: number, isCrit: boolean) => {
       addFloatingText(`-${damage}`, {
         color: isCrit ? '#ff3333' : '#ffaa00',
         isCrit,
       });
-      
+
       if (isCrit) {
         const gameContainer = document.getElementById('game-container');
         if (gameContainer) {
           gameContainer.classList.remove('crit-shake');
           void gameContainer.offsetWidth;
           gameContainer.classList.add('crit-shake');
-          
+
           setTimeout(() => {
             gameContainer.classList.remove('crit-shake');
           }, 300);
@@ -68,7 +70,6 @@ export function MiniLevelGame() {
       const windowCenterX = window.innerWidth / 2;
       const randomOffset = Math.random() * 30 - 15;
       if (damage === 0) {
-        // Show "Dodged!" for Hunter Evasion Stance
         addFloatingText(`✨ Dodged!`, {
           color: '#34d399',
           x: (windowCenterX + 200) + randomOffset,
@@ -88,6 +89,7 @@ export function MiniLevelGame() {
         fontSize: 42,
         isLevelUp: true,
       });
+      audio.playSFX("levelup");
     },
     onJobLevelUp: (newJobLevel: number) => {
       addFloatingText(`🌟 JOB LV ${newJobLevel}! 🌟`, {
@@ -95,6 +97,7 @@ export function MiniLevelGame() {
         fontSize: 42,
         isLevelUp: true,
       });
+      audio.playSFX("levelup");
     },
     onItemDrop: (item) => {
       addDroppingItem(item);
@@ -102,7 +105,7 @@ export function MiniLevelGame() {
     onMaterialDrop: (material: 'elunium' | 'oridecon', amount: number) => {
       const materialText = material === 'elunium' ? `💎 +${amount} Elunium` : `🔥 +${amount} Oridecon`;
       const materialColor = material === 'elunium' ? '#a78bfa' : '#f87171';
-      
+
       addFloatingText(materialText, {
         color: materialColor,
         fontSize: 28,
@@ -110,10 +113,8 @@ export function MiniLevelGame() {
       });
     },
     onEnemyKilled: (isBoss: boolean, goldEarned: number) => {
-      // Show game complete modal if final boss (Zone 8) is defeated
       if (isBoss && game.currentZoneId === 8 && !showGameComplete) {
         setPlayTimeMs(Date.now() - startTimeRef.current);
-        // We use a timeout to let the combat finish before showing the modal
         setTimeout(() => {
           setShowGameComplete(true);
         }, 1000);
@@ -123,21 +124,21 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
-      
-      // Ctrl+D to toggle dev tools
+
       if (e.ctrlKey && e.key === 'd') {
         e.preventDefault();
         setShowDevTools(prev => !prev);
         return;
       }
-      
+
       if (showTutorial || showGameComplete) return;
-      
+
       if ((e.key === 'a' || e.key === 'A') && game.currentZoneId !== 0 && game.canAttack) {
         e.preventDefault();
         game.battleAction();
@@ -147,6 +148,24 @@ export function MiniLevelGame() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [game.canAttack, game.currentZoneId, game.battleAction, showTutorial, showGameComplete]);
+
+  // BGM: switch track based on zone and boss state
+  useEffect(() => {
+    if (game.currentZoneId === 0) {
+      audio.playBGM("town");
+    } else if (game.bossAvailable) {
+      audio.playBGM("boss");
+    } else {
+      audio.playBGM("fight");
+    }
+  }, [game.currentZoneId, game.bossAvailable]);
+
+  // SFX: play death sound when HP hits 0
+  useEffect(() => {
+    if (game.char.hp <= 0) {
+      audio.playSFX("death");
+    }
+  }, [game.char.hp]);
 
   const wrappedSellItem = (item: Equipment) => {
     game.sellItem(item);
@@ -183,10 +202,24 @@ export function MiniLevelGame() {
         paddingBottom: "20px",
       }}
     >
-      {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
-      
-      {showGameComplete && <GameCompleteModal character={game.char} playTimeMs={playTimeMs} onClose={() => setShowGameComplete(false)} />}
-      
+      {showTutorial && (
+        <TutorialOverlay
+          onClose={() => {
+            setShowTutorial(false);
+            // First user interaction unlocks browser autoplay
+            audio.playBGM(game.currentZoneId === 0 ? "town" : "fight");
+          }}
+        />
+      )}
+
+      {showGameComplete && (
+        <GameCompleteModal
+          character={game.char}
+          playTimeMs={playTimeMs}
+          onClose={() => setShowGameComplete(false)}
+        />
+      )}
+
       {showDevTools && (
         <DevToolsPanel
           character={game.char}
@@ -199,10 +232,10 @@ export function MiniLevelGame() {
           onUnlockAllZones={game.devUnlockAllZones}
         />
       )}
-      
+
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
-      
+
       <CombatHUD
         character={game.char}
         hpPotions={game.hpPotions}
@@ -273,7 +306,28 @@ export function MiniLevelGame() {
             <span>📖</span>
             <span>How to Play</span>
           </button>
-          
+
+          {/* Mute / Music toggle button */}
+          <button
+            onClick={audio.toggleMute}
+            style={{
+              padding: "8px 16px",
+              background: "rgba(255, 255, 255, 0.08)",
+              color: audio.isMuted ? "#666" : "#a3e635",
+              border: `1px solid ${audio.isMuted ? "#555" : "#65a30d"}`,
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "clamp(12px, 3vw, 14px)",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span>{audio.isMuted ? "🔇" : "🔊"}</span>
+            <span>{audio.isMuted ? "Muted" : "Music"}</span>
+          </button>
+
           {showDevTools && (
             <button
               onClick={() => setShowTrainingHut(true)}
@@ -314,7 +368,7 @@ export function MiniLevelGame() {
                 onOpenSkills={() => game.setShowSkillWindow(true)}
               />
             </div>
-            
+
             <div style={{ marginTop: "10px", marginBottom: "10px", display: "flex", gap: "8px" }}>
               <button
                 data-tutorial="job-master"
@@ -337,9 +391,7 @@ export function MiniLevelGame() {
                   animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
                 }}
               >
-                {canChangeJobNow
-                  ? "🧙 Job Change!"
-                  : "🧙 Job Master"}
+                {canChangeJobNow ? "🧙 Job Change!" : "🧙 Job Master"}
               </button>
 
               <button
@@ -354,7 +406,7 @@ export function MiniLevelGame() {
                 style={{
                   flex: 1,
                   padding: "10px",
-                  background: game.currentZoneId !== 0 
+                  background: game.currentZoneId !== 0
                     ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
                     : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
                   color: "white",
@@ -363,7 +415,7 @@ export function MiniLevelGame() {
                   cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
                   fontWeight: "bold",
                   fontSize: "clamp(11px, 3vw, 13px)",
-                  boxShadow: game.char.hp > 0 
+                  boxShadow: game.char.hp > 0
                     ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
                     : "none",
                 }}
@@ -372,7 +424,7 @@ export function MiniLevelGame() {
               </button>
             </div>
 
-            <EnemyDisplay 
+            <EnemyDisplay
               enemy={game.enemy}
               currentZoneId={game.currentZoneId}
               onAttack={() => game.battleAction()}
@@ -382,7 +434,7 @@ export function MiniLevelGame() {
               autoAttackEnabled={game.autoAttackEnabled}
               onToggleAutoAttack={game.toggleAutoAttack}
             />
-            
+
             <CombatStatusDisplay
               character={game.char}
               skillCooldowns={game.skillCooldowns}
@@ -390,7 +442,7 @@ export function MiniLevelGame() {
               activeSelfBuffs={game.activeSelfBuffs}
               inTown={game.currentZoneId === 0}
             />
-            
+
             <BossChallenge
               bossAvailable={game.bossAvailable}
               bossDefeated={game.bossDefeated}
@@ -401,7 +453,7 @@ export function MiniLevelGame() {
 
           <div style={{ minWidth: 0 }}>
             <BattleLog logs={logs} />
-            
+
             <PotionBar
               character={game.char}
               hpPotions={game.hpPotions}
@@ -413,7 +465,7 @@ export function MiniLevelGame() {
               onSetAutoHpPercent={game.setAutoHpPercent}
               onSetAutoMpPercent={game.setAutoMpPercent}
             />
-            
+
             <div data-tutorial="map-system">
               <MapSystem
                 currentZoneId={game.currentZoneId}
@@ -421,7 +473,7 @@ export function MiniLevelGame() {
                 onTravel={game.travelToZone}
               />
             </div>
-            
+
             <div data-tutorial="inventory">
               <EnhancedInventory
                 inventory={game.inventory}
@@ -430,7 +482,7 @@ export function MiniLevelGame() {
                 onUnequip={game.unequipItem}
               />
             </div>
-            
+
             <div data-tutorial="shop">
               <Shop
                 character={game.char}
@@ -557,13 +609,11 @@ export function MiniLevelGame() {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "scale(1.05)";
-                  e.currentTarget.style.boxShadow =
-                    "0 6px 20px rgba(220, 38, 38, 0.6)";
+                  e.currentTarget.style.boxShadow = "0 6px 20px rgba(220, 38, 38, 0.6)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 15px rgba(220, 38, 38, 0.4)";
+                  e.currentTarget.style.boxShadow = "0 4px 15px rgba(220, 38, 38, 0.4)";
                 }}
               >
                 ❤️‍🩹 Respawn
@@ -575,12 +625,8 @@ export function MiniLevelGame() {
 
       <style>{`
         @keyframes pulseButton {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.8;
-          }
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
         }
         @keyframes critShake {
           0% { transform: translate(0, 0) rotate(0deg); }
@@ -598,7 +644,7 @@ export function MiniLevelGame() {
         .crit-shake {
           animation: critShake 0.3s cubic-bezier(.36,.07,.19,.97) both;
         }
-        
+
         /* Mobile responsive adjustments */
         @media (max-width: 768px) {
           body {
