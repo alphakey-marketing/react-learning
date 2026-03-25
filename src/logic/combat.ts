@@ -2,7 +2,7 @@ import { Character } from "../types/character";
 import { Enemy } from "../types/enemy";
 import { Skill } from "../types/skill";
 import { EquippedItems, calculateEquipmentStats } from "../types/equipment";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, calcPlayerHit, PlayerDefense } from "./character";
+import { calcPlayerAtk, calcPlayerMagicAtk, calcCritChance, calcPlayerHit, calcEvasionStanceDodge, PlayerDefense } from "./character";
 import { CRIT_MULTIPLIER, BOSS_ARMOR_PENETRATION } from "../data/constants";
 import { ActiveSelfBuff } from "../hooks/useGameState";
 
@@ -18,6 +18,7 @@ export interface EnemyDamageResult {
   hpDamage: number;
   mpDamage: number;
   counterDamage: number; // NEW: Knight Counter Strike damage
+  isDodged: boolean; // NEW: Track if Hunter dodged
 }
 
 // UAT FIX: Added magic_bolt for Novice INT builds
@@ -165,6 +166,17 @@ export function calculateEnemyDamage(
 ): EnemyDamageResult {
   const enemyRawDmg = enemy.atk;
   
+  // EVASION STANCE: Hunter dodge check (runs before all damage calculation)
+  if (char.jobClass === "Hunter") {
+    const dodgeChance = calcEvasionStanceDodge(char);
+    if (dodgeChance > 0) {
+      const dodgeRoll = Math.random() * 100;
+      if (dodgeRoll < dodgeChance) {
+        return { hpDamage: 0, mpDamage: 0, counterDamage: 0, isDodged: true };
+      }
+    }
+  }
+
   // Determine if this is a magic attack (simplified: 30% of enemy attacks are "magic")
   const isMagicAttack = Math.random() < 0.3;
   
@@ -228,5 +240,5 @@ export function calculateEnemyDamage(
     }
   }
 
-  return { hpDamage, mpDamage, counterDamage };
+  return { hpDamage, mpDamage, counterDamage, isDodged: false };
 }

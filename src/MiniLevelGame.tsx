@@ -67,11 +67,20 @@ export function MiniLevelGame() {
     onEnemyDamageDealt: (damage: number) => {
       const windowCenterX = window.innerWidth / 2;
       const randomOffset = Math.random() * 30 - 15;
-      addFloatingText(`-${damage}`, {
-        color: '#ff6b6b',
-        x: (windowCenterX + 200) + randomOffset,
-        y: (window.innerHeight * 0.4) + randomOffset,
-      });
+      if (damage === 0) {
+        // Show "Dodged!" for Hunter Evasion Stance
+        addFloatingText(`✨ Dodged!`, {
+          color: '#34d399',
+          x: (windowCenterX + 200) + randomOffset,
+          y: (window.innerHeight * 0.4) + randomOffset,
+        });
+      } else {
+        addFloatingText(`-${damage}`, {
+          color: '#ff6b6b',
+          x: (windowCenterX + 200) + randomOffset,
+          y: (window.innerHeight * 0.4) + randomOffset,
+        });
+      }
     },
     onLevelUp: (newLevel: number) => {
       addFloatingText(`🌟 LEVEL ${newLevel}! 🌟`, {
