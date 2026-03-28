@@ -42,7 +42,7 @@ export function BottomNavBar({
         borderTop: '1px solid rgba(255,215,0,0.3)',
         display: 'flex',
         alignItems: 'stretch',
-        zIndex: 900,
+        zIndex: 950,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >

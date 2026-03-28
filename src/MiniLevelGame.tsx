@@ -244,16 +244,19 @@ export function MiniLevelGame() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        height: isMobile ? "100dvh" : "auto",
+        minHeight: isMobile ? undefined : "100vh",
+        overflow: isMobile ? "hidden" : "visible",
         background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
         color: "white",
         display: "flex",
-        justifyContent: "center",
-        alignItems: "flex-start",
+        flexDirection: isMobile ? "column" : undefined,
+        justifyContent: isMobile ? undefined : "center",
+        alignItems: isMobile ? "stretch" : "flex-start",
         fontFamily: "system-ui, sans-serif",
-        padding: isMobile ? "4px" : "10px",
-        paddingTop: isMobile ? "8px" : "20px",
-        paddingBottom: isMobile ? "calc(80px + env(safe-area-inset-bottom, 0px))" : "20px",
+        padding: isMobile ? "0" : "10px",
+        paddingTop: isMobile ? "0" : "20px",
+        paddingBottom: isMobile ? "0" : "20px",
       }}
     >
       {showTutorial && (
@@ -264,6 +267,10 @@ export function MiniLevelGame() {
           }}
           onBeforeStep={(stepIndex) => {
             if (!isMobile) return;
+            // Maps tutorial step index → the tab whose data-tutorial element it highlights.
+            // Steps: 0=welcome, 1=Combat&Exploration(map), 2=Stats&Growth, 3=JobAdvancement(stats),
+            //        4=Loot&Equipment(inventory), 5=Town&Survival(shop).
+            // Update this if tutorial steps in TutorialOverlay.tsx are reordered.
             const tabMap: Record<number, MobileTab> = {
               1: 'map',
               2: 'stats',
@@ -315,21 +322,25 @@ export function MiniLevelGame() {
       <div
         id="game-container"
         style={{
-          border: "2px solid gold",
-          padding: "15px",
-          borderRadius: "12px",
+          border: isMobile ? "none" : "2px solid gold",
+          padding: isMobile ? "6px 6px 0 6px" : "15px",
+          borderRadius: isMobile ? "0" : "12px",
           width: "100%",
-          maxWidth: "1200px",
+          maxWidth: isMobile ? "100%" : "1200px",
+          flex: isMobile ? 1 : undefined,
+          display: isMobile ? "flex" : "block",
+          flexDirection: isMobile ? "column" : undefined,
+          overflow: isMobile ? "hidden" : undefined,
           background: "rgba(34, 34, 34, 0.95)",
-          boxShadow: "0 8px 32px rgba(255, 215, 0, 0.2)",
+          boxShadow: isMobile ? "none" : "0 8px 32px rgba(255, 215, 0, 0.2)",
           backdropFilter: "blur(10px)",
-          overflowX: "hidden",
+          overflowX: isMobile ? undefined : "hidden",
           boxSizing: "border-box",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? "4px" : "20px", flexShrink: 0 }}>
 
-          <div style={{ marginBottom: "12px" }}>
+          <div style={{ marginBottom: isMobile ? "3px" : "12px" }}>
             <LivesBar
               onWatchAd={handleWatchAdForLife}
               onBuyCoins={() => setShowShop(true)}
@@ -338,8 +349,8 @@ export function MiniLevelGame() {
 
           <h1
             style={{
-              margin: "0 0 8px 0",
-              fontSize: "clamp(24px, 6vw, 32px)",
+              margin: isMobile ? "0 0 2px 0" : "0 0 8px 0",
+              fontSize: isMobile ? "15px" : "clamp(24px, 6vw, 32px)",
               background: "linear-gradient(45deg, #fbbf24, #f59e0b, #fbbf24)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
@@ -349,6 +360,7 @@ export function MiniLevelGame() {
           >
             ⚔️ Mini RPG Adventure
           </h1>
+          {!isMobile && (
           <p
             style={{
               margin: "0",
@@ -359,13 +371,14 @@ export function MiniLevelGame() {
           >
             A nostalgic Ragnarok Online inspired idle RPG • Battle monsters, level up, and conquer epic bosses
           </p>
+          )}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: isMobile ? "6px" : "10px", marginBottom: isMobile ? "4px" : "12px", flexWrap: "wrap", flexShrink: 0 }}>
           <button
             onClick={() => setShowTutorial(true)}
             style={{
-              padding: "8px 16px",
+              padding: isMobile ? "5px 8px" : "8px 16px",
               background: "rgba(59, 130, 246, 0.2)",
               color: "#60a5fa",
               border: "1px solid #3b82f6",
@@ -376,13 +389,13 @@ export function MiniLevelGame() {
               display: "flex", alignItems: "center", gap: "6px",
             }}
           >
-            <span>📖</span><span>How to Play</span>
+            <span>📖</span>{!isMobile && <span>How to Play</span>}
           </button>
 
           <button
             onClick={audio.toggleMute}
             style={{
-              padding: "8px 16px",
+              padding: isMobile ? "5px 8px" : "8px 16px",
               background: "rgba(255, 255, 255, 0.08)",
               color: audio.isMuted ? "#666" : "#a3e635",
               border: `1px solid ${audio.isMuted ? "#555" : "#65a30d"}`,
@@ -394,13 +407,13 @@ export function MiniLevelGame() {
             }}
           >
             <span>{audio.isMuted ? "🔇" : "🔊"}</span>
-            <span>{audio.isMuted ? "Muted" : "Music"}</span>
+            {!isMobile && <span>{audio.isMuted ? "Muted" : "Music"}</span>}
           </button>
 
           <button
             onClick={() => setShowShop(true)}
             style={{
-              padding: "8px 16px",
+              padding: isMobile ? "5px 8px" : "8px 16px",
               background: "rgba(251, 191, 36, 0.2)",
               color: "#fbbf24",
               border: "1px solid #fbbf24",
@@ -411,14 +424,14 @@ export function MiniLevelGame() {
               display: "flex", alignItems: "center", gap: "6px",
             }}
           >
-            <span>👑</span><span>VIP Store</span>
+            <span>👑</span>{!isMobile && <span>VIP Store</span>}
           </button>
 
           {showDevTools && (
             <button
               onClick={() => setShowTrainingHut(true)}
               style={{
-                padding: "8px 16px",
+                padding: isMobile ? "5px 8px" : "8px 16px",
                 background: "rgba(245, 158, 11, 0.2)",
                 color: "#fbbf24",
                 border: "1px solid #f59e0b",
@@ -429,47 +442,57 @@ export function MiniLevelGame() {
                 display: "flex", alignItems: "center", gap: "6px",
               }}
             >
-              <span>🎯</span><span>Training Hut</span>
+              <span>🎯</span>{!isMobile && <span>Training Hut</span>}
             </button>
           )}
         </div>
 
         {isMobile ? (
           /* ── Mobile: Bottom-nav tab layout ── */
-          <div style={{ marginBottom: "12px" }}>
-            {/* Always visible: core combat area */}
-            {/* EnemyDisplay — attack/auto gated behind lives > 0 */}
-            <EnemyDisplay
-              enemy={game.enemy}
-              currentZoneId={game.currentZoneId}
-              onAttack={() => lives > 0 && game.battleAction()}
-              canAttack={game.canAttack && lives > 0}
-              inTown={game.currentZoneId === 0}
-              attackCooldownPercent={game.attackCooldownPercent}
-              autoAttackEnabled={game.autoAttackEnabled && lives > 0}
-              onToggleAutoAttack={() => {
-                if (lives === 0) return;
-                game.toggleAutoAttack();
+          <>
+            {/* Always visible: core combat area — does not scroll */}
+            <div style={{ flexShrink: 0 }}>
+              {/* EnemyDisplay — attack/auto gated behind lives > 0 */}
+              <EnemyDisplay
+                enemy={game.enemy}
+                currentZoneId={game.currentZoneId}
+                onAttack={() => lives > 0 && game.battleAction()}
+                canAttack={game.canAttack && lives > 0}
+                inTown={game.currentZoneId === 0}
+                attackCooldownPercent={game.attackCooldownPercent}
+                autoAttackEnabled={game.autoAttackEnabled && lives > 0}
+                onToggleAutoAttack={() => {
+                  if (lives === 0) return;
+                  game.toggleAutoAttack();
+                }}
+              />
+
+              <CombatStatusDisplay
+                character={game.char}
+                skillCooldowns={game.skillCooldowns}
+                activeDebuffs={game.activeDebuffs}
+                activeSelfBuffs={game.activeSelfBuffs}
+                inTown={game.currentZoneId === 0}
+              />
+
+              <BossChallenge
+                bossAvailable={game.bossAvailable}
+                bossDefeated={game.bossDefeated}
+                killCount={game.killCount}
+                onChallengeBoss={game.challengeBoss}
+              />
+            </div>
+
+            {/* Tab content — only this region scrolls */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                overflowX: "hidden",
+                WebkitOverflowScrolling: "touch",
+                paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))", // 64px = BottomNavBar height
               }}
-            />
-
-            <CombatStatusDisplay
-              character={game.char}
-              skillCooldowns={game.skillCooldowns}
-              activeDebuffs={game.activeDebuffs}
-              activeSelfBuffs={game.activeSelfBuffs}
-              inTown={game.currentZoneId === 0}
-            />
-
-            <BossChallenge
-              bossAvailable={game.bossAvailable}
-              bossDefeated={game.bossDefeated}
-              killCount={game.killCount}
-              onChallengeBoss={game.challengeBoss}
-            />
-
-            {/* Tab content — swaps based on activeTab */}
-            <div style={{ paddingBottom: "calc(80px + env(safe-area-inset-bottom, 0px))" }}>
+            >
               {activeTab === 'combat' && (
                 <>
                   <BattleLog logs={logs} />
@@ -583,7 +606,7 @@ export function MiniLevelGame() {
               statPointsBadge={game.char.statPoints}
               canChangeJob={canChangeJobNow}
             />
-          </div>
+          </>
         ) : (
           /* ── Desktop: 2-column grid layout ── */
           <div

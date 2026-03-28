@@ -110,8 +110,10 @@ export function TutorialOverlay({
     onBeforeStep?.(currentStep);
     // Small delay so any tab-switch triggered by onBeforeStep can re-render
     // before we try to measure the highlighted element's position.
-    const TAB_SWITCH_SETTLE_DELAY = 80;
-    const timer = setTimeout(updateHighlight, TAB_SWITCH_SETTLE_DELAY);
+    // 'behavior: auto' on scrollIntoView ensures immediate positioning without
+    // animation, preventing race conditions when measuring the element's position.
+    const tabSwitchSettleDelay = 80;
+    const timer = setTimeout(updateHighlight, tabSwitchSettleDelay);
     window.addEventListener('resize', updateHighlight);
     window.addEventListener('scroll', updateHighlight);
 
