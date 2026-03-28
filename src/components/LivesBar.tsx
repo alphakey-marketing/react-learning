@@ -9,9 +9,16 @@ interface LivesBarProps {
 export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
   const { lives, maxLives, isPremium, lastLifeRegenTime } = useMonetization();
   const [timeToNextLife, setTimeToNextLife] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const LIFE_REGEN_MS = 30 * 60 * 1000;
   const DISPLAY_HEARTS = 5; // always show 5 heart slots visually
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   useEffect(() => {
     if (lives >= maxLives) {
@@ -37,18 +44,18 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: "8px",
+      gap: isMobile ? "6px" : "8px",
       background: "rgba(0,0,0,0.4)",
       border: "1px solid #c0392b",
       borderRadius: "10px",
-      padding: "8px 14px",
+      padding: isMobile ? "4px 8px" : "8px 14px",
       flexWrap: "wrap",
     }}>
 
       {/* 5 Heart slots */}
       <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
         {Array.from({ length: DISPLAY_HEARTS }).map((_, i) => (
-          <span key={i} style={{ fontSize: "18px", opacity: i < filledHearts ? 1 : 0.25 }}>
+          <span key={i} style={{ fontSize: isMobile ? "14px" : "18px", opacity: i < filledHearts ? 1 : 0.25 }}>
             ❤️
           </span>
         ))}
@@ -93,7 +100,7 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
           <button
             onClick={onWatchAd}
             style={{
-              padding: "4px 10px",
+              padding: isMobile ? "3px 8px" : "4px 10px",
               background: "rgba(16,185,129,0.2)",
               color: "#10b981",
               border: "1px solid #10b981",
@@ -108,7 +115,7 @@ export function LivesBar({ onWatchAd, onBuyCoins }: LivesBarProps) {
           <button
             onClick={onBuyCoins}
             style={{
-              padding: "4px 10px",
+              padding: isMobile ? "3px 8px" : "4px 10px",
               background: "rgba(251,191,36,0.2)",
               color: "#fbbf24",
               border: "1px solid #fbbf24",

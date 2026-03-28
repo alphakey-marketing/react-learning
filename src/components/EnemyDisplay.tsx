@@ -120,10 +120,10 @@ export function EnemyDisplay({
     return (
       <div
         style={{
-          marginTop: "15px",
-          marginBottom: "15px",
+          marginTop: isMobile ? "6px" : "15px",
+          marginBottom: isMobile ? "6px" : "15px",
           background: "linear-gradient(135deg, #475569 0%, #334155 50%, #1e293b 100%)",
-          padding: "40px 20px",
+          padding: isMobile ? "16px 12px" : "40px 20px",
           borderRadius: "8px",
           textAlign: "center",
           border: "2px solid #64748b",
@@ -131,13 +131,13 @@ export function EnemyDisplay({
           transition: "background 1s ease"
         }}
       >
-        <div style={{ fontSize: "48px", marginBottom: "10px", opacity: 0.8 }}>
+        <div style={{ fontSize: isMobile ? "28px" : "48px", marginBottom: "10px", opacity: 0.8 }}>
           🏯️
         </div>
-        <h2 style={{ margin: "0", color: "#e2e8f0", fontSize: "20px", fontWeight: "bold" }}>
+        <h2 style={{ margin: "0", color: "#e2e8f0", fontSize: isMobile ? "14px" : "20px", fontWeight: "bold" }}>
           Safe in Town
         </h2>
-        <p style={{ fontSize: "13px", color: "#94a3b8", margin: "10px 0 0 0" }}>
+        <p style={{ fontSize: "11px", color: "#94a3b8", margin: "6px 0 0 0" }}>
           Resting at the inn. HP and MP are recovering...
         </p>
       </div>
@@ -147,10 +147,10 @@ export function EnemyDisplay({
   return (
     <div
       style={{
-        marginTop: "15px",
-        marginBottom: "15px",
+        marginTop: isMobile ? "4px" : "15px",
+        marginBottom: isMobile ? "4px" : "15px",
         background: battleArenaBackground,
-        padding: "20px 15px",
+        padding: isMobile ? "10px 8px" : "20px 15px",
         borderRadius: "8px",
         textAlign: "center",
         border: isBoss ? "3px solid #fca5a5" : (isGroup ? "2px solid #fbbf24" : "2px solid rgba(255,255,255,0.2)"),
@@ -176,11 +176,11 @@ export function EnemyDisplay({
 
       {/* Enemy Sprite/Avatar Container */}
       <div style={{
-        height: "120px",
+        height: isMobile ? "70px" : "120px",
         display: "flex",
         justifyContent: "center",
         alignItems: "flex-end",
-        marginBottom: "15px",
+        marginBottom: isMobile ? "6px" : "15px",
         position: "relative",
         zIndex: 1,
       }}>
@@ -188,7 +188,7 @@ export function EnemyDisplay({
           src={getAvatarUrl()} 
           alt={enemy.name}
           style={{
-            height: isBoss ? "120px" : "100px",
+            height: isBoss ? (isMobile ? "70px" : "120px") : (isMobile ? "55px" : "100px"),
             filter: isHit ? "brightness(2) sepia(1) hue-rotate(300deg) saturate(10000%)" : "drop-shadow(0 10px 15px rgba(0,0,0,0.7))",
             transform: isHit ? "scale(0.95) translateX(5px)" : (isLowHp ? "scale(1)" : "scale(1) translateY(0)"),
             transition: "filter 0.1s, transform 0.1s",
@@ -212,8 +212,8 @@ export function EnemyDisplay({
 
       <h2
         style={{
-          margin: "0 0 8px 0",
-          fontSize: "20px",
+          margin: isMobile ? "0 0 4px 0" : "0 0 8px 0",
+          fontSize: isMobile ? "13px" : "20px",
           color: isBoss ? "#fef3c7" : "#fef3c7",
           textShadow: "2px 2px 6px rgba(0,0,0,0.9)",
           position: "relative",
@@ -255,16 +255,16 @@ export function EnemyDisplay({
       
       {/* Enemy Stats Row */}
       <div style={{ 
-        fontSize: "12px", 
-        marginBottom: "15px", 
+        fontSize: "11px", 
+        marginBottom: isMobile ? "6px" : "15px", 
         color: "#fff",
         display: "inline-flex",
         justifyContent: "center",
-        gap: "15px",
+        gap: isMobile ? "8px" : "15px",
         position: "relative",
         zIndex: 1,
         background: "rgba(0,0,0,0.5)",
-        padding: "5px 12px",
+        padding: isMobile ? "3px 8px" : "5px 12px",
         borderRadius: "6px",
         border: "1px solid rgba(255,255,255,0.15)"
       }}>
@@ -274,8 +274,8 @@ export function EnemyDisplay({
       </div>
       
       {/* HP Bar Container */}
-      <div style={{ background: "rgba(0,0,0,0.6)", padding: "10px", borderRadius: "8px", marginBottom: "15px", position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.1)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "6px", fontWeight: "bold" }}>
+      <div style={{ background: "rgba(0,0,0,0.6)", padding: isMobile ? "6px" : "10px", borderRadius: "8px", marginBottom: isMobile ? "8px" : "15px", position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.1)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: isMobile ? "11px" : "13px", marginBottom: isMobile ? "3px" : "6px", fontWeight: "bold" }}>
           <span style={{ color: "#fca5a5" }}>HP</span>
           <span style={{ color: "#fff" }}>{Math.floor(enemy.hp)} / {enemy.maxHp}</span>
         </div>
@@ -283,7 +283,7 @@ export function EnemyDisplay({
         <div
           style={{
             width: "100%",
-            height: "18px",
+            height: isMobile ? "10px" : "18px",
             background: "#000",
             borderRadius: "9px",
             overflow: "hidden",
@@ -327,7 +327,7 @@ export function EnemyDisplay({
           fontSize: "11px",
           color: "#cbd5e1",
         }}>
-          <span>Attack Cooldown</span>
+          <span style={{ display: isMobile ? "none" : undefined }}>Attack Cooldown</span>
           <div style={{ 
             width: "100px", 
             height: "6px", 
@@ -351,18 +351,18 @@ export function EnemyDisplay({
         <button
           onClick={onToggleAutoAttack}
           style={{
-            padding: isMobile ? "14px 10px" : "10px",
+            padding: isMobile ? "8px 6px" : "10px",
             background: autoAttackEnabled 
               ? "linear-gradient(to bottom, #10b981, #059669)" 
               : "linear-gradient(to bottom, #4b5563, #374151)",
             color: "white",
             border: autoAttackEnabled ? "1px solid #34d399" : "1px solid #6b7280",
             borderRadius: "6px",
-            fontSize: isMobile ? "13px" : "12px",
+            fontSize: isMobile ? "11px" : "12px",
             fontWeight: "bold",
             cursor: "pointer",
             transition: "all 0.2s",
-            minHeight: "48px",
+            minHeight: isMobile ? "36px" : "48px",
             boxShadow: autoAttackEnabled ? "0 4px 10px rgba(16,185,129,0.3)" : "none"
           }}
         >
@@ -380,15 +380,15 @@ export function EnemyDisplay({
               color: "white",
               border: canAttack ? "1px solid #fca5a5" : "1px solid #4b5563",
               borderRadius: "6px",
-              fontSize: isMobile ? "18px" : "14px",
+              fontSize: isMobile ? "14px" : "14px",
               fontWeight: "900",
               cursor: canAttack ? "pointer" : "not-allowed",
               textTransform: "uppercase",
               letterSpacing: "1px",
               boxShadow: canAttack ? "0 4px 10px rgba(220,38,38,0.4)" : "none",
               transition: "all 0.1s",
-              minHeight: "48px",
-              padding: isMobile ? "14px 20px" : "10px 16px",
+              minHeight: isMobile ? "36px" : "48px",
+              padding: isMobile ? "8px 6px" : "10px 16px",
               position: "relative",
               zIndex: 2,
             }}

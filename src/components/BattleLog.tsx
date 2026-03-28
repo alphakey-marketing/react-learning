@@ -125,12 +125,12 @@ export function BattleLog({ logs }: BattleLogProps) {
           <div
             key={log.id}
             style={{
-              marginBottom: "6px",
-              paddingBottom: "4px",
+              marginBottom: isMobile ? "3px" : "6px",
+              paddingBottom: isMobile ? "2px" : "4px",
               borderBottom: "1px solid #1a1a1a",
               wordWrap: "break-word",
               color: getLogColor(log.text),
-              lineHeight: "1.4",
+              lineHeight: "1.3",
             }}
           >
             {log.text}

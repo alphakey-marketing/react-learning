@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems, calculateGearScore, calculateEquipmentStats } from "../types/equipment";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
@@ -18,6 +18,13 @@ export function CharacterStats({
   onOpenSkills,
   selectedTitle,
 }: CharacterStatsProps) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
   // Pending stats system
   const [pendingStats, setPendingStats] = useState<Record<keyof Stats, number>>({
     str: 0,
@@ -253,7 +260,7 @@ export function CharacterStats({
   };
 
   return (
-    <div>
+    <div style={isMobile ? { fontSize: "11px", lineHeight: "1.3" } : undefined}>
       <div
         style={{
           marginBottom: "15px",
