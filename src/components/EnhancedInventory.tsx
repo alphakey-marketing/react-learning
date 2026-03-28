@@ -102,7 +102,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
       {/* Equipment Slots - RO Style */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr)",
+        gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
         gap: "6px",
         marginBottom: "12px",
       }}>
@@ -238,7 +238,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
       {/* Inventory Grid */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(4, 1fr)",
+        gridTemplateColumns: "repeat(auto-fill, minmax(60px, 1fr))",
         gap: "8px",
         maxHeight: "220px",
         overflowY: "auto",

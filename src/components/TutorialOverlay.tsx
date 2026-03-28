@@ -87,6 +87,9 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
     if (step.highlightSelector) {
       const element = document.querySelector(step.highlightSelector) as HTMLElement;
       if (element) {
+        // Scroll the element into view, then measure after the animation settles.
+        // 'auto' skips animation so the rect is accurate immediately.
+        element.scrollIntoView({ behavior: 'auto', block: 'center' });
         const rect = element.getBoundingClientRect();
         setHighlightRect(rect);
       } else {

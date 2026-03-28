@@ -36,6 +36,7 @@ export function MiniLevelGame() {
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
   const audio = useGameAudio();
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showTrainingHut, setShowTrainingHut] = useState(false);
   const [showGameComplete, setShowGameComplete] = useState(false);
@@ -183,6 +184,13 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
+  // Reactive mobile detection — updates on window resize / orientation change
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   // Keyboard shortcut — gated behind lives > 0
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -239,9 +247,9 @@ export function MiniLevelGame() {
         justifyContent: "center",
         alignItems: "flex-start",
         fontFamily: "system-ui, sans-serif",
-        padding: "10px",
-        paddingTop: "20px",
-        paddingBottom: "20px",
+        padding: isMobile ? "4px" : "10px",
+        paddingTop: isMobile ? "8px" : "20px",
+        paddingBottom: isMobile ? "8px" : "20px",
       }}
     >
       {showTutorial && (
@@ -299,6 +307,8 @@ export function MiniLevelGame() {
           background: "rgba(34, 34, 34, 0.95)",
           boxShadow: "0 8px 32px rgba(255, 215, 0, 0.2)",
           backdropFilter: "blur(10px)",
+          overflowX: "hidden",
+          boxSizing: "border-box",
         }}
       >
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
@@ -411,7 +421,7 @@ export function MiniLevelGame() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: window.innerWidth < 768 ? "1fr" : "1fr 1fr",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
             gap: "15px",
             marginBottom: "12px",
           }}

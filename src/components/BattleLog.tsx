@@ -49,6 +49,13 @@ export function BattleLog({ logs }: BattleLogProps) {
   const logContainerRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<LogFilter>("all");
   const [autoScroll, setAutoScroll] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   // Memoize filtered logs to prevent recalculation on every render
   const filteredLogs = useMemo(() => {
@@ -102,7 +109,7 @@ export function BattleLog({ logs }: BattleLogProps) {
         ref={logContainerRef}
         onScroll={handleScroll}
         style={{
-          height: "200px",
+          height: isMobile ? "120px" : "200px",
           overflowY: "auto",
           overflowX: "hidden",
           background: "#111",

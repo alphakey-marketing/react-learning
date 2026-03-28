@@ -28,6 +28,7 @@ export function EnemyDisplay({
   const isLowHp = hpPercent < 30;
   
   const [enemyAttackProgress, setEnemyAttackProgress] = useState(0);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isHit, setIsHit] = useState(false);
   const [prevHp, setPrevHp] = useState(enemy.hp);
 
@@ -76,6 +77,12 @@ export function EnemyDisplay({
     }
     setPrevHp(enemy.hp);
   }, [enemy.hp, prevHp]);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   useEffect(() => {
     if (inTown || enemy.attackSpeed <= 0) {
@@ -344,17 +351,18 @@ export function EnemyDisplay({
         <button
           onClick={onToggleAutoAttack}
           style={{
-            padding: "10px",
+            padding: isMobile ? "14px 10px" : "10px",
             background: autoAttackEnabled 
               ? "linear-gradient(to bottom, #10b981, #059669)" 
               : "linear-gradient(to bottom, #4b5563, #374151)",
             color: "white",
             border: autoAttackEnabled ? "1px solid #34d399" : "1px solid #6b7280",
             borderRadius: "6px",
-            fontSize: "12px",
+            fontSize: isMobile ? "13px" : "12px",
             fontWeight: "bold",
             cursor: "pointer",
             transition: "all 0.2s",
+            minHeight: "48px",
             boxShadow: autoAttackEnabled ? "0 4px 10px rgba(16,185,129,0.3)" : "none"
           }}
         >
@@ -372,13 +380,15 @@ export function EnemyDisplay({
               color: "white",
               border: canAttack ? "1px solid #fca5a5" : "1px solid #4b5563",
               borderRadius: "6px",
-              fontSize: "14px",
+              fontSize: isMobile ? "18px" : "14px",
               fontWeight: "900",
               cursor: canAttack ? "pointer" : "not-allowed",
               textTransform: "uppercase",
               letterSpacing: "1px",
               boxShadow: canAttack ? "0 4px 10px rgba(220,38,38,0.4)" : "none",
               transition: "all 0.1s",
+              minHeight: "48px",
+              padding: isMobile ? "14px 20px" : "10px 16px",
               position: "relative",
               zIndex: 2,
             }}

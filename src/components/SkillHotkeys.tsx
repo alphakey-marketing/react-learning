@@ -1,6 +1,7 @@
 import { Character } from "../types/character";
 import { SKILLS_DB } from "../data/skills";
 import { isMagicSkill } from "../logic/combat";
+import { useState, useEffect } from "react";
 
 interface SkillHotkeysProps {
   character: Character;
@@ -15,10 +16,20 @@ export function SkillHotkeys({
   onUseSkill,
   disabled = false,
 }: SkillHotkeysProps) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   const availableSkills = SKILLS_DB[character.jobClass];
   const learnedSkills = availableSkills.filter(
     (skill) => (character.learnedSkills[skill.id] || 0) > 0
   );
+
+  if (isMobile) return null;
 
   return (
     <div 
