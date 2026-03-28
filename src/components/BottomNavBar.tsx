@@ -14,6 +14,7 @@ interface BottomNavBarProps {
   onTabChange: (tab: MobileTab) => void;
   statPointsBadge?: number;
   canChangeJob?: boolean;
+  inventoryBadge?: number;
 }
 
 export function BottomNavBar({
@@ -21,12 +22,13 @@ export function BottomNavBar({
   onTabChange,
   statPointsBadge = 0,
   canChangeJob = false,
+  inventoryBadge = 0,
 }: BottomNavBarProps) {
   const tabs: NavItem[] = [
     { id: 'combat',    icon: '⚔️',  label: 'Battle' },
     { id: 'stats',     icon: '📊',  label: 'Stats', badge: statPointsBadge },
     { id: 'map',       icon: '🗺️',  label: 'Map' },
-    { id: 'inventory', icon: '🎒',  label: 'Bag' },
+    { id: 'inventory', icon: '🎒',  label: 'Bag', badge: inventoryBadge },
     { id: 'shop',      icon: '🛒',  label: 'Shop' },
   ];
 
