@@ -74,7 +74,13 @@ const steps: TutorialStep[] = [
   }
 ];
 
-export function TutorialOverlay({ onClose }: { onClose: () => void }) {
+export function TutorialOverlay({
+  onClose,
+  onBeforeStep,
+}: {
+  onClose: () => void;
+  onBeforeStep?: (stepIndex: number) => void;
+}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -101,11 +107,16 @@ export function TutorialOverlay({ onClose }: { onClose: () => void }) {
   };
 
   useEffect(() => {
-    updateHighlight();
+    onBeforeStep?.(currentStep);
+    // Small delay so any tab-switch triggered by onBeforeStep can re-render
+    // before we try to measure the highlighted element's position.
+    const TAB_SWITCH_SETTLE_DELAY = 80;
+    const timer = setTimeout(updateHighlight, TAB_SWITCH_SETTLE_DELAY);
     window.addEventListener('resize', updateHighlight);
     window.addEventListener('scroll', updateHighlight);
-    
+
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('resize', updateHighlight);
       window.removeEventListener('scroll', updateHighlight);
     };

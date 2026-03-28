@@ -25,6 +25,7 @@ import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { useGameAudio } from "./hooks/useGameAudio";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState, useRef } from "react";
+import { BottomNavBar, MobileTab } from "./components/BottomNavBar";
 import { useMonetization } from "./context/MonetizationContext";
 import { LivesBar } from "./components/LivesBar";
 import { ShopModal } from "./components/ShopModal";
@@ -37,6 +38,7 @@ export function MiniLevelGame() {
   const audio = useGameAudio();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [activeTab, setActiveTab] = useState<MobileTab>('combat');
   const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showTrainingHut, setShowTrainingHut] = useState(false);
   const [showGameComplete, setShowGameComplete] = useState(false);
@@ -66,7 +68,6 @@ export function MiniLevelGame() {
   const [showInterstitialAd, setShowInterstitialAd] = useState(false);
   const [pendingChapterUnlock, setPendingChapterUnlock] = useState<number | null>(null);
 
-  // FIX: Block zone entry at 0 lives — gate at the door, not inside the battle
   function handleZoneTravel(zoneId: number) {
     if (lives === 0) {
       setShowNoLivesGate(true);
@@ -77,6 +78,7 @@ export function MiniLevelGame() {
       setShowInterstitialAd(true);
     } else {
       game.travelToZone(zoneId);
+      if (isMobile) setActiveTab('combat');
     }
   }
 
@@ -85,6 +87,7 @@ export function MiniLevelGame() {
     if (pendingChapterUnlock !== null) {
       game.travelToZone(pendingChapterUnlock);
       setPendingChapterUnlock(null);
+      if (isMobile) setActiveTab('combat');
     }
   }
 
@@ -162,6 +165,7 @@ export function MiniLevelGame() {
     },
     onItemDrop: (item) => {
       addDroppingItem(item);
+      if (isMobile) setActiveTab('inventory');
     },
     onMaterialDrop: (material: 'elunium' | 'oridecon', amount: number) => {
       const materialText = material === 'elunium' ? `💎 +${amount} Elunium` : `🔥 +${amount} Oridecon`;
@@ -249,7 +253,7 @@ export function MiniLevelGame() {
         fontFamily: "system-ui, sans-serif",
         padding: isMobile ? "4px" : "10px",
         paddingTop: isMobile ? "8px" : "20px",
-        paddingBottom: isMobile ? "8px" : "20px",
+        paddingBottom: isMobile ? "calc(80px + env(safe-area-inset-bottom, 0px))" : "20px",
       }}
     >
       {showTutorial && (
@@ -257,6 +261,18 @@ export function MiniLevelGame() {
           onClose={() => {
             setShowTutorial(false);
             audio.playBGM(game.currentZoneId === 0 ? "town" : "fight");
+          }}
+          onBeforeStep={(stepIndex) => {
+            if (!isMobile) return;
+            const tabMap: Record<number, MobileTab> = {
+              1: 'map',
+              2: 'stats',
+              3: 'stats',
+              4: 'inventory',
+              5: 'shop',
+            };
+            const tab = tabMap[stepIndex];
+            if (tab) setActiveTab(tab);
           }}
         />
       )}
@@ -418,68 +434,10 @@ export function MiniLevelGame() {
           )}
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-            gap: "15px",
-            marginBottom: "12px",
-          }}
-        >
-          <div style={{ minWidth: 0 }}>
-            <div data-tutorial="character-stats">
-              <CharacterStats
-                character={game.char}
-                equipped={game.equipped}
-                onAddStat={game.addStat}
-                onOpenSkills={() => game.setShowSkillWindow(true)}
-              />
-            </div>
-
-            <div style={{ marginTop: "10px", marginBottom: "10px", display: "flex", gap: "8px" }}>
-              <button
-                data-tutorial="job-master"
-                onClick={game.openJobChangeNPC}
-                style={{
-                  flex: 1, padding: "10px",
-                  background: canChangeJobNow ? "linear-gradient(45deg, #f59e0b, #d97706)" : "#555",
-                  color: "white",
-                  border: canChangeJobNow ? "2px solid #fbbf24" : "none",
-                  borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
-                  fontSize: "clamp(11px, 3vw, 13px)",
-                  boxShadow: canChangeJobNow ? "0 0 15px rgba(251, 191, 36, 0.5)" : "none",
-                  animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
-                }}
-              >
-                {canChangeJobNow ? "🧙 Job Change!" : "🧙 Job Master"}
-              </button>
-
-              <button
-                onClick={() => {
-                  if (game.currentZoneId !== 0) {
-                    game.escapeToTown();
-                  } else {
-                    setShowRefineNPC(true);
-                  }
-                }}
-                disabled={game.char.hp <= 0}
-                style={{
-                  flex: 1, padding: "10px",
-                  background: game.currentZoneId !== 0
-                    ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
-                    : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
-                  color: "white", border: "none", borderRadius: "6px",
-                  cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
-                  fontWeight: "bold", fontSize: "clamp(11px, 3vw, 13px)",
-                  boxShadow: game.char.hp > 0
-                    ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
-                    : "none",
-                }}
-              >
-                {game.currentZoneId !== 0 ? "🏛️ Escape to Town" : "🔨 Blacksmith"}
-              </button>
-            </div>
-
+        {isMobile ? (
+          /* ── Mobile: Bottom-nav tab layout ── */
+          <div style={{ marginBottom: "12px" }}>
+            {/* Always visible: core combat area */}
             {/* EnemyDisplay — attack/auto gated behind lives > 0 */}
             <EnemyDisplay
               enemy={game.enemy}
@@ -509,52 +467,263 @@ export function MiniLevelGame() {
               killCount={game.killCount}
               onChallengeBoss={game.challengeBoss}
             />
-          </div>
 
-          <div style={{ minWidth: 0 }}>
-            <BattleLog logs={logs} />
+            {/* Tab content — swaps based on activeTab */}
+            <div style={{ paddingBottom: "calc(80px + env(safe-area-inset-bottom, 0px))" }}>
+              {activeTab === 'combat' && (
+                <>
+                  <BattleLog logs={logs} />
+                  <PotionBar
+                    character={game.char}
+                    hpPotions={game.hpPotions}
+                    mpPotions={game.mpPotions}
+                    autoHpPercent={game.autoHpPercent}
+                    autoMpPercent={game.autoMpPercent}
+                    onUseHpPotion={wrappedUseHpPotion}
+                    onUseMpPotion={wrappedUseMpPotion}
+                    onSetAutoHpPercent={game.setAutoHpPercent}
+                    onSetAutoMpPercent={game.setAutoMpPercent}
+                  />
+                </>
+              )}
 
-            <PotionBar
-              character={game.char}
-              hpPotions={game.hpPotions}
-              mpPotions={game.mpPotions}
-              autoHpPercent={game.autoHpPercent}
-              autoMpPercent={game.autoMpPercent}
-              onUseHpPotion={wrappedUseHpPotion}
-              onUseMpPotion={wrappedUseMpPotion}
-              onSetAutoHpPercent={game.setAutoHpPercent}
-              onSetAutoMpPercent={game.setAutoMpPercent}
+              {activeTab === 'stats' && (
+                <>
+                  <div data-tutorial="character-stats">
+                    <CharacterStats
+                      character={game.char}
+                      equipped={game.equipped}
+                      onAddStat={game.addStat}
+                      onOpenSkills={() => game.setShowSkillWindow(true)}
+                    />
+                  </div>
+                  <div style={{ marginTop: "10px", display: "flex", gap: "8px" }}>
+                    <button
+                      data-tutorial="job-master"
+                      onClick={game.openJobChangeNPC}
+                      style={{
+                        flex: 1, padding: "10px",
+                        background: canChangeJobNow ? "linear-gradient(45deg, #f59e0b, #d97706)" : "#555",
+                        color: "white",
+                        border: canChangeJobNow ? "2px solid #fbbf24" : "none",
+                        borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
+                        fontSize: "clamp(11px, 3vw, 13px)",
+                        boxShadow: canChangeJobNow ? "0 0 15px rgba(251, 191, 36, 0.5)" : "none",
+                        animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
+                      }}
+                    >
+                      {canChangeJobNow ? "🧙 Job Change!" : "🧙 Job Master"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (game.currentZoneId !== 0) {
+                          game.escapeToTown();
+                        } else {
+                          setShowRefineNPC(true);
+                        }
+                      }}
+                      disabled={game.char.hp <= 0}
+                      style={{
+                        flex: 1, padding: "10px",
+                        background: game.currentZoneId !== 0
+                          ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
+                          : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
+                        color: "white", border: "none", borderRadius: "6px",
+                        cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
+                        fontWeight: "bold", fontSize: "clamp(11px, 3vw, 13px)",
+                        boxShadow: game.char.hp > 0
+                          ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
+                          : "none",
+                      }}
+                    >
+                      {game.currentZoneId !== 0 ? "🏛️ Escape to Town" : "🔨 Blacksmith"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'map' && (
+                <div data-tutorial="map-system">
+                  <MapSystem
+                    currentZoneId={game.currentZoneId}
+                    unlockedZoneIds={game.unlockedZoneIds}
+                    onTravel={handleZoneTravel}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'inventory' && (
+                <div data-tutorial="inventory">
+                  <EnhancedInventory
+                    inventory={game.inventory}
+                    equipped={game.equipped}
+                    onEquip={game.equipItem}
+                    onUnequip={game.unequipItem}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'shop' && (
+                <div data-tutorial="shop">
+                  <Shop
+                    character={game.char}
+                    isInTown={game.currentZoneId === 0}
+                    inventory={game.inventory}
+                    onSellItem={wrappedSellItem}
+                    onBuyHpPotion={game.buyHpPotion}
+                    onBuyMpPotion={game.buyMpPotion}
+                  />
+                </div>
+              )}
+            </div>
+
+            <BottomNavBar
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              statPointsBadge={game.char.statPoints}
+              canChangeJob={canChangeJobNow}
             />
+          </div>
+        ) : (
+          /* ── Desktop: 2-column grid layout ── */
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "15px",
+              marginBottom: "12px",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div data-tutorial="character-stats">
+                <CharacterStats
+                  character={game.char}
+                  equipped={game.equipped}
+                  onAddStat={game.addStat}
+                  onOpenSkills={() => game.setShowSkillWindow(true)}
+                />
+              </div>
 
-            <div data-tutorial="map-system">
-              <MapSystem
+              <div style={{ marginTop: "10px", marginBottom: "10px", display: "flex", gap: "8px" }}>
+                <button
+                  data-tutorial="job-master"
+                  onClick={game.openJobChangeNPC}
+                  style={{
+                    flex: 1, padding: "10px",
+                    background: canChangeJobNow ? "linear-gradient(45deg, #f59e0b, #d97706)" : "#555",
+                    color: "white",
+                    border: canChangeJobNow ? "2px solid #fbbf24" : "none",
+                    borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
+                    fontSize: "clamp(11px, 3vw, 13px)",
+                    boxShadow: canChangeJobNow ? "0 0 15px rgba(251, 191, 36, 0.5)" : "none",
+                    animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
+                  }}
+                >
+                  {canChangeJobNow ? "🧙 Job Change!" : "🧙 Job Master"}
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (game.currentZoneId !== 0) {
+                      game.escapeToTown();
+                    } else {
+                      setShowRefineNPC(true);
+                    }
+                  }}
+                  disabled={game.char.hp <= 0}
+                  style={{
+                    flex: 1, padding: "10px",
+                    background: game.currentZoneId !== 0
+                      ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
+                      : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
+                    color: "white", border: "none", borderRadius: "6px",
+                    cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
+                    fontWeight: "bold", fontSize: "clamp(11px, 3vw, 13px)",
+                    boxShadow: game.char.hp > 0
+                      ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
+                      : "none",
+                  }}
+                >
+                  {game.currentZoneId !== 0 ? "🏛️ Escape to Town" : "🔨 Blacksmith"}
+                </button>
+              </div>
+
+              {/* EnemyDisplay — attack/auto gated behind lives > 0 */}
+              <EnemyDisplay
+                enemy={game.enemy}
                 currentZoneId={game.currentZoneId}
-                unlockedZoneIds={game.unlockedZoneIds}
-                onTravel={handleZoneTravel}
+                onAttack={() => lives > 0 && game.battleAction()}
+                canAttack={game.canAttack && lives > 0}
+                inTown={game.currentZoneId === 0}
+                attackCooldownPercent={game.attackCooldownPercent}
+                autoAttackEnabled={game.autoAttackEnabled && lives > 0}
+                onToggleAutoAttack={() => {
+                  if (lives === 0) return;
+                  game.toggleAutoAttack();
+                }}
               />
-            </div>
 
-            <div data-tutorial="inventory">
-              <EnhancedInventory
-                inventory={game.inventory}
-                equipped={game.equipped}
-                onEquip={game.equipItem}
-                onUnequip={game.unequipItem}
-              />
-            </div>
-
-            <div data-tutorial="shop">
-              <Shop
+              <CombatStatusDisplay
                 character={game.char}
-                isInTown={game.currentZoneId === 0}
-                inventory={game.inventory}
-                onSellItem={wrappedSellItem}
-                onBuyHpPotion={game.buyHpPotion}
-                onBuyMpPotion={game.buyMpPotion}
+                skillCooldowns={game.skillCooldowns}
+                activeDebuffs={game.activeDebuffs}
+                activeSelfBuffs={game.activeSelfBuffs}
+                inTown={game.currentZoneId === 0}
               />
+
+              <BossChallenge
+                bossAvailable={game.bossAvailable}
+                bossDefeated={game.bossDefeated}
+                killCount={game.killCount}
+                onChallengeBoss={game.challengeBoss}
+              />
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <BattleLog logs={logs} />
+
+              <PotionBar
+                character={game.char}
+                hpPotions={game.hpPotions}
+                mpPotions={game.mpPotions}
+                autoHpPercent={game.autoHpPercent}
+                autoMpPercent={game.autoMpPercent}
+                onUseHpPotion={wrappedUseHpPotion}
+                onUseMpPotion={wrappedUseMpPotion}
+                onSetAutoHpPercent={game.setAutoHpPercent}
+                onSetAutoMpPercent={game.setAutoMpPercent}
+              />
+
+              <div data-tutorial="map-system">
+                <MapSystem
+                  currentZoneId={game.currentZoneId}
+                  unlockedZoneIds={game.unlockedZoneIds}
+                  onTravel={handleZoneTravel}
+                />
+              </div>
+
+              <div data-tutorial="inventory">
+                <EnhancedInventory
+                  inventory={game.inventory}
+                  equipped={game.equipped}
+                  onEquip={game.equipItem}
+                  onUnequip={game.unequipItem}
+                />
+              </div>
+
+              <div data-tutorial="shop">
+                <Shop
+                  character={game.char}
+                  isInTown={game.currentZoneId === 0}
+                  inventory={game.inventory}
+                  onSellItem={wrappedSellItem}
+                  onBuyHpPotion={game.buyHpPotion}
+                  onBuyMpPotion={game.buyMpPotion}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {game.showSkillWindow && (
           <SkillWindow
