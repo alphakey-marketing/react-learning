@@ -30,6 +30,7 @@ import { useMonetization } from "./context/MonetizationContext";
 import { LivesBar } from "./components/LivesBar";
 import { ShopModal } from "./components/ShopModal";
 import { InterstitialAd } from "./components/InterstitialAd";
+import { TopHUDBar } from "./components/TopHUDBar";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -322,6 +323,15 @@ export function MiniLevelGame() {
         onUseMpPotion={wrappedUseMpPotion}
         inTown={game.currentZoneId === 0}
       />
+
+      {/* Phase 2A: TopHUDBar — mobile-only persistent top bar */}
+      {isMobile && (
+        <TopHUDBar
+          level={game.char.level}
+          hp={game.char.hp}
+          maxHp={game.char.maxHp}
+        />
+      )}
 
       <div
         id="game-container"
