@@ -83,7 +83,10 @@ export function TutorialOverlay({
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  // FIX BUG 2: initialise from window immediately, same pattern as the rest of the codebase.
+  // Previously `useState(false)` meant the first render always treated mobile as desktop,
+  // firing off-screen directional positioning and causing a white flash.
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
   const step = steps[currentStep];
 
@@ -93,8 +96,6 @@ export function TutorialOverlay({
     if (step.highlightSelector) {
       const element = document.querySelector(step.highlightSelector) as HTMLElement;
       if (element) {
-        // Scroll the element into view, then measure after the animation settles.
-        // 'auto' skips animation so the rect is accurate immediately.
         element.scrollIntoView({ behavior: 'auto', block: 'center' });
         const rect = element.getBoundingClientRect();
         setHighlightRect(rect);
@@ -108,10 +109,6 @@ export function TutorialOverlay({
 
   useEffect(() => {
     onBeforeStep?.(currentStep);
-    // Small delay so any tab-switch triggered by onBeforeStep can re-render
-    // before we try to measure the highlighted element's position.
-    // 'behavior: auto' on scrollIntoView ensures immediate positioning without
-    // animation, preventing race conditions when measuring the element's position.
     const tabSwitchSettleDelay = 80;
     const timer = setTimeout(updateHighlight, tabSwitchSettleDelay);
     window.addEventListener('resize', updateHighlight);
@@ -140,8 +137,6 @@ export function TutorialOverlay({
   };
 
   const getBoxPosition = (): React.CSSProperties => {
-    // Force center position on mobile devices because directional positioning
-    // breaks when UI elements stack vertically, causing overflow or off-screen bugs.
     if (!highlightRect || step.position === 'center' || isMobile) {
       return {
         top: '50%',
@@ -197,7 +192,6 @@ export function TutorialOverlay({
         const top = highlightRect.bottom + padding;
         const left = highlightRect.left + highlightRect.width / 2;
         
-        // If box would overflow bottom, fallback to center
         if (top + boxHeight > window.innerHeight) {
           return {
             top: '50%',
@@ -257,7 +251,6 @@ export function TutorialOverlay({
       >
         <defs>
           <mask id="spotlight-mask">
-            {/* White = visible, Black = hidden */}
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
             {highlightRect && (
               <rect
@@ -352,28 +345,34 @@ export function TutorialOverlay({
         </>
       )}
 
-      {/* Tutorial box */}
+      {/* FIX BUG 1: Tutorial box wrapper now has an explicit dark background so the
+          painted region is never transparent/white. Also uses a solid background
+          behind the inner card to prevent white bleed during the fade-in animation. */}
       <div style={{
         position: "fixed",
         ...getBoxPosition(),
         zIndex: 10003,
         padding: "15px",
         maxWidth: step.position === 'center' || isMobile ? "500px" : "380px",
-        width: "90%", // Always use 90% width to prevent overflow
+        width: "90%",
         maxHeight: "90vh",
-        overflow: "auto",
+        overflowY: "auto",
+        overflowX: "hidden",
+        // Prevent the white unpainted region showing during CSS animation
+        background: "transparent",
+        WebkitOverflowScrolling: "touch" as any,
       }}>
         <div style={{
           background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
           border: "2px solid #3b82f6",
           borderRadius: "16px",
-          padding: "clamp(15px, 4vw, 30px)", // Responsive padding
+          padding: "clamp(15px, 4vw, 30px)",
           color: "white",
           boxShadow: "0 10px 40px rgba(59, 130, 246, 0.5)",
           animation: "popupFadeIn 0.3s ease-out",
         }}>
           <div style={{ 
-            fontSize: "clamp(32px, 8vw, 48px)", // Responsive icon
+            fontSize: "clamp(32px, 8vw, 48px)",
             textAlign: "center", 
             marginBottom: "10px" 
           }}>
@@ -384,12 +383,12 @@ export function TutorialOverlay({
             color: "#60a5fa", 
             marginTop: 0, 
             marginBottom: "clamp(10px, 3vw, 20px)", 
-            fontSize: "clamp(18px, 5vw, 20px)" // Responsive title
+            fontSize: "clamp(18px, 5vw, 20px)"
           }}>
             {step.title}
           </h2>
           <div style={{ 
-            fontSize: "clamp(13px, 3.5vw, 15px)", // Responsive description text
+            fontSize: "clamp(13px, 3.5vw, 15px)",
             lineHeight: "1.6", 
             color: "#e2e8f0", 
             minHeight: "60px",
