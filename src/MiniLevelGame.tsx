@@ -838,9 +838,14 @@ export function MiniLevelGame() {
                   character={game.char}
                   isInTown={game.currentZoneId === 0}
                   inventory={game.inventory}
+                  equipped={game.equipped}
                   onSellItem={wrappedSellItem}
                   onBuyHpPotion={game.buyHpPotion}
                   onBuyMpPotion={game.buyMpPotion}
+                  onRefine={game.refineItem}
+                  onJobChange={wrappedHandleJobChange}
+                  isOpen={true}
+                  onClose={() => {}}
                 />
               </div>
             </div>
