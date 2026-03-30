@@ -97,7 +97,7 @@ export function Shop({
           top: 0,
           right: 0,
           bottom: 0,
-          width: "min(100vw, 420px)",
+          width: "min(100%, 420px)",
           background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
           borderLeft: "1px solid rgba(255,215,0,0.2)",
           zIndex: 860,

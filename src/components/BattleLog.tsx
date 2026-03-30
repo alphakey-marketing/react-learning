@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
 import { Log } from "../types/game";
 
 interface BattleLogProps {
@@ -50,6 +50,8 @@ export function BattleLog({ logs }: BattleLogProps) {
   const [filter, setFilter] = useState<LogFilter>("all");
   const [autoScroll, setAutoScroll] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const prevLogsLenRef = useRef(logs.length);
+  const [unread, setUnread] = useState(0);
 
   const filteredLogs = useMemo(() => {
     if (filter === "all") return logs;
@@ -62,6 +64,14 @@ export function BattleLog({ logs }: BattleLogProps) {
     container.scrollTop = container.scrollHeight;
   }, [filteredLogs, autoScroll, isOpen]);
 
+  // Track new logs arriving while panel is closed
+  useEffect(() => {
+    if (!isOpen && logs.length > prevLogsLenRef.current) {
+      setUnread(prev => prev + (logs.length - prevLogsLenRef.current));
+    }
+    prevLogsLenRef.current = logs.length;
+  }, [logs.length, isOpen]);
+
   const handleScroll = () => {
     const container = logContainerRef.current;
     if (!container) return;
@@ -73,7 +83,7 @@ export function BattleLog({ logs }: BattleLogProps) {
     <div style={{ marginBottom: "8px" }}>
       {/* Toggle button — always visible */}
       <button
-        onClick={() => setIsOpen(prev => !prev)}
+        onClick={() => { setIsOpen(prev => !prev); setUnread(0); }}
         style={{
           display: "flex",
           alignItems: "center",
@@ -102,6 +112,21 @@ export function BattleLog({ logs }: BattleLogProps) {
             }}
           >
             {logs.length}
+          </span>
+        )}
+        {!isOpen && unread > 0 && (
+          <span
+            style={{
+              background: "#ef4444",
+              borderRadius: "10px",
+              fontSize: "10px",
+              padding: "1px 7px",
+              color: "white",
+              fontWeight: "bold",
+              animation: "pulse 1s infinite",
+            }}
+          >
+            +{unread} new
           </span>
         )}
         <span style={{ marginLeft: "auto", fontSize: "12px", color: "#9ca3af" }}>

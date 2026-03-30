@@ -825,10 +825,8 @@ export function CharacterStats({
               { key: "accessory2" as const, label: "Acc 2", icon: "💍" },
             ].map(slot => {
               const item = equipped[slot.key];
-              const rarityColor = item ? (() => {
-                const colors: Record<string, string> = { legendary: "#ff6b35", epic: "#a855f7", rare: "#3b82f6", uncommon: "#22c55e", common: "#9ca3af" };
-                return colors[item.rarity] || "#9ca3af";
-              })() : "#334155";
+              const SLOT_RARITY_COLORS: Record<string, string> = { legendary: "#ff6b35", epic: "#a855f7", rare: "#3b82f6", uncommon: "#22c55e", common: "#9ca3af" };
+              const rarityColor = item ? (SLOT_RARITY_COLORS[item.rarity] || "#9ca3af") : "#334155";
               return (
                 <div
                   key={slot.key}
@@ -844,10 +842,7 @@ export function CharacterStats({
                     minHeight: "44px",
                   }}
                 >
-                  <span style={{ fontSize: "18px", flexShrink: 0 }}>{item ? (() => {
-                    const icons: Record<string, string> = { weapon: item.weaponType === "bow" ? "🏹" : item.weaponType === "wand" ? "🪄" : "⚔️", armor: "🛡️", head: "🎩", garment: "🧥", footgear: "👢", accessory: "💍" };
-                    return icons[item.type] || "📦";
-                  })() : slot.icon}</span>
+                  <span style={{ fontSize: "18px", flexShrink: 0 }}>{item ? getEquipmentIcon(item) : slot.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: rarityColor, fontSize: "12px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item ? item.name + (item.refinement ? " +" + item.refinement : "") : "Empty"}

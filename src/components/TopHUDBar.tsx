@@ -30,7 +30,7 @@ export function TopHUDBar({ level, hp, maxHp }: TopHUDBarProps) {
         paddingBottom: "6px",
         background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)",
         borderBottom: "1px solid rgba(255,215,0,0.2)",
-        height: "56px",
+        minHeight: "56px",
         boxSizing: "border-box",
         zIndex: 900,
       }}

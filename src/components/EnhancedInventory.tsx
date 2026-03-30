@@ -14,9 +14,6 @@ type SortOption = "type" | "rarity" | "power" | "name";
 
 const EQUIPMENT_TYPES = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
 
-function getItemCategory(item: Equipment): "equipment" {
-  return "equipment";
-}
 
 export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: EnhancedInventoryProps) {
   const [isOpen, setIsOpen] = useState(false);

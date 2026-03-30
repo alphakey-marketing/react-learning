@@ -36,17 +36,20 @@ export function EquipmentComparisonModal({
     return { text: "— Same", color: "#6b7280" };
   };
 
-  const statComparisons = [
-    currentItem ? { label: "⚔️ ATK", d: diff(getItemAtk(newItem), getItemAtk(currentItem)) } : null,
-    currentItem ? { label: "🔮 MATK", d: diff(getItemMatk(newItem), getItemMatk(currentItem)) } : null,
-    currentItem ? { label: "🛡️ DEF", d: diff(getItemDef(newItem), getItemDef(currentItem)) } : null,
-    currentItem ? { label: "STR", d: diff(newItem.str || 0, currentItem.str || 0) } : null,
-    currentItem ? { label: "AGI", d: diff(newItem.agi || 0, currentItem.agi || 0) } : null,
-    currentItem ? { label: "VIT", d: diff(newItem.vit || 0, currentItem.vit || 0) } : null,
-    currentItem ? { label: "INT", d: diff(newItem.int || 0, currentItem.int || 0) } : null,
-    currentItem ? { label: "DEX", d: diff(newItem.dex || 0, currentItem.dex || 0) } : null,
-    currentItem ? { label: "LUK", d: diff(newItem.luk || 0, currentItem.luk || 0) } : null,
-  ].filter(Boolean).filter(row => row!.d.text !== "— Same");
+  type StatRow = { label: string; d: { text: string; color: string } };
+  const statComparisons: StatRow[] = currentItem
+    ? [
+        { label: "⚔️ ATK", d: diff(getItemAtk(newItem), getItemAtk(currentItem)) },
+        { label: "🔮 MATK", d: diff(getItemMatk(newItem), getItemMatk(currentItem)) },
+        { label: "🛡️ DEF", d: diff(getItemDef(newItem), getItemDef(currentItem)) },
+        { label: "STR", d: diff(newItem.str || 0, currentItem.str || 0) },
+        { label: "AGI", d: diff(newItem.agi || 0, currentItem.agi || 0) },
+        { label: "VIT", d: diff(newItem.vit || 0, currentItem.vit || 0) },
+        { label: "INT", d: diff(newItem.int || 0, currentItem.int || 0) },
+        { label: "DEX", d: diff(newItem.dex || 0, currentItem.dex || 0) },
+        { label: "LUK", d: diff(newItem.luk || 0, currentItem.luk || 0) },
+      ].filter((row): row is StatRow => row.d.text !== "— Same")
+    : [];
 
   return (
     <div
