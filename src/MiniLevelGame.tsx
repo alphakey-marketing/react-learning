@@ -676,19 +676,23 @@ export function MiniLevelGame() {
                 </div>
               )}
 
-              {activeTab === 'shop' && (
-                <div data-tutorial="shop">
-                  <Shop
-                    character={game.char}
-                    isInTown={game.currentZoneId === 0}
-                    inventory={game.inventory}
-                    onSellItem={wrappedSellItem}
-                    onBuyHpPotion={game.buyHpPotion}
-                    onBuyMpPotion={game.buyMpPotion}
-                  />
-                </div>
-              )}
+              {/* Shop panel is now a slide-in overlay controlled by activeTab */}
             </div>
+
+            {/* Phase 2F: Shop as full-screen slide-in panel */}
+            <Shop
+              character={game.char}
+              isInTown={game.currentZoneId === 0}
+              inventory={game.inventory}
+              equipped={game.equipped}
+              onSellItem={wrappedSellItem}
+              onBuyHpPotion={game.buyHpPotion}
+              onBuyMpPotion={game.buyMpPotion}
+              onRefine={game.refineItem}
+              onJobChange={wrappedHandleJobChange}
+              isOpen={activeTab === 'shop'}
+              onClose={() => setActiveTab('combat')}
+            />
 
             <BottomNavBar
               activeTab={activeTab}
