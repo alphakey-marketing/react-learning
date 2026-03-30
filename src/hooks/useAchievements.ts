@@ -4,7 +4,8 @@ import { ACHIEVEMENTS_DB } from "../data/achievements";
 import { Character } from "../types/character";
 import { Equipment, EquippedItems } from "../types/equipment";
 
-interface AchievementStats {
+export interface AchievementStats {
+  [key: string]: number;
   total_kills: number;
   boss_kills: number;
   max_damage: number;

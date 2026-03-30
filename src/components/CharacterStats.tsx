@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems, calculateGearScore, calculateEquipmentStats, getEquipmentIcon } from "../types/equipment";
-import { useAchievements } from "../hooks/useAchievements";
+import { useAchievements, AchievementStats } from "../hooks/useAchievements";
 import { ACHIEVEMENTS_DB } from "../data/achievements";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
 
@@ -20,7 +20,7 @@ function AchievementPanel({
   progress 
 }: { 
   unlockedIds: Set<string>; 
-  progress: Record<string, number>; 
+  progress: AchievementStats; 
 }) {
   const [page, setPage] = useState(0);
   const PER_PAGE = 5;
@@ -51,7 +51,7 @@ function AchievementPanel({
 
       {pageItems.map(achievement => {
         const isUnlocked = unlockedIds.has(achievement.id);
-        const current = progress[achievement.requirement.type] || 0;
+        const current = progress[achievement.requirement.type] ?? 0;
         const target = achievement.requirement.target;
         const percent = Math.min(100, Math.floor((current / target) * 100));
         const color = rarityColors[achievement.rarity] || "#9ca3af";
@@ -858,7 +858,7 @@ export function CharacterStats({
             padding: "0 2px",
           }}
         >
-          <AchievementPanel unlockedIds={achievementData.playerAchievements.unlocked} progress={achievementData.stats as unknown as Record<string, number>} />
+          <AchievementPanel unlockedIds={achievementData.playerAchievements.unlocked} progress={achievementData.stats} />
         </div>
       </div>
 

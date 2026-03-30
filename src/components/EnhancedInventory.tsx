@@ -456,7 +456,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
             position: "fixed",
             inset: 0,
             background: "rgba(0,0,0,0.92)",
-            zIndex: 900,
+            zIndex: 1000,
             display: "flex",
             flexDirection: "column",
             padding: "0",

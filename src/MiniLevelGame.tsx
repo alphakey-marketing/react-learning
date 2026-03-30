@@ -510,6 +510,7 @@ export function MiniLevelGame() {
                 overflowY: "auto",
                 overflowX: "hidden",
                 WebkitOverflowScrolling: "touch",
+                touchAction: "pan-y",
                 paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))", // 64px = BottomNavBar height
               }}
             >

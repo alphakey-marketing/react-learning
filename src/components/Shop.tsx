@@ -106,6 +106,7 @@ export function Shop({
           transform: isOpen ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
           overflow: "hidden",
+          pointerEvents: isOpen ? "auto" : "none",
         }}
       >
         {/* Header */}
