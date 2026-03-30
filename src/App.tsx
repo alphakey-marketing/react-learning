@@ -5,8 +5,8 @@ import { MonetizationProvider } from "./context/MonetizationContext";
 function App() {
   return (
     <MonetizationProvider>
-      {/* UATBanner overlays everything via its own z-index — outside the shell */}
-      <UATBanner />
+      {/* UATBanner hidden for UAT — re-enable by uncommenting */}
+      {/* <UATBanner /> */}
 
       {/* App shell — vertical flex column, full dynamic viewport height */}
       <div

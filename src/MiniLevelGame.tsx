@@ -630,6 +630,24 @@ export function MiniLevelGame() {
                       {canChangeJobNow ? "🧙 Job Change!" : "🧙 Job Master"}
                     </button>
                     <button
+                      onClick={() => game.setShowSkillWindow(true)}
+                      style={{
+                        flex: 1, padding: "10px",
+                        background: game.char.skillPoints > 0
+                          ? "linear-gradient(45deg, #7c3aed, #6d28d9)"
+                          : "linear-gradient(45deg, #4c1d95, #3b1980)",
+                        color: "white",
+                        border: game.char.skillPoints > 0 ? "2px solid #8b5cf6" : "none",
+                        borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
+                        fontSize: "clamp(11px, 3vw, 13px)",
+                        boxShadow: game.char.skillPoints > 0 ? "0 0 15px rgba(124, 58, 237, 0.5)" : "none",
+                        animation: game.char.skillPoints > 0 ? "pulseButton 2s infinite" : "none",
+                        touchAction: "manipulation",
+                      }}
+                    >
+                      {game.char.skillPoints > 0 ? `📖 Skills (${game.char.skillPoints}!)` : "📖 Skills"}
+                    </button>
+                    <button
                       onClick={() => {
                         if (game.currentZoneId !== 0) {
                           game.escapeToTown();
@@ -651,7 +669,7 @@ export function MiniLevelGame() {
                           : "none",
                       }}
                     >
-                      {game.currentZoneId !== 0 ? "🏛️ Escape to Town" : "🔨 Blacksmith"}
+                      {game.currentZoneId !== 0 ? "🏛️ Escape" : "🔨 Blacksmith"}
                     </button>
                   </div>
                 </>
