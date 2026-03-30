@@ -1,5 +1,6 @@
 import { Achievement, AchievementCategory } from "../types/achievement";
 import { ACHIEVEMENTS_DB } from "../data/achievements";
+import { useState } from "react";
 
 interface AchievementListProps {
   unlockedIds: Set<string>;
@@ -7,300 +8,306 @@ interface AchievementListProps {
   onClose: () => void;
 }
 
+const PER_PAGE = 6;
+
+const RARITY_COLORS: Record<string, string> = {
+  common: "#9ca3af",
+  rare: "#3b82f6",
+  epic: "#a855f7",
+  legendary: "#f59e0b",
+};
+
+const CATEGORY_ICONS: Record<AchievementCategory, string> = {
+  combat: "⚔️",
+  progression: "📈",
+  collection: "🎒",
+  exploration: "🗺️",
+};
+
+const CATEGORIES: AchievementCategory[] = ["combat", "progression", "collection", "exploration"];
+
 export function AchievementList({ unlockedIds, progress, onClose }: AchievementListProps) {
-  const categories: AchievementCategory[] = ["combat", "progression", "collection", "exploration"];
+  const [category, setCategory] = useState<AchievementCategory | "all">("all");
+  const [page, setPage] = useState(0);
 
-  const rarityColorMap = {
-    common: "#9ca3af",
-    rare: "#3b82f6",
-    epic: "#a855f7",
-    legendary: "#f59e0b",
-  };
+  const filtered = ACHIEVEMENTS_DB.filter(a => category === "all" || a.category === category);
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const pageItems = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
 
-  const categoryIcons = {
-    combat: "⚔️",
-    progression: "📈",
-    collection: "🎒",
-    exploration: "🗺️",
-  };
-
-  const getProgress = (achievement: Achievement): { current: number; target: number; percent: number; remaining: number } => {
-    const current = progress[achievement.requirement.type] || 0;
-    const target = achievement.requirement.target;
-    const percent = Math.min(100, Math.floor((current / target) * 100));
-    const remaining = Math.max(0, target - current);
-    return { current, target, percent, remaining };
-  };
-
-  const getProgressHint = (achievement: Achievement, remaining: number): string => {
-    if (remaining <= 0) return "Ready to unlock!";
-    
-    const type = achievement.requirement.type;
-    
-    if (type === "total_kills") return `Kill ${remaining} more!`;
-    if (type === "boss_kills") return `Defeat ${remaining} more boss${remaining > 1 ? 'es' : ''}!`;
-    if (type === "max_damage") return `Deal ${remaining} more damage in one hit!`;
-    if (type === "base_level") return `${remaining} level${remaining > 1 ? 's' : ''} to go!`;
-    if (type === "job_level") return `${remaining} job level${remaining > 1 ? 's' : ''} to go!`;
-    if (type === "max_stat") return `Raise a stat by ${remaining} more!`;
-    if (type === "skills_learned") return `Learn ${remaining} more skill${remaining > 1 ? 's' : ''}!`;
-    if (type === "job_changes") return "Change your job class!";
-    if (type === "total_gold_earned") return `Earn ${remaining} more gold!`;
-    if (type === "unique_items_owned") return `Collect ${remaining} more item${remaining > 1 ? 's' : ''}!`;
-    if (type === "items_sold") return `Sell ${remaining} more item${remaining > 1 ? 's' : ''}!`;
-    if (type === "potions_used") return `Use ${remaining} more potion${remaining > 1 ? 's' : ''}!`;
-    if (type === "zones_visited") return `Visit ${remaining} more zone${remaining > 1 ? 's' : ''}!`;
-    if (type === "combat_time") return `${Math.ceil(remaining / 60)} more minute${Math.ceil(remaining / 60) > 1 ? 's' : ''} in combat!`;
-    if (type === "deaths") return "Die once to unlock!";
-    
-    return `${remaining} to go!`;
+  const handleCategoryChange = (cat: AchievementCategory | "all") => {
+    setCategory(cat);
+    setPage(0);
   };
 
   return (
     <div
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0, 0, 0, 0.9)",
+        inset: 0,
+        background: "rgba(0,0,0,0.9)",
         zIndex: 10000,
         display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "20px",
-        overflowY: "auto",
+        flexDirection: "column",
+        padding: "0",
       }}
       onClick={onClose}
     >
       <div
+        onClick={e => e.stopPropagation()}
         style={{
-          background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
-          border: "3px solid #fbbf24",
-          borderRadius: "12px",
-          padding: "24px",
-          maxWidth: "900px",
-          width: "100%",
-          maxHeight: "90vh",
-          overflowY: "auto",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+          overflow: "hidden",
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "20px",
+            padding: "14px",
+            borderBottom: "1px solid #1e293b",
+            flexShrink: 0,
           }}
         >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "24px",
-              color: "#fbbf24",
-              fontWeight: "bold",
-            }}
-          >
-            🏆 Achievements
-          </h2>
-          <div style={{ fontSize: "14px", color: "#9ca3af" }}>
-            {unlockedIds.size} / {ACHIEVEMENTS_DB.length} Unlocked
-          </div>
           <button
             onClick={onClose}
             style={{
-              background: "#444",
-              border: "none",
-              borderRadius: "6px",
-              padding: "8px 16px",
+              minWidth: "44px",
+              minHeight: "44px",
+              background: "#1e293b",
+              border: "1px solid #334155",
+              borderRadius: "8px",
               color: "white",
               cursor: "pointer",
-              fontSize: "14px",
+              fontSize: "18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginRight: "12px",
+              touchAction: "manipulation",
             }}
           >
-            ✖ Close
+            ‹
           </button>
+          <div>
+            <div style={{ fontSize: "16px", fontWeight: "bold", color: "#fbbf24" }}>
+              🏆 Achievements
+            </div>
+            <div style={{ fontSize: "12px", color: "#64748b" }}>
+              {unlockedIds.size} / {ACHIEVEMENTS_DB.length} unlocked
+            </div>
+          </div>
         </div>
 
-        {/* Categories */}
-        {categories.map((category) => {
-          const categoryAchievements = ACHIEVEMENTS_DB.filter((a) => a.category === category);
-          const unlockedCount = categoryAchievements.filter((a) => unlockedIds.has(a.id)).length;
+        {/* Category filter */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0",
+            borderBottom: "1px solid #1e293b",
+            flexShrink: 0,
+            overflowX: "auto",
+          }}
+        >
+          {(["all", ...CATEGORIES] as const).map(cat => (
+            <button
+              key={cat}
+              onClick={() => handleCategoryChange(cat)}
+              style={{
+                flex: "0 0 auto",
+                padding: "10px 14px",
+                background: "transparent",
+                color: category === cat ? "#fbbf24" : "#64748b",
+                border: "none",
+                borderBottom: category === cat ? "2px solid #fbbf24" : "2px solid transparent",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: category === cat ? "bold" : "normal",
+                whiteSpace: "nowrap",
+                touchAction: "manipulation",
+              }}
+            >
+              {cat === "all" ? "🌟 All" : `${CATEGORY_ICONS[cat]} ${cat.charAt(0).toUpperCase() + cat.slice(1)}`}
+            </button>
+          ))}
+        </div>
 
-          return (
-            <div key={category} style={{ marginBottom: "24px" }}>
-              {/* Category Header */}
+        {/* Achievement cards — scrollable */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "12px 14px",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {pageItems.map((achievement: Achievement) => {
+            const isUnlocked = unlockedIds.has(achievement.id);
+            const current = progress[achievement.requirement.type] || 0;
+            const target = achievement.requirement.target;
+            const percent = Math.min(100, Math.floor((current / target) * 100));
+            const color = RARITY_COLORS[achievement.rarity] || "#9ca3af";
+
+            return (
               <div
+                key={achievement.id}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "12px",
-                  paddingBottom: "8px",
-                  borderBottom: "2px solid #444",
+                  padding: "12px",
+                  marginBottom: "8px",
+                  background: isUnlocked ? "rgba(34,197,94,0.08)" : "#0f172a",
+                  border: "1px solid " + (isUnlocked ? "#22c55e" : "#1e293b"),
+                  borderRadius: "10px",
+                  minHeight: "44px",
                 }}
               >
-                <span style={{ fontSize: "20px" }}>{categoryIcons[category]}</span>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: "16px",
-                    color: "#fbbf24",
-                    textTransform: "capitalize",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {category}
-                </h3>
-                <span style={{ fontSize: "12px", color: "#666" }}>
-                  ({unlockedCount}/{categoryAchievements.length})
-                </span>
-              </div>
-
-              {/* Achievement Cards */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: "12px",
-                }}
-              >
-                {categoryAchievements.map((achievement) => {
-                  const unlocked = unlockedIds.has(achievement.id);
-                  const { current, target, percent, remaining } = getProgress(achievement);
-                  const rarityColor = rarityColorMap[achievement.rarity];
-
-                  return (
+                {/* Achievement header */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: isUnlocked ? 0 : "8px" }}>
+                  <span style={{ fontSize: "16px", flexShrink: 0, marginTop: "1px" }}>
+                    {isUnlocked ? "✅" : "🔒"}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
-                      key={achievement.id}
                       style={{
-                        background: unlocked ? "#2a2a2a" : "#1a1a1a",
-                        border: `2px solid ${unlocked ? rarityColor : "#333"}`,
-                        borderRadius: "8px",
-                        padding: "12px",
-                        opacity: unlocked ? 1 : 0.7,
-                        transition: "all 0.3s ease",
-                        position: "relative",
-                        overflow: "hidden",
+                        color: isUnlocked ? color : "#64748b",
+                        fontWeight: "bold",
+                        fontSize: "13px",
+                        marginBottom: "3px",
                       }}
                     >
-                      {/* Progress Bar Background */}
-                      {!unlocked && percent > 0 && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            height: "100%",
-                            width: `${percent}%`,
-                            background: `linear-gradient(90deg, transparent, ${rarityColor}22)`,
-                            transition: "width 0.5s ease",
-                          }}
-                        />
-                      )}
-
-                      <div style={{ position: "relative", zIndex: 1 }}>
-                        {/* Icon & Title */}
-                        <div style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
-                          <div
-                            style={{
-                              fontSize: "32px",
-                              filter: unlocked ? `drop-shadow(0 0 6px ${rarityColor})` : "grayscale(100%)",
-                            }}
-                          >
-                            {achievement.icon}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div
-                              style={{
-                                fontSize: "14px",
-                                fontWeight: "bold",
-                                color: unlocked ? rarityColor : "#999",
-                                marginBottom: "2px",
-                              }}
-                            >
-                              {unlocked ? achievement.name : "???"}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "10px",
-                                color: "#666",
-                                textTransform: "capitalize",
-                              }}
-                            >
-                              {achievement.rarity}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Description - ALWAYS SHOW */}
-                        <div
-                          style={{
-                            fontSize: "11px",
-                            color: unlocked ? "#9ca3af" : "#777",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          {achievement.description}
-                        </div>
-
-                        {/* Progress */}
-                        {!unlocked && (
-                          <>
-                            <div
-                              style={{
-                                fontSize: "10px",
-                                color: "#666",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginBottom: "4px",
-                              }}
-                            >
-                              <span>
-                                {current} / {target}
-                              </span>
-                              <span>{percent}%</span>
-                            </div>
-                            {/* Progress Hint */}
-                            <div
-                              style={{
-                                fontSize: "10px",
-                                color: remaining <= 5 && remaining > 0 ? "#fbbf24" : "#888",
-                                fontStyle: "italic",
-                              }}
-                            >
-                              {getProgressHint(achievement, remaining)}
-                            </div>
-                          </>
-                        )}
-
-                        {/* Reward */}
-                        {unlocked && achievement.rewardTitle && (
-                          <div
-                            style={{
-                              fontSize: "10px",
-                              color: "#fbbf24",
-                              marginTop: "6px",
-                              padding: "4px 8px",
-                              background: "#3a2f0a",
-                              borderRadius: "4px",
-                            }}
-                          >
-                            🎁 Title: "{achievement.rewardTitle}"
-                          </div>
-                        )}
-                      </div>
+                      {achievement.name}
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          color: color,
+                          fontWeight: "normal",
+                          marginLeft: "6px",
+                          textTransform: "capitalize",
+                          opacity: 0.8,
+                        }}
+                      >
+                        [{achievement.rarity}]
+                      </span>
                     </div>
-                  );
-                })}
+                    <div style={{ color: "#475569", fontSize: "10px", lineHeight: "1.3" }}>
+                      {achievement.description}
+                    </div>
+                  </div>
+                  <span style={{ flexShrink: 0, fontSize: "14px" }}>
+                    {CATEGORY_ICONS[achievement.category]}
+                  </span>
+                </div>
+
+                {/* Progress bar — only for locked achievements */}
+                {!isUnlocked && (
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "10px",
+                        color: "#64748b",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      <span>{percent}% complete</span>
+                      <span>{Math.min(current, target).toLocaleString()} / {target.toLocaleString()}</span>
+                    </div>
+                    <div
+                      style={{
+                        height: "8px",
+                        background: "#1e293b",
+                        borderRadius: "4px",
+                        overflow: "hidden",
+                        border: "1px solid #334155",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: percent + "%",
+                          height: "100%",
+                          background: color,
+                          borderRadius: "4px",
+                          transition: "width 0.4s ease",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
+            );
+          })}
+
+          {pageItems.length === 0 && (
+            <div
+              style={{
+                textAlign: "center",
+                color: "#475569",
+                padding: "40px 20px",
+                fontSize: "14px",
+              }}
+            >
+              No achievements in this category
             </div>
-          );
-        })}
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 14px",
+              borderTop: "1px solid #1e293b",
+              flexShrink: 0,
+              paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              style={{
+                minHeight: "44px",
+                minWidth: "80px",
+                padding: "8px 16px",
+                background: page === 0 ? "#1e293b" : "#334155",
+                color: page === 0 ? "#475569" : "white",
+                border: "1px solid #334155",
+                borderRadius: "8px",
+                cursor: page === 0 ? "not-allowed" : "pointer",
+                fontSize: "11px",
+                touchAction: "manipulation",
+              }}
+            >
+              ‹ Prev
+            </button>
+            <span style={{ color: "#64748b", fontSize: "11px" }}>
+              {page + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page === totalPages - 1}
+              style={{
+                minHeight: "44px",
+                minWidth: "80px",
+                padding: "8px 16px",
+                background: page === totalPages - 1 ? "#1e293b" : "#334155",
+                color: page === totalPages - 1 ? "#475569" : "white",
+                border: "1px solid #334155",
+                borderRadius: "8px",
+                cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
+                fontSize: "11px",
+                touchAction: "manipulation",
+              }}
+            >
+              Next ›
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

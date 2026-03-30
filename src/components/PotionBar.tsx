@@ -1,5 +1,6 @@
 import { Character } from "../types/character";
 import { HP_POTION_HEAL_FLAT, HP_POTION_HEAL_PERCENT } from "../data/constants";
+import { useState } from "react";
 
 interface PotionBarProps {
   character: Character;
@@ -24,148 +25,179 @@ export function PotionBar({
   onSetAutoHpPercent,
   onSetAutoMpPercent,
 }: PotionBarProps) {
+  const [showAutoSettings, setShowAutoSettings] = useState(false);
   const hpHealAmount = HP_POTION_HEAL_FLAT + Math.floor(character.maxHp * HP_POTION_HEAL_PERCENT);
 
   return (
     <div
       style={{
-        background: "#2a2a2a",
-        padding: "10px",
-        borderRadius: "6px",
-        border: "1px solid #444",
-        marginBottom: "15px",
+        marginBottom: "8px",
       }}
     >
-      <h3
-        style={{
-          margin: "0 0 8px 0",
-          fontSize: "14px",
-          color: "#fbbf24",
-        }}
-      >
-        🧪 Potions
-      </h3>
-
-      {/* HP Potion Info */}
+      {/* Horizontal quick-use strip */}
       <div
         style={{
-          marginBottom: "8px",
-          padding: "6px",
-          background: "rgba(239, 68, 68, 0.15)",
-          borderRadius: "4px",
-          fontSize: "10px",
-          color: "#aaa",
+          display: "flex",
+          gap: "6px",
+          alignItems: "stretch",
         }}
       >
-        <div>🍖 HP Pot heals: <strong style={{ color: "#22c55e" }}>{hpHealAmount} HP</strong></div>
-        <div style={{ fontSize: "9px", marginTop: "2px" }}>({HP_POTION_HEAL_FLAT} + {Math.floor(HP_POTION_HEAL_PERCENT * 100)}% Max HP)</div>
-      </div>
-
-      {/* Use Potion Buttons */}
-      <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+        {/* HP Potion button */}
         <button
           onClick={onUseHpPotion}
-          disabled={hpPotions === 0}
+          disabled={hpPotions === 0 || character.hp >= character.maxHp}
           style={{
             flex: 1,
-            padding: "8px",
-            background: hpPotions > 0 ? "#ef4444" : "#555",
+            minHeight: "52px",
+            padding: "6px 8px",
+            background: hpPotions > 0 && character.hp < character.maxHp
+              ? "linear-gradient(135deg, #ef4444, #dc2626)"
+              : "#374151",
             color: "white",
             border: "none",
-            borderRadius: "4px",
-            cursor: hpPotions > 0 ? "pointer" : "not-allowed",
-            fontSize: "11px",
-            fontWeight: "bold",
+            borderRadius: "8px",
+            cursor: hpPotions > 0 && character.hp < character.maxHp ? "pointer" : "not-allowed",
+            opacity: hpPotions > 0 && character.hp < character.maxHp ? 1 : 0.5,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "2px",
+            touchAction: "manipulation",
           }}
         >
-          🍖 Use HP ({hpPotions})
+          <span style={{ fontSize: "16px", lineHeight: 1 }}>🍖</span>
+          <span style={{ fontSize: "10px", fontWeight: "bold" }}>HP ({hpPotions})</span>
+          <span style={{ fontSize: "8px", opacity: 0.8 }}>+{hpHealAmount}</span>
         </button>
+
+        {/* MP Potion button */}
         <button
           onClick={onUseMpPotion}
-          disabled={mpPotions === 0}
+          disabled={mpPotions === 0 || character.mp >= character.maxMp}
           style={{
             flex: 1,
-            padding: "8px",
-            background: mpPotions > 0 ? "#3b82f6" : "#555",
+            minHeight: "52px",
+            padding: "6px 8px",
+            background: mpPotions > 0 && character.mp < character.maxMp
+              ? "linear-gradient(135deg, #3b82f6, #2563eb)"
+              : "#374151",
             color: "white",
             border: "none",
-            borderRadius: "4px",
-            cursor: mpPotions > 0 ? "pointer" : "not-allowed",
-            fontSize: "11px",
-            fontWeight: "bold",
+            borderRadius: "8px",
+            cursor: mpPotions > 0 && character.mp < character.maxMp ? "pointer" : "not-allowed",
+            opacity: mpPotions > 0 && character.mp < character.maxMp ? 1 : 0.5,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "2px",
+            touchAction: "manipulation",
           }}
         >
-          🧪 Use MP ({mpPotions})
+          <span style={{ fontSize: "16px", lineHeight: 1 }}>🧪</span>
+          <span style={{ fontSize: "10px", fontWeight: "bold" }}>MP ({mpPotions})</span>
+        </button>
+
+        {/* Auto-settings toggle */}
+        <button
+          onClick={() => setShowAutoSettings(prev => !prev)}
+          style={{
+            minWidth: "44px",
+            minHeight: "52px",
+            padding: "6px",
+            background: showAutoSettings ? "#374151" : "rgba(55,65,81,0.5)",
+            color: "#9ca3af",
+            border: "1px solid #374151",
+            borderRadius: "8px",
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "2px",
+            touchAction: "manipulation",
+          }}
+        >
+          <span style={{ fontSize: "14px" }}>⚙️</span>
+          <span style={{ fontSize: "7px" }}>Auto</span>
         </button>
       </div>
 
-      {/* Auto-Use Settings */}
-      <div
-        style={{
-          background: "#1a1a1a",
-          padding: "8px",
-          borderRadius: "4px",
-          border: "1px solid #333",
-        }}
-      >
-        <div style={{ fontSize: "11px", color: "#fbbf24", marginBottom: "6px" }}>
-          ⚙️ Auto-Use Potions
-        </div>
-        
-        {/* Auto HP */}
-        <div style={{ marginBottom: "6px" }}>
-          <label style={{ fontSize: "10px", color: "#aaa", display: "block", marginBottom: "3px" }}>
-            Auto HP when below:
-          </label>
-          <div style={{ display: "flex", gap: "4px" }}>
-            {[0, 30, 50, 70].map((percent) => (
-              <button
-                key={`hp-${percent}`}
-                onClick={() => onSetAutoHpPercent(percent)}
-                style={{
-                  flex: 1,
-                  padding: "4px",
-                  background: autoHpPercent === percent ? "#dc2626" : "#444",
-                  color: "white",
-                  border: autoHpPercent === percent ? "1px solid #ef4444" : "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "9px",
-                }}
-              >
-                {percent === 0 ? "OFF" : `${percent}%`}
-              </button>
-            ))}
+      {/* Auto-use settings panel (expanded on demand) */}
+      {showAutoSettings && (
+        <div
+          style={{
+            marginTop: "6px",
+            background: "#1a1a1a",
+            padding: "8px",
+            borderRadius: "8px",
+            border: "1px solid #374151",
+          }}
+        >
+          <div style={{ fontSize: "9px", color: "#fbbf24", marginBottom: "8px", fontWeight: "bold" }}>
+            ⚙️ Auto-Use Potions
           </div>
-        </div>
 
-        {/* Auto MP */}
-        <div>
-          <label style={{ fontSize: "10px", color: "#aaa", display: "block", marginBottom: "3px" }}>
-            Auto MP when below:
-          </label>
-          <div style={{ display: "flex", gap: "4px" }}>
-            {[0, 30, 50, 70].map((percent) => (
-              <button
-                key={`mp-${percent}`}
-                onClick={() => onSetAutoMpPercent(percent)}
-                style={{
-                  flex: 1,
-                  padding: "4px",
-                  background: autoMpPercent === percent ? "#2563eb" : "#444",
-                  color: "white",
-                  border: autoMpPercent === percent ? "1px solid #3b82f6" : "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "9px",
-                }}
-              >
-                {percent === 0 ? "OFF" : `${percent}%`}
-              </button>
-            ))}
+          {/* Auto HP */}
+          <div style={{ marginBottom: "8px" }}>
+            <label style={{ fontSize: "9px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>
+              Auto HP when below:
+            </label>
+            <div style={{ display: "flex", gap: "4px" }}>
+              {[0, 30, 50, 70].map((percent) => (
+                <button
+                  key={`hp-${percent}`}
+                  onClick={() => onSetAutoHpPercent(percent)}
+                  style={{
+                    flex: 1,
+                    minHeight: "32px",
+                    padding: "4px",
+                    background: autoHpPercent === percent ? "#dc2626" : "#374151",
+                    color: "white",
+                    border: autoHpPercent === percent ? "1px solid #ef4444" : "1px solid transparent",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "9px",
+                    touchAction: "manipulation",
+                  }}
+                >
+                  {percent === 0 ? "OFF" : `${percent}%`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Auto MP */}
+          <div>
+            <label style={{ fontSize: "10px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>
+              Auto MP when below:
+            </label>
+            <div style={{ display: "flex", gap: "4px" }}>
+              {[0, 30, 50, 70].map((percent) => (
+                <button
+                  key={`mp-${percent}`}
+                  onClick={() => onSetAutoMpPercent(percent)}
+                  style={{
+                    flex: 1,
+                    minHeight: "32px",
+                    padding: "4px",
+                    background: autoMpPercent === percent ? "#2563eb" : "#374151",
+                    color: "white",
+                    border: autoMpPercent === percent ? "1px solid #3b82f6" : "1px solid transparent",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontSize: "9px",
+                    touchAction: "manipulation",
+                  }}
+                >
+                  {percent === 0 ? "OFF" : `${percent}%`}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

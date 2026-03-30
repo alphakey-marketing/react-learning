@@ -15,9 +15,10 @@ interface RefineNPCProps {
   equipped: EquippedItems;
   onRefine: (item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) => RefineResult | void;
   onClose: () => void;
+  embedded?: boolean;
 }
 
-export function RefineNPC({ character, inventory, equipped, onRefine, onClose }: RefineNPCProps) {
+export function RefineNPC({ character, inventory, equipped, onRefine, onClose, embedded = false }: RefineNPCProps) {
   const [activeTab, setActiveTab] = useState<"equipped" | "inventory">("equipped");
   const [selectedItem, setSelectedItem] = useState<{ item: Equipment; isEquipped: boolean; slotKey?: keyof EquippedItems } | null>(null);
   const [refineResult, setRefineResult] = useState<RefineResult | null>(null);

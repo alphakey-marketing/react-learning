@@ -131,10 +131,10 @@ export function EnemyDisplay({
           transition: "background 1s ease"
         }}
       >
-        <div style={{ fontSize: isMobile ? "28px" : "48px", marginBottom: "10px", opacity: 0.8 }}>
+        <div style={{ fontSize: isMobile ? "24px" : "48px", marginBottom: "10px", opacity: 0.8 }}>
           🏯️
         </div>
-        <h2 style={{ margin: "0", color: "#e2e8f0", fontSize: isMobile ? "14px" : "20px", fontWeight: "bold" }}>
+        <h2 style={{ margin: "0", color: "#e2e8f0", fontSize: isMobile ? "12px" : "20px", fontWeight: "bold" }}>
           Safe in Town
         </h2>
         <p style={{ fontSize: "11px", color: "#94a3b8", margin: "6px 0 0 0" }}>
@@ -213,7 +213,7 @@ export function EnemyDisplay({
       <h2
         style={{
           margin: isMobile ? "0 0 4px 0" : "0 0 8px 0",
-          fontSize: isMobile ? "13px" : "20px",
+          fontSize: isMobile ? "11px" : "20px",
           color: isBoss ? "#fef3c7" : "#fef3c7",
           textShadow: "2px 2px 6px rgba(0,0,0,0.9)",
           position: "relative",
@@ -275,7 +275,7 @@ export function EnemyDisplay({
       
       {/* HP Bar Container */}
       <div style={{ background: "rgba(0,0,0,0.6)", padding: isMobile ? "6px" : "10px", borderRadius: "8px", marginBottom: isMobile ? "8px" : "15px", position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.1)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: isMobile ? "11px" : "13px", marginBottom: isMobile ? "3px" : "6px", fontWeight: "bold" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: isMobile ? "10px" : "13px", marginBottom: isMobile ? "3px" : "6px", fontWeight: "bold" }}>
           <span style={{ color: "#fca5a5" }}>HP</span>
           <span style={{ color: "#fff" }}>{Math.floor(enemy.hp)} / {enemy.maxHp}</span>
         </div>

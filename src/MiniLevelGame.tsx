@@ -2,6 +2,7 @@ import { CharacterStats } from "./components/CharacterStats";
 import { EnemyDisplay } from "./components/EnemyDisplay";
 import { BattleLog } from "./components/BattleLog";
 import { SkillWindow } from "./components/SkillWindow";
+import { SkillHotkeys } from "./components/SkillHotkeys";
 import { EnhancedInventory } from "./components/EnhancedInventory";
 import { Shop } from "./components/Shop";
 import { PotionBar } from "./components/PotionBar";
@@ -30,6 +31,7 @@ import { useMonetization } from "./context/MonetizationContext";
 import { LivesBar } from "./components/LivesBar";
 import { ShopModal } from "./components/ShopModal";
 import { InterstitialAd } from "./components/InterstitialAd";
+import { TopHUDBar } from "./components/TopHUDBar";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -267,6 +269,7 @@ export function MiniLevelGame() {
         <TutorialOverlay
           onClose={() => {
             setShowTutorial(false);
+            setActiveTab('combat'); // reset tab so no empty screen after tutorial
             audio.playBGM(game.currentZoneId === 0 ? "town" : "fight");
           }}
           onBeforeStep={(stepIndex) => {
@@ -322,6 +325,15 @@ export function MiniLevelGame() {
         onUseMpPotion={wrappedUseMpPotion}
         inTown={game.currentZoneId === 0}
       />
+
+      {/* Phase 2A: TopHUDBar — mobile-only persistent top bar */}
+      {isMobile && (
+        <TopHUDBar
+          level={game.char.level}
+          hp={game.char.hp}
+          maxHp={game.char.maxHp}
+        />
+      )}
 
       <div
         id="game-container"
@@ -580,6 +592,12 @@ export function MiniLevelGame() {
                     onSetAutoHpPercent={game.setAutoHpPercent}
                     onSetAutoMpPercent={game.setAutoMpPercent}
                   />
+                  <SkillHotkeys
+                    character={game.char}
+                    skillCooldowns={game.skillCooldowns}
+                    onUseSkill={(skillId) => game.battleAction(skillId)}
+                    disabled={game.currentZoneId === 0 || lives === 0}
+                  />
                 </>
               )}
 
@@ -659,19 +677,23 @@ export function MiniLevelGame() {
                 </div>
               )}
 
-              {activeTab === 'shop' && (
-                <div data-tutorial="shop">
-                  <Shop
-                    character={game.char}
-                    isInTown={game.currentZoneId === 0}
-                    inventory={game.inventory}
-                    onSellItem={wrappedSellItem}
-                    onBuyHpPotion={game.buyHpPotion}
-                    onBuyMpPotion={game.buyMpPotion}
-                  />
-                </div>
-              )}
+              {/* Shop panel is now a slide-in overlay controlled by activeTab */}
             </div>
+
+            {/* Phase 2F: Shop as full-screen slide-in panel */}
+            <Shop
+              character={game.char}
+              isInTown={game.currentZoneId === 0}
+              inventory={game.inventory}
+              equipped={game.equipped}
+              onSellItem={wrappedSellItem}
+              onBuyHpPotion={game.buyHpPotion}
+              onBuyMpPotion={game.buyMpPotion}
+              onRefine={game.refineItem}
+              onJobChange={wrappedHandleJobChange}
+              isOpen={activeTab === 'shop'}
+              onClose={() => setActiveTab('combat')}
+            />
 
             <BottomNavBar
               activeTab={activeTab}
