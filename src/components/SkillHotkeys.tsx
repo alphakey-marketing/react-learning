@@ -151,7 +151,7 @@ export function SkillHotkeys({
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "18px",
+                    fontSize: "15px",
                     fontWeight: "bold",
                     color: "#fbbf24",
                     borderRadius: "8px",

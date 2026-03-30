@@ -95,7 +95,7 @@ export function BattleLog({ logs }: BattleLogProps) {
           border: "1px solid #374151",
           borderRadius: isOpen ? "6px 6px 0 0" : "6px",
           cursor: "pointer",
-          fontSize: "13px",
+          fontSize: "12px",
           fontWeight: "bold",
           touchAction: "manipulation",
         }}
@@ -106,7 +106,7 @@ export function BattleLog({ logs }: BattleLogProps) {
             style={{
               background: "#374151",
               borderRadius: "10px",
-              fontSize: "10px",
+              fontSize: "9px",
               padding: "1px 6px",
               color: "#9ca3af",
             }}
@@ -119,8 +119,8 @@ export function BattleLog({ logs }: BattleLogProps) {
             style={{
               background: "#ef4444",
               borderRadius: "10px",
-              fontSize: "10px",
-              padding: "1px 7px",
+              fontSize: "9px",
+              padding: "1px 6px",
               color: "white",
               fontWeight: "bold",
               animation: "pulse 1s infinite",
@@ -222,7 +222,7 @@ export function BattleLog({ logs }: BattleLogProps) {
                   background: "rgba(17,17,17,0.9)",
                   padding: "4px",
                   textAlign: "center",
-                  fontSize: "10px",
+                  fontSize: "9px",
                   color: "#fbbf24",
                   borderTop: "1px solid #444",
                 }}

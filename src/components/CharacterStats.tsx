@@ -45,7 +45,7 @@ function AchievementPanel({
         border: "1px solid #2d3748",
       }}
     >
-      <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold", marginBottom: "10px" }}>
+      <div style={{ fontSize: "11px", color: "#fbbf24", fontWeight: "bold", marginBottom: "10px" }}>
         🏆 Achievements ({unlockedIds.size}/{allAchievements.length})
       </div>
 
@@ -74,7 +74,7 @@ function AchievementPanel({
                 <div style={{ color: isUnlocked ? color : "#64748b", fontWeight: "bold", fontSize: "12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {achievement.name}
                 </div>
-                <div style={{ color: "#475569", fontSize: "10px" }}>
+                <div style={{ color: "#475569", fontSize: "9px" }}>
                   {achievement.description}
                 </div>
               </div>
@@ -844,13 +844,13 @@ export function CharacterStats({
                 >
                   <span style={{ fontSize: "18px", flexShrink: 0 }}>{item ? getEquipmentIcon(item) : slot.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: rarityColor, fontSize: "12px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ color: rarityColor, fontSize: "11px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item ? item.name + (item.refinement ? " +" + item.refinement : "") : "Empty"}
                     </div>
                     <div style={{ color: "#475569", fontSize: "10px" }}>{slot.label}</div>
                   </div>
                   {item && (
-                    <div style={{ flexShrink: 0, fontSize: "11px", color: "#fbbf24", background: "#1e293b", borderRadius: "4px", padding: "2px 6px" }}>
+                    <div style={{ flexShrink: 0, fontSize: "10px", color: "#fbbf24", background: "#1e293b", borderRadius: "4px", padding: "2px 5px" }}>
                       ⭐ {calculateGearScore(item)}
                     </div>
                   )}
@@ -859,7 +859,7 @@ export function CharacterStats({
             })}
             <div style={{ marginTop: "10px", padding: "8px", background: "#0f172a", borderRadius: "6px", border: "1px solid #1e293b", textAlign: "center" }}>
               <div style={{ fontSize: "11px", color: "#64748b" }}>Total Gear Score</div>
-              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#fbbf24" }}>⭐ {totalEquipPower}</div>
+              <div style={{ fontSize: "15px", fontWeight: "bold", color: "#fbbf24" }}>⭐ {totalEquipPower}</div>
             </div>
           </div>
         </div>
@@ -872,7 +872,7 @@ export function CharacterStats({
             padding: "0 2px",
           }}
         >
-          <AchievementPanel unlockedIds={achievementData.playerAchievements.unlockedIds} progress={achievementData.stats} />
+          <AchievementPanel unlockedIds={achievementData.playerAchievements.unlocked} progress={achievementData.stats} />
         </div>
       </div>
 

@@ -158,10 +158,10 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
             flexShrink: 0,
           }}
         >
-          <h3 style={{ margin: 0, fontSize: "15px", color: "#fbbf24" }}>
+          <h3 style={{ margin: 0, fontSize: "13px", color: "#fbbf24" }}>
             🎒 Inventory
           </h3>
-          <span style={{ fontSize: "12px", color: "#9ca3af" }}>
+          <span style={{ fontSize: "11px", color: "#9ca3af" }}>
             {inventory.length} items
           </span>
         </div>
@@ -210,7 +210,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
             flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: "10px", color: "#64748b" }}>Sort:</span>
+          <span style={{ fontSize: "9px", color: "#64748b" }}>Sort:</span>
           {(["type", "rarity", "power", "name"] as SortOption[]).map(opt => (
             <button
               key={opt}
@@ -291,7 +291,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "22px",
+                      fontSize: "18px",
                       border: `1px solid ${rarityColor}`,
                       position: "relative",
                     }}
@@ -337,7 +337,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                         <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
                       )}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#64748b", textTransform: "capitalize" }}>
+                    <div style={{ fontSize: "10px", color: "#64748b", textTransform: "capitalize" }}>
                       {typeLabel} · {item.rarity}
                     </div>
                   </div>
@@ -379,7 +379,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
           border: "1px solid rgba(251,191,36,0.4)",
           borderRadius: "8px",
           cursor: "pointer",
-          fontSize: "13px",
+          fontSize: "12px",
           fontWeight: "bold",
           width: "100%",
           marginBottom: "4px",
@@ -505,7 +505,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                   <span style={{ color: "#fbbf24" }}> +{selectedItem.refinement}</span>
                 )}
               </div>
-              <div style={{ fontSize: "12px", color: "#64748b", textTransform: "capitalize" }}>
+              <div style={{ fontSize: "11px", color: "#64748b", textTransform: "capitalize" }}>
                 {selectedItem.type} · {selectedItem.rarity} · ⭐ {calculateGearScore(selectedItem)}
               </div>
             </div>
@@ -521,7 +521,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
           >
             <div
               style={{
-                fontSize: "48px",
+                fontSize: "36px",
                 textAlign: "center",
                 marginBottom: "12px",
               }}
@@ -540,7 +540,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
               }}
             >
               {selectedItem.atk !== undefined && selectedItem.atk > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "11px" }}>
                   <span style={{ color: "#94a3b8" }}>ATK</span>
                   <span style={{ color: "#fb923c", fontWeight: "bold" }}>+{selectedItem.atk}</span>
                 </div>
@@ -643,7 +643,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
               textAlign: "center",
             }}
           >
-            <h3 style={{ color: "#fbbf24", margin: "0 0 12px 0", fontSize: "16px" }}>💍 Replace which slot?</h3>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "13px" }}>💍 Replace which slot?</h3>
             <div style={{ display: "flex", gap: "10px", marginBottom: "14px" }}>
               {(["accessory1", "accessory2"] as const).map((slotKey, idx) => {
                 const acc = equipped[slotKey]!;
@@ -664,9 +664,9 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                       touchAction: "manipulation",
                     }}
                   >
-                    <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "4px" }}>Slot {idx + 1}</div>
-                    <div style={{ color: getRarityColor(acc.rarity), fontWeight: "bold", fontSize: "12px" }}>{acc.name}</div>
-                    <div style={{ color: diff > 0 ? "#22c55e" : "#ef4444", fontSize: "11px", marginTop: "4px" }}>
+                    <div style={{ fontSize: "9px", color: "#64748b", marginBottom: "3px" }}>Slot {idx + 1}</div>
+                    <div style={{ color: getRarityColor(acc.rarity), fontWeight: "bold", fontSize: "11px" }}>{acc.name}</div>
+                    <div style={{ color: diff > 0 ? "#22c55e" : "#ef4444", fontSize: "10px", marginTop: "4px" }}>
                       {diff > 0 ? "▲" : "▼"} {Math.abs(diff)} power
                     </div>
                   </button>

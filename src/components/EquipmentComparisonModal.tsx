@@ -106,17 +106,17 @@ export function EquipmentComparisonModal({
               marginBottom: "8px",
             }}
           >
-            <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "6px" }}>CURRENTLY EQUIPPED</div>
+            <div style={{ fontSize: "9px", color: "#64748b", marginBottom: "4px" }}>CURRENTLY EQUIPPED</div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "28px" }}>{currentIcon}</span>
+              <span style={{ fontSize: "22px" }}>{currentIcon}</span>
               <div>
-                <div style={{ color: currentRarityColor, fontWeight: "bold", fontSize: "14px" }}>
+                <div style={{ color: currentRarityColor, fontWeight: "bold", fontSize: "12px" }}>
                   {currentItem.name}
                   {currentItem.refinement !== undefined && currentItem.refinement > 0 && (
                     <span style={{ color: "#fbbf24" }}> +{currentItem.refinement}</span>
                   )}
                 </div>
-                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                <div style={{ fontSize: "10px", color: "#64748b" }}>
                   ⭐ {currentGearScore} power · {currentItem.rarity}
                 </div>
               </div>
@@ -142,7 +142,7 @@ export function EquipmentComparisonModal({
                   justifyContent: "space-between",
                   alignItems: "center",
                   padding: "3px 0",
-                  fontSize: "12px",
+                  fontSize: "11px",
                 }}
               >
                 <span style={{ color: "#94a3b8" }}>{row!.label}</span>
@@ -155,7 +155,7 @@ export function EquipmentComparisonModal({
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "6px 0 2px",
-                fontSize: "13px",
+                fontSize: "11px",
                 borderTop: "1px solid #1e293b",
                 marginTop: "4px",
               }}
@@ -185,9 +185,9 @@ export function EquipmentComparisonModal({
         >
           <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "6px" }}>NEW ITEM</div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{ fontSize: "28px" }}>{newIcon}</span>
+            <span style={{ fontSize: "22px" }}>{newIcon}</span>
             <div>
-              <div style={{ color: newRarityColor, fontWeight: "bold", fontSize: "14px" }}>
+              <div style={{ color: newRarityColor, fontWeight: "bold", fontSize: "12px" }}>
                 {newItem.name}
                 {newItem.refinement !== undefined && newItem.refinement > 0 && (
                   <span style={{ color: "#fbbf24" }}> +{newItem.refinement}</span>
@@ -213,7 +213,7 @@ export function EquipmentComparisonModal({
               borderRadius: "10px",
               cursor: "pointer",
               fontWeight: "bold",
-              fontSize: "15px",
+              fontSize: "13px",
               touchAction: "manipulation",
             }}
           >

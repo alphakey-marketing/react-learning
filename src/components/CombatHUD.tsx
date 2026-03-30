@@ -159,7 +159,7 @@ export function CombatHUD({
             display: "flex",
             justifyContent: "space-between",
             marginBottom: "4px",
-            fontSize: "11px",
+            fontSize: "10px",
             fontWeight: "bold",
           }}
         >
@@ -276,7 +276,7 @@ export function CombatHUD({
             color: "white",
             border: "none",
             borderRadius: "6px",
-            fontSize: "11px",
+            fontSize: "10px",
             fontWeight: "bold",
             cursor:
               hpPotions > 0 && character.hp < character.maxHp

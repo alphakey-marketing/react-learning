@@ -165,7 +165,7 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
               >
                 {/* Achievement header */}
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: isUnlocked ? 0 : "8px" }}>
-                  <span style={{ fontSize: "22px", flexShrink: 0, marginTop: "1px" }}>
+                  <span style={{ fontSize: "16px", flexShrink: 0, marginTop: "1px" }}>
                     {isUnlocked ? "✅" : "🔒"}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -191,7 +191,7 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
                         [{achievement.rarity}]
                       </span>
                     </div>
-                    <div style={{ color: "#475569", fontSize: "11px", lineHeight: "1.4" }}>
+                    <div style={{ color: "#475569", fontSize: "10px", lineHeight: "1.3" }}>
                       {achievement.description}
                     </div>
                   </div>
@@ -279,13 +279,13 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
                 border: "1px solid #334155",
                 borderRadius: "8px",
                 cursor: page === 0 ? "not-allowed" : "pointer",
-                fontSize: "13px",
+                fontSize: "11px",
                 touchAction: "manipulation",
               }}
             >
               ‹ Prev
             </button>
-            <span style={{ color: "#64748b", fontSize: "12px" }}>
+            <span style={{ color: "#64748b", fontSize: "11px" }}>
               {page + 1} / {totalPages}
             </span>
             <button
@@ -300,7 +300,7 @@ export function AchievementList({ unlockedIds, progress, onClose }: AchievementL
                 border: "1px solid #334155",
                 borderRadius: "8px",
                 cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
-                fontSize: "13px",
+                fontSize: "11px",
                 touchAction: "manipulation",
               }}
             >

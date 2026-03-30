@@ -269,6 +269,7 @@ export function MiniLevelGame() {
         <TutorialOverlay
           onClose={() => {
             setShowTutorial(false);
+            setActiveTab('combat'); // reset tab so no empty screen after tutorial
             audio.playBGM(game.currentZoneId === 0 ? "town" : "fight");
           }}
           onBeforeStep={(stepIndex) => {

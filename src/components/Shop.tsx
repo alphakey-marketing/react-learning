@@ -141,10 +141,10 @@ export function Shop({
             ‹
           </button>
           <div>
-            <div style={{ fontSize: "16px", fontWeight: "bold", color: "#fbbf24" }}>
+            <div style={{ fontSize: "13px", fontWeight: "bold", color: "#fbbf24" }}>
               🏪 Town Shop
             </div>
-            <div style={{ fontSize: "11px", color: "#64748b" }}>
+            <div style={{ fontSize: "10px", color: "#64748b" }}>
               {isInTown ? "Welcome, adventurer!" : "⚠️ Return to town to shop"}
             </div>
           </div>
@@ -179,7 +179,7 @@ export function Shop({
                 gap: "2px",
               }}
             >
-              <span style={{ fontSize: "16px" }}>{tab.icon}</span>
+              <span style={{ fontSize: "12px" }}>{tab.icon}</span>
               <span>{tab.label}</span>
             </button>
           ))}
@@ -217,10 +217,10 @@ export function Shop({
 
               {/* HP Potions */}
               <div style={{ marginBottom: "12px" }}>
-                <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold", marginBottom: "8px" }}>
+                <div style={{ fontSize: "11px", color: "#fbbf24", fontWeight: "bold", marginBottom: "6px" }}>
                   🍖 HP Potions
                 </div>
-                <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "6px" }}>
+                <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "5px" }}>
                   {HP_POTION_COST}g each · Heals ~{hpHealAmount} HP
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
@@ -257,7 +257,7 @@ export function Shop({
 
               {/* MP Potions */}
               <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold", marginBottom: "8px" }}>
+                <div style={{ fontSize: "11px", color: "#fbbf24", fontWeight: "bold", marginBottom: "8px" }}>
                   🧪 MP Potions
                 </div>
                 <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "6px" }}>
@@ -319,7 +319,7 @@ export function Shop({
                         border: "none",
                         borderRadius: "6px",
                         cursor: "pointer",
-                        fontSize: "12px",
+                        fontSize: "11px",
                         fontWeight: "bold",
                         touchAction: "manipulation",
                       }}
@@ -379,7 +379,7 @@ export function Shop({
                             >
                               {item.name}
                             </div>
-                            <div style={{ color: "#64748b", fontSize: "10px" }}>
+                            <div style={{ color: "#64748b", fontSize: "9px" }}>
                               {calculateSellPrice(item)}g
                             </div>
                           </div>

@@ -66,9 +66,9 @@ export function PotionBar({
             touchAction: "manipulation",
           }}
         >
-          <span style={{ fontSize: "18px", lineHeight: 1 }}>🍖</span>
-          <span style={{ fontSize: "11px", fontWeight: "bold" }}>HP ({hpPotions})</span>
-          <span style={{ fontSize: "9px", opacity: 0.8 }}>+{hpHealAmount}</span>
+          <span style={{ fontSize: "16px", lineHeight: 1 }}>🍖</span>
+          <span style={{ fontSize: "10px", fontWeight: "bold" }}>HP ({hpPotions})</span>
+          <span style={{ fontSize: "8px", opacity: 0.8 }}>+{hpHealAmount}</span>
         </button>
 
         {/* MP Potion button */}
@@ -95,8 +95,8 @@ export function PotionBar({
             touchAction: "manipulation",
           }}
         >
-          <span style={{ fontSize: "18px", lineHeight: 1 }}>🧪</span>
-          <span style={{ fontSize: "11px", fontWeight: "bold" }}>MP ({mpPotions})</span>
+          <span style={{ fontSize: "16px", lineHeight: 1 }}>🧪</span>
+          <span style={{ fontSize: "10px", fontWeight: "bold" }}>MP ({mpPotions})</span>
         </button>
 
         {/* Auto-settings toggle */}
@@ -119,8 +119,8 @@ export function PotionBar({
             touchAction: "manipulation",
           }}
         >
-          <span style={{ fontSize: "16px" }}>⚙️</span>
-          <span style={{ fontSize: "8px" }}>Auto</span>
+          <span style={{ fontSize: "14px" }}>⚙️</span>
+          <span style={{ fontSize: "7px" }}>Auto</span>
         </button>
       </div>
 
@@ -135,13 +135,13 @@ export function PotionBar({
             border: "1px solid #374151",
           }}
         >
-          <div style={{ fontSize: "10px", color: "#fbbf24", marginBottom: "8px", fontWeight: "bold" }}>
+          <div style={{ fontSize: "9px", color: "#fbbf24", marginBottom: "8px", fontWeight: "bold" }}>
             ⚙️ Auto-Use Potions
           </div>
 
           {/* Auto HP */}
           <div style={{ marginBottom: "8px" }}>
-            <label style={{ fontSize: "10px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>
+            <label style={{ fontSize: "9px", color: "#9ca3af", display: "block", marginBottom: "4px" }}>
               Auto HP when below:
             </label>
             <div style={{ display: "flex", gap: "4px" }}>
