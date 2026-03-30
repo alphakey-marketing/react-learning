@@ -19,9 +19,9 @@ interface ShopProps {
   onBuyMpPotion: (amount: number) => void;
   onRefine: (item: Equipment, isEquipped: boolean, slotKey?: keyof EquippedItems) => RefineResult | void;
   onJobChange: (newJob: JobClass) => void;
-  // Slide-in panel control
-  isOpen: boolean;
-  onClose: () => void;
+  // Slide-in panel control (optional — defaults to always-open with no-op close)
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export function Shop({
@@ -34,8 +34,8 @@ export function Shop({
   onBuyMpPotion,
   onRefine,
   onJobChange,
-  isOpen,
-  onClose,
+  isOpen = true,
+  onClose = () => {},
 }: ShopProps) {
   const [subTab, setSubTab] = useState<ShopSubTab>("items");
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());

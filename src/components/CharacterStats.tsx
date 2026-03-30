@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
-import { EquippedItems, calculateGearScore, calculateEquipmentStats } from "../types/equipment";
+import { EquippedItems, calculateGearScore, calculateEquipmentStats, getEquipmentIcon } from "../types/equipment";
 import { useAchievements } from "../hooks/useAchievements";
 import { ACHIEVEMENTS_DB } from "../data/achievements";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
@@ -858,7 +858,7 @@ export function CharacterStats({
             padding: "0 2px",
           }}
         >
-          <AchievementPanel unlockedIds={achievementData.playerAchievements.unlocked} progress={achievementData.stats} />
+          <AchievementPanel unlockedIds={achievementData.playerAchievements.unlocked} progress={achievementData.stats as unknown as Record<string, number>} />
         </div>
       </div>
 
