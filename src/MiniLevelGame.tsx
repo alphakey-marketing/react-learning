@@ -2,6 +2,7 @@ import { CharacterStats } from "./components/CharacterStats";
 import { EnemyDisplay } from "./components/EnemyDisplay";
 import { BattleLog } from "./components/BattleLog";
 import { SkillWindow } from "./components/SkillWindow";
+import { SkillHotkeys } from "./components/SkillHotkeys";
 import { EnhancedInventory } from "./components/EnhancedInventory";
 import { Shop } from "./components/Shop";
 import { PotionBar } from "./components/PotionBar";
@@ -589,6 +590,12 @@ export function MiniLevelGame() {
                     onUseMpPotion={wrappedUseMpPotion}
                     onSetAutoHpPercent={game.setAutoHpPercent}
                     onSetAutoMpPercent={game.setAutoMpPercent}
+                  />
+                  <SkillHotkeys
+                    character={game.char}
+                    skillCooldowns={game.skillCooldowns}
+                    onUseSkill={(skillId) => game.battleAction(skillId)}
+                    disabled={game.currentZoneId === 0 || lives === 0}
                   />
                 </>
               )}
