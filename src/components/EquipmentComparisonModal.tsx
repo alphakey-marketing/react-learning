@@ -1,5 +1,4 @@
 import { Equipment, getRarityColor, getEquipmentIcon, calculateGearScore } from "../types/equipment";
-import { CSSProperties } from "react";
 
 interface EquipmentComparisonModalProps {
   newItem: Equipment;
@@ -15,7 +14,7 @@ export function EquipmentComparisonModal({
   onCancel,
 }: EquipmentComparisonModalProps) {
   const newRarityColor = getRarityColor(newItem.rarity);
-  const currentRarityColor = currentItem ? getRarityColor(currentItem.rarity) : "#666";
+  const currentRarityColor = currentItem ? getRarityColor(currentItem.rarity) : "#555";
   const newIcon = getEquipmentIcon(newItem);
   const currentIcon = currentItem ? getEquipmentIcon(currentItem) : "❌";
 
@@ -23,402 +22,215 @@ export function EquipmentComparisonModal({
   const currentGearScore = currentItem ? calculateGearScore(currentItem) : 0;
   const scoreDiff = newGearScore - currentGearScore;
 
-  // Phase 3: Type-specific stat extraction
-  const getItemAtk = (item: Equipment): number => {
-    return item.type === 'weapon' ? (item.atk || 0) : 0;
-  };
-  
-  // UAT FIX: Add MATK extraction for wands
-  const getItemMatk = (item: Equipment): number => {
-    return item.type === 'weapon' ? (item.matk || 0) : 0;
-  };
-  
+  const getItemAtk = (item: Equipment): number => item.type === "weapon" ? (item.atk || 0) : 0;
+  const getItemMatk = (item: Equipment): number => item.type === "weapon" ? (item.matk || 0) : 0;
   const getItemDef = (item: Equipment): number => {
-    const armorTypes = ['armor', 'head', 'garment', 'footgear'];
+    const armorTypes = ["armor", "head", "garment", "footgear"];
     return armorTypes.includes(item.type) ? (item.def || 0) : 0;
   };
 
-  // Calculate stat differences
-  const getStatDiff = (newVal: number = 0, oldVal: number = 0) => {
-    const diff = newVal - oldVal;
-    if (diff > 0) return { text: `+${diff}`, color: "#22c55e" };
-    if (diff < 0) return { text: `${diff}`, color: "#ef4444" };
-    return { text: "0", color: "#9ca3af" };
+  const diff = (newVal: number = 0, oldVal: number = 0) => {
+    const d = newVal - oldVal;
+    if (d > 0) return { text: `▲ Better (+${d})`, color: "#22c55e" };
+    if (d < 0) return { text: `▼ Worse (${d})`, color: "#ef4444" };
+    return { text: "— Same", color: "#6b7280" };
   };
 
-  const atkDiff = getStatDiff(getItemAtk(newItem), currentItem ? getItemAtk(currentItem) : 0);
-  const matkDiff = getStatDiff(getItemMatk(newItem), currentItem ? getItemMatk(currentItem) : 0);
-  const defDiff = getStatDiff(getItemDef(newItem), currentItem ? getItemDef(currentItem) : 0);
-  const strDiff = getStatDiff(newItem.str || 0, currentItem?.str || 0);
-  const agiDiff = getStatDiff(newItem.agi || 0, currentItem?.agi || 0);
-  const vitDiff = getStatDiff(newItem.vit || 0, currentItem?.vit || 0);
-  const intDiff = getStatDiff(newItem.int || 0, currentItem?.int || 0);
-  const dexDiff = getStatDiff(newItem.dex || 0, currentItem?.dex || 0);
-  const lukDiff = getStatDiff(newItem.luk || 0, currentItem?.luk || 0);
-
-  const overlayStyle: CSSProperties = {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0, 0, 0, 0.85)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10000,
-    padding: "20px",
-  };
-
-  const modalStyle: CSSProperties = {
-    background: "linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)",
-    border: `3px solid ${scoreDiff > 0 ? "#22c55e" : "#fbbf24"}`,
-    borderRadius: "12px",
-    padding: "20px",
-    maxWidth: "600px",
-    width: "100%",
-    maxHeight: "90vh",
-    overflowY: "auto",
-    boxShadow: `0 10px 40px ${scoreDiff > 0 ? "rgba(34, 197, 94, 0.3)" : "rgba(251, 191, 36, 0.4)"}`,
-  };
-
-  const cardStyle = (color: string): CSSProperties => ({
-    background: "#1a1a1a",
-    border: `2px solid ${color}`,
-    borderRadius: "8px",
-    padding: "12px",
-    flex: 1,
-    position: "relative",
-  });
-
-  const statRowStyle: CSSProperties = {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "6px",
-    fontSize: "12px",
-  };
-
-  const sectionHeaderStyle: CSSProperties = {
-    fontSize: "12px",
-    color: "#fbbf24",
-    marginBottom: "8px",
-    marginTop: "12px",
-    borderBottom: "1px solid #444",
-    paddingBottom: "4px",
-    fontWeight: "bold"
-  };
-
-  const BadgeStyle: CSSProperties = {
-    position: "absolute",
-    top: "-10px",
-    right: "10px",
-    background: "#111",
-    padding: "4px 8px",
-    borderRadius: "12px",
-    border: "1px solid #444",
-    fontSize: "11px",
-    fontWeight: "bold",
-    color: "#fbbf24",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px"
-  };
-
-  // Render stats for an item with type checking
-  const renderItemStats = (item: Equipment, showDiff: boolean = false) => {
-    const itemAtk = getItemAtk(item);
-    const itemMatk = getItemMatk(item);
-    const itemDef = getItemDef(item);
-    const isWeapon = item.type === 'weapon';
-    const isArmor = ['armor', 'head', 'garment', 'footgear'].includes(item.type);
-
-    const hasCombatStats = (isWeapon && (itemAtk > 0 || itemMatk > 0)) || (isArmor && itemDef > 0) || (isWeapon && item.weaponLevel);
-    const hasBasicStats = (item.str || 0) > 0 || (item.agi || 0) > 0 || (item.vit || 0) > 0 || 
-                          (item.int || 0) > 0 || (item.dex || 0) > 0 || (item.luk || 0) > 0;
-
-    return (
-      <>
-        <div style={{ fontSize: "10px", color: "#9ca3af", marginBottom: "8px", textTransform: "capitalize" }}>
-          {item.type}{item.weaponType ? ` (${item.weaponType})` : ""} • {item.rarity}
-        </div>
-        <div style={{ borderTop: "1px solid #444", marginBottom: "8px" }} />
-        
-        {/* Combat Stats */}
-        {hasCombatStats && (
-          <>
-            <div style={sectionHeaderStyle}>Combat Stats</div>
-            {/* ATK - Physical Weapons */}
-            {isWeapon && itemAtk > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#fca5a5" }}>⚔️ ATK:</span>
-                <span>
-                  {itemAtk}
-                  {showDiff && currentItem && (
-                    <span style={{ color: atkDiff.color, marginLeft: "6px" }}>({atkDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-            
-            {/* UAT FIX: MATK - Magic Weapons (Wands) */}
-            {isWeapon && itemMatk > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#93c5fd" }}>🪄 MATK:</span>
-                <span>
-                  {itemMatk}
-                  {showDiff && currentItem && (
-                    <span style={{ color: matkDiff.color, marginLeft: "6px" }}>({matkDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-            
-            {/* Weapon Level - Weapons only */}
-            {isWeapon && item.weaponLevel && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#fca5a5" }}>Weapon Level:</span>
-                <span>{item.weaponLevel}</span>
-              </div>
-            )}
-            
-            {/* DEF - Armor types only */}
-            {isArmor && itemDef > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#93c5fd" }}>🛡️ DEF:</span>
-                <span>
-                  {itemDef}
-                  {showDiff && currentItem && (
-                    <span style={{ color: defDiff.color, marginLeft: "6px" }}>({defDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-          </>
-        )}
-        
-        {/* Basic Stats */}
-        {hasBasicStats && (
-          <>
-            <div style={sectionHeaderStyle}>Basic Stats</div>
-            {item.str !== undefined && item.str > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#fca5a5" }}>STR:</span>
-                <span>
-                  <span style={{ color: "#22c55e" }}>+{item.str}</span>
-                  {showDiff && currentItem && currentItem.str !== item.str && (
-                    <span style={{ color: strDiff.color, marginLeft: "6px" }}>({strDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-            {item.agi !== undefined && item.agi > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#86efac" }}>AGI:</span>
-                <span>
-                  <span style={{ color: "#22c55e" }}>+{item.agi}</span>
-                  {showDiff && currentItem && currentItem.agi !== item.agi && (
-                    <span style={{ color: agiDiff.color, marginLeft: "6px" }}>({agiDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-            {item.vit !== undefined && item.vit > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#fdba74" }}>VIT:</span>
-                <span>
-                  <span style={{ color: "#22c55e" }}>+{item.vit}</span>
-                  {showDiff && currentItem && currentItem.vit !== item.vit && (
-                    <span style={{ color: vitDiff.color, marginLeft: "6px" }}>({vitDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-            {item.int !== undefined && item.int > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#93c5fd" }}>INT:</span>
-                <span>
-                  <span style={{ color: "#22c55e" }}>+{item.int}</span>
-                  {showDiff && currentItem && currentItem.int !== item.int && (
-                    <span style={{ color: intDiff.color, marginLeft: "6px" }}>({intDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-            {item.dex !== undefined && item.dex > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#fde047" }}>DEX:</span>
-                <span>
-                  <span style={{ color: "#22c55e" }}>+{item.dex}</span>
-                  {showDiff && currentItem && currentItem.dex !== item.dex && (
-                    <span style={{ color: dexDiff.color, marginLeft: "6px" }}>({dexDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-            {item.luk !== undefined && item.luk > 0 && (
-              <div style={statRowStyle}>
-                <span style={{ color: "#c084fc" }}>LUK:</span>
-                <span>
-                  <span style={{ color: "#22c55e" }}>+{item.luk}</span>
-                  {showDiff && currentItem && currentItem.luk !== item.luk && (
-                    <span style={{ color: lukDiff.color, marginLeft: "6px" }}>({lukDiff.text})</span>
-                  )}
-                </span>
-              </div>
-            )}
-          </>
-        )}
-      </>
-    );
-  };
+  const statComparisons = [
+    currentItem ? { label: "⚔️ ATK", d: diff(getItemAtk(newItem), getItemAtk(currentItem)) } : null,
+    currentItem ? { label: "🔮 MATK", d: diff(getItemMatk(newItem), getItemMatk(currentItem)) } : null,
+    currentItem ? { label: "🛡️ DEF", d: diff(getItemDef(newItem), getItemDef(currentItem)) } : null,
+    currentItem ? { label: "STR", d: diff(newItem.str || 0, currentItem.str || 0) } : null,
+    currentItem ? { label: "AGI", d: diff(newItem.agi || 0, currentItem.agi || 0) } : null,
+    currentItem ? { label: "VIT", d: diff(newItem.vit || 0, currentItem.vit || 0) } : null,
+    currentItem ? { label: "INT", d: diff(newItem.int || 0, currentItem.int || 0) } : null,
+    currentItem ? { label: "DEX", d: diff(newItem.dex || 0, currentItem.dex || 0) } : null,
+    currentItem ? { label: "LUK", d: diff(newItem.luk || 0, currentItem.luk || 0) } : null,
+  ].filter(Boolean).filter(row => row!.d.text !== "— Same");
 
   return (
-    <div style={overlayStyle} onClick={onCancel}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0, 0, 0, 0.88)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-end",
+        zIndex: 10000,
+        padding: "0",
+      }}
+      onClick={onCancel}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+          border: `2px solid ${scoreDiff > 0 ? "#22c55e" : "#fbbf24"}`,
+          borderRadius: "16px 16px 0 0",
+          padding: "20px",
+          width: "100%",
+          maxWidth: "480px",
+          maxHeight: "85vh",
+          overflowY: "auto",
+          boxShadow: `0 -8px 32px ${scoreDiff > 0 ? "rgba(34,197,94,0.25)" : "rgba(251,191,36,0.25)"}`,
+        }}
+      >
         {/* Title */}
-        <h2
+        <div
           style={{
-            margin: "0 0 5px 0",
-            fontSize: "20px",
-            color: "#white",
             textAlign: "center",
-            fontWeight: "bold",
+            marginBottom: "16px",
+            fontSize: "14px",
+            color: "#94a3b8",
           }}
         >
-          ⚖️ Equipment Comparison
-        </h2>
-        
-        {/* Power Level Summary */}
-        <div style={{ 
-          textAlign: "center", 
-          marginBottom: "20px",
-          fontSize: "14px",
-          color: scoreDiff > 0 ? "#22c55e" : (scoreDiff < 0 ? "#ef4444" : "#9ca3af"),
-          fontWeight: "bold"
-        }}>
-          {scoreDiff > 0 ? `▲ Upgrade! (+${scoreDiff} Power)` : 
-           (scoreDiff < 0 ? `▼ Downgrade (${scoreDiff} Power)` : "▶ Same Power Level")}
+          {scoreDiff > 0
+            ? "✅ This is an upgrade!"
+            : scoreDiff < 0
+            ? "⚠️ This is a downgrade"
+            : "Same power level"}
         </div>
 
-        {/* Comparison Grid */}
-        <div style={{ display: "flex", gap: "15px", marginBottom: "20px" }}>
-          {/* Current Item */}
-          <div style={cardStyle(currentRarityColor)}>
-            <div style={BadgeStyle}>⭐ {currentGearScore}</div>
-            <div
-              style={{
-                fontSize: "14px",
-                fontWeight: "bold",
-                color: currentRarityColor,
-                marginBottom: "10px",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                marginTop: "4px",
-              }}
-            >
-              <span style={{ fontSize: "20px" }}>{currentIcon}</span>
-              <div>
-                <div>Currently Equipped</div>
-                {currentItem && (
-                  <div style={{ fontSize: "11px", opacity: 0.7 }}>
-                    {currentItem.name}
-                    {currentItem.refinement !== undefined && currentItem.refinement > 0 && (
-                      <span style={{ color: "#fbbf24" }}> +{currentItem.refinement}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {!currentItem ? (
-              <div style={{ color: "#666", fontSize: "12px", fontStyle: "italic" }}>
-                No item equipped
-              </div>
-            ) : (
-              renderItemStats(currentItem, false)
-            )}
-          </div>
-
-          {/* Arrow */}
+        {/* Current item — on top */}
+        {currentItem && (
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              fontSize: "24px",
-              color: scoreDiff > 0 ? "#22c55e" : (scoreDiff < 0 ? "#ef4444" : "#fbbf24"),
+              background: "#0f172a",
+              border: `1px solid ${currentRarityColor}`,
+              borderRadius: "10px",
+              padding: "12px",
+              marginBottom: "8px",
             }}
           >
-            →
-          </div>
-
-          {/* New Item */}
-          <div style={cardStyle(newRarityColor)}>
-            <div style={{...BadgeStyle, color: scoreDiff > 0 ? "#22c55e" : "#fbbf24"}}>
-              ⭐ {newGearScore}
-            </div>
-            <div
-              style={{
-                fontSize: "14px",
-                fontWeight: "bold",
-                color: newRarityColor,
-                marginBottom: "10px",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                marginTop: "4px",
-              }}
-            >
-              <span style={{ fontSize: "20px" }}>{newIcon}</span>
+            <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "6px" }}>CURRENTLY EQUIPPED</div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "28px" }}>{currentIcon}</span>
               <div>
-                <div>New Item</div>
-                <div style={{ fontSize: "11px", opacity: 0.7 }}>
-                  {newItem.name}
-                  {newItem.refinement !== undefined && newItem.refinement > 0 && (
-                    <span style={{ color: "#fbbf24" }}> +{newItem.refinement}</span>
+                <div style={{ color: currentRarityColor, fontWeight: "bold", fontSize: "14px" }}>
+                  {currentItem.name}
+                  {currentItem.refinement !== undefined && currentItem.refinement > 0 && (
+                    <span style={{ color: "#fbbf24" }}> +{currentItem.refinement}</span>
                   )}
+                </div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                  ⭐ {currentGearScore} power · {currentItem.rarity}
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {renderItemStats(newItem, true)}
+        {/* Stat differences */}
+        {currentItem && statComparisons.length > 0 && (
+          <div
+            style={{
+              background: "#1e293b",
+              borderRadius: "8px",
+              padding: "10px 12px",
+              marginBottom: "8px",
+            }}
+          >
+            {statComparisons.map(row => (
+              <div
+                key={row!.label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "3px 0",
+                  fontSize: "12px",
+                }}
+              >
+                <span style={{ color: "#94a3b8" }}>{row!.label}</span>
+                <span style={{ color: row!.d.color, fontWeight: "bold" }}>{row!.d.text}</span>
+              </div>
+            ))}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "6px 0 2px",
+                fontSize: "13px",
+                borderTop: "1px solid #1e293b",
+                marginTop: "4px",
+              }}
+            >
+              <span style={{ color: "#94a3b8" }}>⭐ Power</span>
+              <span
+                style={{
+                  color: scoreDiff > 0 ? "#22c55e" : scoreDiff < 0 ? "#ef4444" : "#6b7280",
+                  fontWeight: "bold",
+                }}
+              >
+                {scoreDiff > 0 ? `▲ +${scoreDiff}` : scoreDiff < 0 ? `▼ ${scoreDiff}` : "— Same"}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* New item — below */}
+        <div
+          style={{
+            background: "#0f172a",
+            border: `2px solid ${newRarityColor}`,
+            borderRadius: "10px",
+            padding: "12px",
+            marginBottom: "16px",
+          }}
+        >
+          <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "6px" }}>NEW ITEM</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "28px" }}>{newIcon}</span>
+            <div>
+              <div style={{ color: newRarityColor, fontWeight: "bold", fontSize: "14px" }}>
+                {newItem.name}
+                {newItem.refinement !== undefined && newItem.refinement > 0 && (
+                  <span style={{ color: "#fbbf24" }}> +{newItem.refinement}</span>
+                )}
+              </div>
+              <div style={{ fontSize: "12px", color: "#64748b" }}>
+                ⭐ {newGearScore} power · {newItem.rarity}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action buttons */}
         <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            onClick={onCancel}
-            style={{
-              flex: 1,
-              padding: "12px",
-              background: "#444",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: "bold",
-            }}
-          >
-            ❌ Cancel
-          </button>
           <button
             onClick={onEquip}
             style={{
               flex: 1,
-              padding: "12px",
-              background: scoreDiff >= 0 ? "linear-gradient(45deg, #10b981, #059669)" : "linear-gradient(45deg, #f59e0b, #d97706)",
+              minHeight: "52px",
+              background: "linear-gradient(135deg, #059669, #047857)",
               color: "white",
               border: "none",
-              borderRadius: "6px",
+              borderRadius: "10px",
               cursor: "pointer",
-              fontSize: "14px",
               fontWeight: "bold",
-              boxShadow: scoreDiff >= 0 ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "0 4px 15px rgba(245, 158, 11, 0.4)",
+              fontSize: "15px",
+              touchAction: "manipulation",
             }}
           >
-            {scoreDiff >= 0 ? "✅ Equip Upgrade" : "⚠️ Equip Anyway"}
+            ⚔️ Equip
+          </button>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              minHeight: "52px",
+              background: "#374151",
+              color: "#9ca3af",
+              border: "1px solid #374151",
+              borderRadius: "10px",
+              cursor: "pointer",
+              fontSize: "15px",
+              touchAction: "manipulation",
+            }}
+          >
+            Cancel
           </button>
         </div>
       </div>
