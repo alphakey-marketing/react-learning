@@ -1,6 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems, calculateGearScore, calculateEquipmentStats } from "../types/equipment";
+import { useAchievements } from "../hooks/useAchievements";
+import { ACHIEVEMENTS_DB } from "../data/achievements";
 import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
 
 interface CharacterStatsProps {
@@ -9,6 +11,141 @@ interface CharacterStatsProps {
   onAddStat: (stat: keyof Stats) => void;
   onOpenSkills: () => void;
   selectedTitle?: string;
+}
+
+
+// Inline Achievement Panel for the carousel — no modal overhead
+function AchievementPanel({ 
+  unlockedIds, 
+  progress 
+}: { 
+  unlockedIds: Set<string>; 
+  progress: Record<string, number>; 
+}) {
+  const [page, setPage] = useState(0);
+  const PER_PAGE = 5;
+
+  const allAchievements = ACHIEVEMENTS_DB;
+  const totalPages = Math.ceil(allAchievements.length / PER_PAGE);
+  const pageItems = allAchievements.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+
+  const rarityColors: Record<string, string> = {
+    common: "#9ca3af",
+    rare: "#3b82f6",
+    epic: "#a855f7",
+    legendary: "#f59e0b",
+  };
+
+  return (
+    <div
+      style={{
+        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+        borderRadius: "8px",
+        padding: "10px",
+        border: "1px solid #2d3748",
+      }}
+    >
+      <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold", marginBottom: "10px" }}>
+        🏆 Achievements ({unlockedIds.size}/{allAchievements.length})
+      </div>
+
+      {pageItems.map(achievement => {
+        const isUnlocked = unlockedIds.has(achievement.id);
+        const current = progress[achievement.requirement.type] || 0;
+        const target = achievement.requirement.target;
+        const percent = Math.min(100, Math.floor((current / target) * 100));
+        const color = rarityColors[achievement.rarity] || "#9ca3af";
+
+        return (
+          <div
+            key={achievement.id}
+            style={{
+              padding: "10px",
+              marginBottom: "6px",
+              background: isUnlocked ? "rgba(34,197,94,0.08)" : "#0f172a",
+              border: "1px solid " + (isUnlocked ? "#22c55e" : "#1e293b"),
+              borderRadius: "8px",
+              minHeight: "44px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+              <span style={{ fontSize: "18px" }}>{isUnlocked ? "✅" : "🔒"}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: isUnlocked ? color : "#64748b", fontWeight: "bold", fontSize: "12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {achievement.name}
+                </div>
+                <div style={{ color: "#475569", fontSize: "10px" }}>
+                  {achievement.description}
+                </div>
+              </div>
+            </div>
+            {!isUnlocked && (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#64748b", marginBottom: "3px" }}>
+                  <span>{percent}%</span>
+                  <span>{Math.min(current, target)}/{target}</span>
+                </div>
+                <div style={{ height: "6px", background: "#1e293b", borderRadius: "3px", overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: percent + "%",
+                      height: "100%",
+                      background: color,
+                      borderRadius: "3px",
+                      transition: "width 0.3s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+          <button
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            style={{
+              minHeight: "36px",
+              minWidth: "60px",
+              padding: "6px 12px",
+              background: page === 0 ? "#1e293b" : "#334155",
+              color: page === 0 ? "#475569" : "white",
+              border: "1px solid #334155",
+              borderRadius: "6px",
+              cursor: page === 0 ? "not-allowed" : "pointer",
+              fontSize: "12px",
+              touchAction: "manipulation",
+            }}
+          >
+            ‹ Prev
+          </button>
+          <span style={{ color: "#64748b", fontSize: "11px" }}>{page + 1}/{totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            disabled={page === totalPages - 1}
+            style={{
+              minHeight: "36px",
+              minWidth: "60px",
+              padding: "6px 12px",
+              background: page === totalPages - 1 ? "#1e293b" : "#334155",
+              color: page === totalPages - 1 ? "#475569" : "white",
+              border: "1px solid #334155",
+              borderRadius: "6px",
+              cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
+              fontSize: "12px",
+              touchAction: "manipulation",
+            }}
+          >
+            Next ›
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function CharacterStats({
@@ -259,8 +396,50 @@ export function CharacterStats({
     return bonusMap[statKey];
   };
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activePanel, setActivePanel] = useState(0);
+  const achievementData = useAchievements();
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const panel = Math.round(el.scrollLeft / el.clientWidth);
+    setActivePanel(panel);
+  };
+
+  const scrollToPanel = (idx: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ left: idx * el.clientWidth, behavior: "smooth" });
+  };
+
   return (
-    <div style={isMobile ? { fontSize: "11px", lineHeight: "1.3" } : undefined}>
+    <div style={{ fontSize: "11px", lineHeight: "1.3" }}>
+      {/* Carousel container */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        style={{
+          display: "flex",
+          overflowX: "auto",
+          scrollSnapType: "x mandatory",
+          scrollBehavior: "smooth",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          gap: "0",
+          touchAction: "pan-x",
+        }}
+      >
+        {/* ── Panel 1: Core Stats ── */}
+        <div
+          style={{
+            minWidth: "100%",
+            scrollSnapAlign: "start",
+            padding: "0 2px",
+          }}
+        >
+          
       <div
         style={{
           marginBottom: "15px",
@@ -614,6 +793,121 @@ export function CharacterStats({
         >
           📖 Skill Tree {character.skillPoints > 0 ? `(Points: ${character.skillPoints}!)` : ""}
         </button>
+      </div>
+        </div>
+
+        {/* ── Panel 2: Equipment ── */}
+        <div
+          style={{
+            minWidth: "100%",
+            scrollSnapAlign: "start",
+            padding: "0 2px",
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+              borderRadius: "8px",
+              padding: "10px",
+              border: "1px solid #2d3748",
+            }}
+          >
+            <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold", marginBottom: "10px" }}>
+              ⚔️ Equipped Gear
+            </div>
+            {[
+              { key: "weapon" as const, label: "Weapon", icon: "⚔️" },
+              { key: "armor" as const, label: "Armor", icon: "🛡️" },
+              { key: "head" as const, label: "Head", icon: "🎩" },
+              { key: "garment" as const, label: "Garment", icon: "🧥" },
+              { key: "footgear" as const, label: "Footgear", icon: "👢" },
+              { key: "accessory1" as const, label: "Acc 1", icon: "💍" },
+              { key: "accessory2" as const, label: "Acc 2", icon: "💍" },
+            ].map(slot => {
+              const item = equipped[slot.key];
+              const rarityColor = item ? (() => {
+                const colors: Record<string, string> = { legendary: "#ff6b35", epic: "#a855f7", rare: "#3b82f6", uncommon: "#22c55e", common: "#9ca3af" };
+                return colors[item.rarity] || "#9ca3af";
+              })() : "#334155";
+              return (
+                <div
+                  key={slot.key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "7px 10px",
+                    marginBottom: "4px",
+                    background: "#0f172a",
+                    border: "1px solid " + rarityColor,
+                    borderRadius: "8px",
+                    minHeight: "44px",
+                  }}
+                >
+                  <span style={{ fontSize: "18px", flexShrink: 0 }}>{item ? (() => {
+                    const icons: Record<string, string> = { weapon: item.weaponType === "bow" ? "🏹" : item.weaponType === "wand" ? "🪄" : "⚔️", armor: "🛡️", head: "🎩", garment: "🧥", footgear: "👢", accessory: "💍" };
+                    return icons[item.type] || "📦";
+                  })() : slot.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: rarityColor, fontSize: "12px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {item ? item.name + (item.refinement ? " +" + item.refinement : "") : "Empty"}
+                    </div>
+                    <div style={{ color: "#475569", fontSize: "10px" }}>{slot.label}</div>
+                  </div>
+                  {item && (
+                    <div style={{ flexShrink: 0, fontSize: "11px", color: "#fbbf24", background: "#1e293b", borderRadius: "4px", padding: "2px 6px" }}>
+                      ⭐ {calculateGearScore(item)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ marginTop: "10px", padding: "8px", background: "#0f172a", borderRadius: "6px", border: "1px solid #1e293b", textAlign: "center" }}>
+              <div style={{ fontSize: "11px", color: "#64748b" }}>Total Gear Score</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#fbbf24" }}>⭐ {totalEquipPower}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Panel 3: Achievements ── */}
+        <div
+          style={{
+            minWidth: "100%",
+            scrollSnapAlign: "start",
+            padding: "0 2px",
+          }}
+        >
+          <AchievementPanel unlockedIds={achievementData.playerAchievements.unlockedIds} progress={achievementData.stats} />
+        </div>
+      </div>
+
+      {/* Dot indicators */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "8px",
+          padding: "10px 0 4px",
+        }}
+      >
+        {["Stats", "Gear", "Trophies"].map((label, idx) => (
+          <button
+            key={label}
+            onClick={() => scrollToPanel(idx)}
+            style={{
+              width: activePanel === idx ? "24px" : "8px",
+              height: "8px",
+              borderRadius: "4px",
+              background: activePanel === idx ? "#fbbf24" : "#334155",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              transition: "all 0.2s",
+              touchAction: "manipulation",
+            }}
+            title={label}
+          />
+        ))}
       </div>
     </div>
   );
