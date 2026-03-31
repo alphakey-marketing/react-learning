@@ -17,11 +17,13 @@ import { TutorialOverlay } from "./components/TutorialOverlay";
 import { DevToolsPanel } from "./components/DevToolsPanel";
 import { CombatStatusDisplay } from "./components/CombatStatusDisplay";
 import { GameCompleteModal } from "./components/GameCompleteModal";
-import { Equipment } from "./types/equipment";
+import { Equipment, calculateGearScore, getEquipmentIcon } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
+import { useAchievements } from "./hooks/useAchievements";
+import { ACHIEVEMENTS_DB } from "./data/achievements";
 import { useGameAudio } from "./hooks/useGameAudio";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState, useRef } from "react";
@@ -30,13 +32,14 @@ import { useMonetization } from "./context/MonetizationContext";
 import { LivesBar } from "./components/LivesBar";
 import { ShopModal } from "./components/ShopModal";
 import { InterstitialAd } from "./components/InterstitialAd";
-import { TopHUDBar } from "./components/TopHUDBar";
+import { MoreMenu } from "./components/MoreMenu";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
   const audio = useGameAudio();
+  const achievementData = useAchievements();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeTab, setActiveTab] = useState<MobileTab>('combat');
@@ -44,6 +47,10 @@ export function MiniLevelGame() {
   const [showRefineNPC, setShowRefineNPC] = useState(false);
   const [showTrainingHut, setShowTrainingHut] = useState(false);
   const [showGameComplete, setShowGameComplete] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showEquippedGear, setShowEquippedGear] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [showGameShop, setShowGameShop] = useState(false);
   const [playTimeMs, setPlayTimeMs] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
 
@@ -282,7 +289,6 @@ export function MiniLevelGame() {
               2: 'stats',
               3: 'stats',
               4: 'inventory',
-              5: 'shop',
             };
             const tab = tabMap[stepIndex];
             if (tab) setActiveTab(tab);
@@ -594,8 +600,7 @@ export function MiniLevelGame() {
               )}
 
               {activeTab === 'stats' && (
-                <>
-                  <div data-tutorial="character-stats">
+                <div data-tutorial="character-stats">
                     <CharacterStats
                       character={game.char}
                       equipped={game.equipped}
@@ -603,67 +608,6 @@ export function MiniLevelGame() {
                       onOpenSkills={() => game.setShowSkillWindow(true)}
                     />
                   </div>
-                  <div style={{ marginTop: "10px", display: "flex", gap: "8px" }}>
-                    <button
-                      data-tutorial="job-master"
-                      onClick={game.openJobChangeNPC}
-                      style={{
-                        flex: 1, padding: "10px",
-                        background: canChangeJobNow ? "linear-gradient(45deg, #f59e0b, #d97706)" : "#555",
-                        color: "white",
-                        border: canChangeJobNow ? "2px solid #fbbf24" : "none",
-                        borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
-                        fontSize: "clamp(11px, 3vw, 13px)",
-                        boxShadow: canChangeJobNow ? "0 0 15px rgba(251, 191, 36, 0.5)" : "none",
-                        animation: canChangeJobNow ? "pulseButton 2s infinite" : "none",
-                      }}
-                    >
-                      {canChangeJobNow ? "🧙 Job Change!" : "🧙 Job Master"}
-                    </button>
-                    <button
-                      onClick={() => game.setShowSkillWindow(true)}
-                      style={{
-                        flex: 1, padding: "10px",
-                        background: game.char.skillPoints > 0
-                          ? "linear-gradient(45deg, #7c3aed, #6d28d9)"
-                          : "linear-gradient(45deg, #4c1d95, #3b1980)",
-                        color: "white",
-                        border: game.char.skillPoints > 0 ? "2px solid #8b5cf6" : "none",
-                        borderRadius: "6px", cursor: "pointer", fontWeight: "bold",
-                        fontSize: "clamp(11px, 3vw, 13px)",
-                        boxShadow: game.char.skillPoints > 0 ? "0 0 15px rgba(124, 58, 237, 0.5)" : "none",
-                        animation: game.char.skillPoints > 0 ? "pulseButton 2s infinite" : "none",
-                        touchAction: "manipulation",
-                      }}
-                    >
-                      {game.char.skillPoints > 0 ? `📖 Skills (${game.char.skillPoints}!)` : "📖 Skills"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (game.currentZoneId !== 0) {
-                          game.escapeToTown();
-                        } else {
-                          setShowRefineNPC(true);
-                        }
-                      }}
-                      disabled={game.char.hp <= 0}
-                      style={{
-                        flex: 1, padding: "10px",
-                        background: game.currentZoneId !== 0
-                          ? (game.char.hp > 0 ? "linear-gradient(45deg, #10b981, #059669)" : "#555")
-                          : "linear-gradient(45deg, #8b5cf6, #6d28d9)",
-                        color: "white", border: "none", borderRadius: "6px",
-                        cursor: game.char.hp > 0 ? "pointer" : "not-allowed",
-                        fontWeight: "bold", fontSize: "clamp(11px, 3vw, 13px)",
-                        boxShadow: game.char.hp > 0
-                          ? (game.currentZoneId !== 0 ? "0 0 10px rgba(16, 185, 129, 0.3)" : "0 0 10px rgba(139, 92, 246, 0.3)")
-                          : "none",
-                      }}
-                    >
-                      {game.currentZoneId !== 0 ? "🏛️ Escape" : "🔨 Blacksmith"}
-                    </button>
-                  </div>
-                </>
               )}
 
               {activeTab === 'map' && (
@@ -701,15 +645,19 @@ export function MiniLevelGame() {
               onBuyMpPotion={game.buyMpPotion}
               onRefine={game.refineItem}
               onJobChange={wrappedHandleJobChange}
-              isOpen={activeTab === 'shop'}
-              onClose={() => setActiveTab('combat')}
+              isOpen={showGameShop}
+              onClose={() => setShowGameShop(false)}
             />
 
             <BottomNavBar
               activeTab={activeTab}
               onTabChange={(tab) => {
-                setActiveTab(tab);
-                if (tab === 'inventory') setNewItemBadge(0);
+                if (tab === 'more') {
+                  setShowMoreMenu(true);
+                } else {
+                  setActiveTab(tab);
+                  if (tab === 'inventory') setNewItemBadge(0);
+                }
               }}
               statPointsBadge={game.char.statPoints}
               canChangeJob={canChangeJobNow}
@@ -860,6 +808,132 @@ export function MiniLevelGame() {
             </div>
           </div>
         )}
+
+        {/* ── More Menu (mobile) ──────────────────────────────────────────── */}
+        <MoreMenu
+          isOpen={showMoreMenu}
+          onClose={() => setShowMoreMenu(false)}
+          canChangeJob={canChangeJobNow}
+          skillPoints={game.char.skillPoints}
+          isInTown={game.currentZoneId === 0}
+          onOpenSkills={() => game.setShowSkillWindow(true)}
+          onOpenJobMaster={game.openJobChangeNPC}
+          onOpenBlacksmith={() => setShowRefineNPC(true)}
+          onOpenShop={() => setShowGameShop(true)}
+          onOpenEquippedGear={() => setShowEquippedGear(true)}
+          onOpenAchievements={() => setShowAchievements(true)}
+        />
+
+        {/* ── Equipped Gear Overlay ────────────────────────────────────────── */}
+        {showEquippedGear && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.7)",
+              zIndex: 1200,
+              display: "flex",
+              alignItems: "flex-end",
+            }}
+            onClick={() => setShowEquippedGear(false)}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxHeight: "80vh",
+                overflowY: "auto",
+                background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)",
+                borderRadius: "16px 16px 0 0",
+                padding: "16px 12px 80px",
+                borderTop: "1px solid rgba(255,215,0,0.3)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <div style={{ fontSize: "14px", color: "#fbbf24", fontWeight: "bold" }}>⚔️ Equipped Gear</div>
+                <button onClick={() => setShowEquippedGear(false)} style={{ background: "none", border: "none", color: "#64748b", fontSize: "20px", cursor: "pointer", padding: "4px 8px" }}>✕</button>
+              </div>
+              {([
+                { key: "weapon" as const, label: "Weapon", icon: "⚔️" },
+                { key: "armor" as const, label: "Armor", icon: "🛡️" },
+                { key: "head" as const, label: "Head", icon: "🎩" },
+                { key: "garment" as const, label: "Garment", icon: "🧥" },
+                { key: "footgear" as const, label: "Footgear", icon: "👢" },
+                { key: "accessory1" as const, label: "Acc 1", icon: "💍" },
+                { key: "accessory2" as const, label: "Acc 2", icon: "💍" },
+              ] as const).map(slot => {
+                const item = game.equipped[slot.key];
+                const RARITY_COLORS: Record<string, string> = { legendary: "#ff6b35", epic: "#a855f7", rare: "#3b82f6", uncommon: "#22c55e", common: "#9ca3af" };
+                const rarityColor = item ? (RARITY_COLORS[item.rarity] || "#9ca3af") : "#334155";
+                return (
+                  <div key={slot.key} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", marginBottom: "6px", background: "#0f172a", border: "1px solid " + rarityColor, borderRadius: "8px", minHeight: "44px" }}>
+                    <span style={{ fontSize: "20px", flexShrink: 0 }}>{item ? getEquipmentIcon(item) : slot.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: rarityColor, fontSize: "12px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item ? item.name + (item.refinement ? " +" + item.refinement : "") : "Empty"}
+                      </div>
+                      <div style={{ color: "#475569", fontSize: "10px" }}>{slot.label}</div>
+                    </div>
+                    {item && <div style={{ flexShrink: 0, fontSize: "10px", color: "#fbbf24", background: "#1e293b", borderRadius: "4px", padding: "2px 5px" }}>⭐ {calculateGearScore(item)}</div>}
+                  </div>
+                );
+              })}
+              <div style={{ marginTop: "10px", padding: "10px", background: "#0f172a", borderRadius: "6px", border: "1px solid #1e293b", textAlign: "center" }}>
+                <div style={{ fontSize: "11px", color: "#64748b" }}>Total Gear Score</div>
+                <div style={{ fontSize: "16px", fontWeight: "bold", color: "#fbbf24" }}>
+                  ⭐ {Object.values(game.equipped).filter(Boolean).reduce((sum, item) => sum + calculateGearScore(item as any), 0)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Achievements Overlay ─────────────────────────────────────────── */}
+        {showAchievements && (() => {
+          const { playerAchievements, stats } = achievementData;
+          const allAch = ACHIEVEMENTS_DB;
+          const rarityColors: Record<string, string> = { common: "#9ca3af", rare: "#3b82f6", epic: "#a855f7", legendary: "#f59e0b" };
+          return (
+            <div
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1200, display: "flex", alignItems: "flex-end" }}
+              onClick={() => setShowAchievements(false)}
+            >
+              <div
+                onClick={e => e.stopPropagation()}
+                style={{ width: "100%", maxHeight: "80vh", overflowY: "auto", background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)", borderRadius: "16px 16px 0 0", padding: "16px 12px 80px", borderTop: "1px solid rgba(255,215,0,0.3)" }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <div style={{ fontSize: "14px", color: "#fbbf24", fontWeight: "bold" }}>🏆 Achievements ({playerAchievements.unlocked.size}/{allAch.length})</div>
+                  <button onClick={() => setShowAchievements(false)} style={{ background: "none", border: "none", color: "#64748b", fontSize: "20px", cursor: "pointer", padding: "4px 8px" }}>✕</button>
+                </div>
+                {allAch.map(achievement => {
+                  const isUnlocked = playerAchievements.unlocked.has(achievement.id);
+                  const current = (stats as Record<string, number>)[achievement.requirement.type] ?? 0;
+                  const target = achievement.requirement.target;
+                  const percent = Math.min(100, Math.floor((current / target) * 100));
+                  const color = rarityColors[achievement.rarity] || "#9ca3af";
+                  return (
+                    <div key={achievement.id} style={{ padding: "10px", marginBottom: "6px", background: isUnlocked ? "rgba(34,197,94,0.08)" : "#0f172a", border: "1px solid " + (isUnlocked ? "#22c55e" : "#1e293b"), borderRadius: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: isUnlocked ? 0 : "6px" }}>
+                        <span style={{ fontSize: "18px" }}>{isUnlocked ? "✅" : "🔒"}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ color: isUnlocked ? color : "#64748b", fontWeight: "bold", fontSize: "12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{achievement.name}</div>
+                          <div style={{ color: "#475569", fontSize: "10px" }}>{achievement.description}</div>
+                        </div>
+                      </div>
+                      {!isUnlocked && (
+                        <div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#64748b", marginBottom: "3px" }}><span>{percent}%</span><span>{Math.min(current, target)}/{target}</span></div>
+                          <div style={{ height: "6px", background: "#1e293b", borderRadius: "3px", overflow: "hidden" }}><div style={{ width: percent + "%", height: "100%", background: color, borderRadius: "3px" }} /></div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {game.showSkillWindow && (
           <SkillWindow

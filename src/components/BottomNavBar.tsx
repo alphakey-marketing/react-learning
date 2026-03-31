@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type MobileTab = 'combat' | 'stats' | 'map' | 'inventory' | 'shop';
+export type MobileTab = 'combat' | 'stats' | 'map' | 'inventory' | 'more';
 
 interface NavItem {
   id: MobileTab;
@@ -29,7 +29,7 @@ export function BottomNavBar({
     { id: 'stats',     icon: '📊',  label: 'Stats', badge: statPointsBadge },
     { id: 'map',       icon: '🗺️',  label: 'Map' },
     { id: 'inventory', icon: '🎒',  label: 'Bag', badge: inventoryBadge },
-    { id: 'shop',      icon: '🛒',  label: 'Shop' },
+    { id: 'more',      icon: '☰',   label: 'More' },
   ];
 
   return (
