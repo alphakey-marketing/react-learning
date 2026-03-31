@@ -8,11 +8,12 @@ interface ShopProps {
   character: Character;
   isInTown: boolean;
   inventory: Equipment[];
-  equipped: EquippedItems;
+  equipped?: EquippedItems;
   onSellItem: (item: Equipment) => void;
   onBuyHpPotion: (amount: number) => void;
   onBuyMpPotion: (amount: number) => void;
-  // Slide-in panel control (optional — defaults to always-open with no-op close)
+  // When provided, renders as a slide-in overlay panel (mobile).
+  // When omitted, renders inline as a normal desktop block.
   isOpen?: boolean;
   onClose?: () => void;
 }
@@ -24,8 +25,8 @@ export function Shop({
   onSellItem,
   onBuyHpPotion,
   onBuyMpPotion,
-  isOpen = true,
-  onClose = () => {},
+  isOpen,
+  onClose,
 }: ShopProps) {
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
@@ -58,6 +59,248 @@ export function Shop({
     setSelectedItems(new Set());
   };
 
+  // ── Shared inner content ─────────────────────────────────────────────────
+  const shopContent = (
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch" as any,
+        padding: "12px",
+        paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+      }}
+    >
+      {!isInTown && (
+        <div
+          style={{
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid #ef4444",
+            borderRadius: "8px",
+            padding: "10px",
+            marginBottom: "12px",
+            fontSize: "12px",
+            color: "#fca5a5",
+            textAlign: "center",
+          }}
+        >
+          ⚠️ Return to town to purchase items
+        </div>
+      )}
+
+      {/* HP Potions */}
+      <div style={{ marginBottom: "12px" }}>
+        <div style={{ fontSize: "11px", color: "#fbbf24", fontWeight: "bold", marginBottom: "6px" }}>
+          🍖 HP Potions
+        </div>
+        <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "5px" }}>
+          {HP_POTION_COST}g each · Heals ~{hpHealAmount} HP
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
+          {[1, 5, 10].map(amount => (
+            <button
+              key={amount}
+              onClick={() => onBuyHpPotion(amount)}
+              disabled={!isInTown || character.gold < HP_POTION_COST * amount}
+              style={{
+                minHeight: "52px",
+                padding: "8px",
+                background: isInTown && character.gold >= HP_POTION_COST * amount
+                  ? "linear-gradient(135deg, #ef4444, #dc2626)"
+                  : "#374151",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: isInTown && character.gold >= HP_POTION_COST * amount ? "pointer" : "not-allowed",
+                opacity: isInTown && character.gold >= HP_POTION_COST * amount ? 1 : 0.5,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "2px",
+                touchAction: "manipulation",
+              }}
+            >
+              <span style={{ fontSize: "14px" }}>🍖 ×{amount}</span>
+              <span style={{ fontSize: "10px", opacity: 0.85 }}>{HP_POTION_COST * amount}g</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* MP Potions */}
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ fontSize: "11px", color: "#fbbf24", fontWeight: "bold", marginBottom: "8px" }}>
+          🧪 MP Potions
+        </div>
+        <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "6px" }}>
+          {MP_POTION_COST}g each
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
+          {[1, 5, 10].map(amount => (
+            <button
+              key={amount}
+              onClick={() => onBuyMpPotion(amount)}
+              disabled={!isInTown || character.gold < MP_POTION_COST * amount}
+              style={{
+                minHeight: "52px",
+                padding: "8px",
+                background: isInTown && character.gold >= MP_POTION_COST * amount
+                  ? "linear-gradient(135deg, #3b82f6, #2563eb)"
+                  : "#374151",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: isInTown && character.gold >= MP_POTION_COST * amount ? "pointer" : "not-allowed",
+                opacity: isInTown && character.gold >= MP_POTION_COST * amount ? 1 : 0.5,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "2px",
+                touchAction: "manipulation",
+              }}
+            >
+              <span style={{ fontSize: "14px" }}>🧪 ×{amount}</span>
+              <span style={{ fontSize: "10px", opacity: 0.85 }}>{MP_POTION_COST * amount}g</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sell section */}
+      <div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "8px",
+          }}
+        >
+          <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold" }}>
+            💰 Sell Items
+          </div>
+          {selectedItems.size > 0 && (
+            <button
+              onClick={handleSellSelected}
+              style={{
+                minHeight: "36px",
+                padding: "6px 12px",
+                background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                color: "white",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: "bold",
+                touchAction: "manipulation",
+              }}
+            >
+              Sell {selectedItems.size} →{" "}
+              {inventory
+                .filter(i => selectedItems.has(i.id))
+                .reduce((sum, i) => sum + calculateSellPrice(i), 0)}g
+            </button>
+          )}
+        </div>
+
+        {inventory.length === 0 ? (
+          <div style={{ color: "#475569", textAlign: "center", padding: "20px", fontSize: "13px" }}>
+            No items to sell
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+            {inventory.map(item => {
+              const isSelected = selectedItems.has(item.id);
+              const rarityColor = getRarityColor(item.rarity);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleToggleItem(item.id)}
+                  style={{
+                    padding: "8px",
+                    background: isSelected ? "rgba(34,197,94,0.15)" : "#0f172a",
+                    border: "1px solid " + (isSelected ? "#22c55e" : rarityColor),
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    textAlign: "left",
+                    minHeight: "52px",
+                    touchAction: "manipulation",
+                  }}
+                >
+                  <span style={{ fontSize: "20px", flexShrink: 0 }}>{getEquipmentIcon(item)}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        color: rarityColor,
+                        fontSize: "11px",
+                        fontWeight: "bold",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.name}
+                    </div>
+                    <div style={{ color: "#64748b", fontSize: "9px" }}>
+                      {calculateSellPrice(item)}g
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <span style={{ color: "#22c55e", fontSize: "14px", flexShrink: 0 }}>✓</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ── Desktop: render inline (no overlay, no backdrop) ─────────────────────
+  if (isOpen === undefined) {
+    return (
+      <div
+        style={{
+          background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+          border: "1px solid rgba(255,215,0,0.2)",
+          borderRadius: "8px",
+          marginTop: "10px",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        {/* Inline header — no close button needed */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "10px 14px",
+            borderBottom: "1px solid #1e293b",
+            flexShrink: 0,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "13px", fontWeight: "bold", color: "#fbbf24" }}>
+              🏪 Town Shop
+            </div>
+            <div style={{ fontSize: "10px", color: "#64748b" }}>
+              {isInTown ? "Welcome, adventurer!" : "⚠️ Return to town to shop"}
+            </div>
+          </div>
+        </div>
+        {shopContent}
+      </div>
+    );
+  }
+
+  // ── Mobile: render as fixed slide-in overlay panel ────────────────────────
   return (
     <>
       {/* Backdrop */}
@@ -134,205 +377,7 @@ export function Shop({
           </div>
         </div>
 
-        {/* Content area */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            WebkitOverflowScrolling: "touch",
-            padding: "12px",
-            paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
-          }}
-        >
-          {!isInTown && (
-            <div
-              style={{
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid #ef4444",
-                borderRadius: "8px",
-                padding: "10px",
-                marginBottom: "12px",
-                fontSize: "12px",
-                color: "#fca5a5",
-                textAlign: "center",
-              }}
-            >
-              ⚠️ Return to town to purchase items
-            </div>
-          )}
-
-          {/* HP Potions */}
-          <div style={{ marginBottom: "12px" }}>
-            <div style={{ fontSize: "11px", color: "#fbbf24", fontWeight: "bold", marginBottom: "6px" }}>
-              🍖 HP Potions
-            </div>
-            <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "5px" }}>
-              {HP_POTION_COST}g each · Heals ~{hpHealAmount} HP
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
-              {[1, 5, 10].map(amount => (
-                <button
-                  key={amount}
-                  onClick={() => onBuyHpPotion(amount)}
-                  disabled={!isInTown || character.gold < HP_POTION_COST * amount}
-                  style={{
-                    minHeight: "52px",
-                    padding: "8px",
-                    background: isInTown && character.gold >= HP_POTION_COST * amount
-                      ? "linear-gradient(135deg, #ef4444, #dc2626)"
-                      : "#374151",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: isInTown && character.gold >= HP_POTION_COST * amount ? "pointer" : "not-allowed",
-                    opacity: isInTown && character.gold >= HP_POTION_COST * amount ? 1 : 0.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "2px",
-                    touchAction: "manipulation",
-                  }}
-                >
-                  <span style={{ fontSize: "14px" }}>🍖 ×{amount}</span>
-                  <span style={{ fontSize: "10px", opacity: 0.85 }}>{HP_POTION_COST * amount}g</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* MP Potions */}
-          <div style={{ marginBottom: "16px" }}>
-            <div style={{ fontSize: "11px", color: "#fbbf24", fontWeight: "bold", marginBottom: "8px" }}>
-              🧪 MP Potions
-            </div>
-            <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "6px" }}>
-              {MP_POTION_COST}g each
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
-              {[1, 5, 10].map(amount => (
-                <button
-                  key={amount}
-                  onClick={() => onBuyMpPotion(amount)}
-                  disabled={!isInTown || character.gold < MP_POTION_COST * amount}
-                  style={{
-                    minHeight: "52px",
-                    padding: "8px",
-                    background: isInTown && character.gold >= MP_POTION_COST * amount
-                      ? "linear-gradient(135deg, #3b82f6, #2563eb)"
-                      : "#374151",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: isInTown && character.gold >= MP_POTION_COST * amount ? "pointer" : "not-allowed",
-                    opacity: isInTown && character.gold >= MP_POTION_COST * amount ? 1 : 0.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "2px",
-                    touchAction: "manipulation",
-                  }}
-                >
-                  <span style={{ fontSize: "14px" }}>🧪 ×{amount}</span>
-                  <span style={{ fontSize: "10px", opacity: 0.85 }}>{MP_POTION_COST * amount}g</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sell section */}
-          <div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "8px",
-              }}
-            >
-              <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold" }}>
-                💰 Sell Items
-              </div>
-              {selectedItems.size > 0 && (
-                <button
-                  onClick={handleSellSelected}
-                  style={{
-                    minHeight: "36px",
-                    padding: "6px 12px",
-                    background: "linear-gradient(135deg, #f59e0b, #d97706)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "11px",
-                    fontWeight: "bold",
-                    touchAction: "manipulation",
-                  }}
-                >
-                  Sell {selectedItems.size} →{" "}
-                  {inventory
-                    .filter(i => selectedItems.has(i.id))
-                    .reduce((sum, i) => sum + calculateSellPrice(i), 0)}g
-                </button>
-              )}
-            </div>
-
-            {inventory.length === 0 ? (
-              <div style={{ color: "#475569", textAlign: "center", padding: "20px", fontSize: "13px" }}>
-                No items to sell
-              </div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                {inventory.map(item => {
-                  const isSelected = selectedItems.has(item.id);
-                  const rarityColor = getRarityColor(item.rarity);
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleToggleItem(item.id)}
-                      style={{
-                        padding: "8px",
-                        background: isSelected ? "rgba(34,197,94,0.15)" : "#0f172a",
-                        border: "1px solid " + (isSelected ? "#22c55e" : rarityColor),
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        textAlign: "left",
-                        minHeight: "52px",
-                        touchAction: "manipulation",
-                      }}
-                    >
-                      <span style={{ fontSize: "20px", flexShrink: 0 }}>{getEquipmentIcon(item)}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            color: rarityColor,
-                            fontSize: "11px",
-                            fontWeight: "bold",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {item.name}
-                        </div>
-                        <div style={{ color: "#64748b", fontSize: "9px" }}>
-                          {calculateSellPrice(item)}g
-                        </div>
-                      </div>
-                      {isSelected && (
-                        <span style={{ color: "#22c55e", fontSize: "14px", flexShrink: 0 }}>✓</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        {shopContent}
       </div>
     </>
   );
