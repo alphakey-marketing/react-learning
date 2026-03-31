@@ -33,7 +33,7 @@ import { LivesBar } from "./components/LivesBar";
 import { ShopModal } from "./components/ShopModal";
 import { InterstitialAd } from "./components/InterstitialAd";
 import { MoreMenu } from "./components/MoreMenu";
-import { TopHUDBar } from "./components/TopHUDBar"; 
+import { TopHUDBar } from "./components/TopHUDBar";
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
@@ -175,7 +175,6 @@ export function MiniLevelGame() {
     },
     onItemDrop: (item) => {
       addDroppingItem(item);
-      // Show badge on Bag tab rather than auto-switching (which is disruptive during combat)
       if (isMobile && activeTab !== 'inventory') {
         setNewItemBadge(prev => prev + 1);
       }
@@ -201,14 +200,12 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
-  // Reactive mobile detection — updates on window resize / orientation change
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  // Keyboard shortcut — gated behind lives > 0
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -276,15 +273,11 @@ export function MiniLevelGame() {
         <TutorialOverlay
           onClose={() => {
             setShowTutorial(false);
-            setActiveTab('combat'); // reset tab so no empty screen after tutorial
+            setActiveTab('combat');
             audio.playBGM(game.currentZoneId === 0 ? "town" : "fight");
           }}
           onBeforeStep={(stepIndex) => {
             if (!isMobile) return;
-            // Maps tutorial step index → the tab whose data-tutorial element it highlights.
-            // Steps: 0=welcome, 1=Combat&Exploration(map), 2=Stats&Growth, 3=JobAdvancement(stats),
-            //        4=Loot&Equipment(inventory), 5=Town&Survival(shop).
-            // Update this if tutorial steps in TutorialOverlay.tsx are reordered.
             const tabMap: Record<number, MobileTab> = {
               1: 'map',
               2: 'stats',
@@ -321,7 +314,6 @@ export function MiniLevelGame() {
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
 
-      {/* Phase 2A: TopHUDBar — mobile-only persistent top bar */}
       {isMobile && (
         <TopHUDBar
           level={game.char.level}
@@ -352,7 +344,6 @@ export function MiniLevelGame() {
         }}
       >
         <div style={{ textAlign: "center", marginBottom: isMobile ? "4px" : "20px", flexShrink: 0 }}>
-
           <div style={{ marginBottom: isMobile ? "3px" : "12px" }}>
             <LivesBar
               onWatchAd={handleWatchAdForLife}
@@ -374,81 +365,28 @@ export function MiniLevelGame() {
             ⚔️ Mini RPG Adventure
           </h1>
           {!isMobile && (
-          <p
-            style={{
-              margin: "0",
-              fontSize: "clamp(12px, 3vw, 14px)",
-              color: "#94a3b8",
-              fontStyle: "italic",
-            }}
-          >
-            A nostalgic Ragnarok Online inspired idle RPG • Battle monsters, level up, and conquer epic bosses
-          </p>
+            <p
+              style={{
+                margin: "0",
+                fontSize: "clamp(12px, 3vw, 14px)",
+                color: "#94a3b8",
+                fontStyle: "italic",
+              }}
+            >
+              A nostalgic Ragnarok Online inspired idle RPG • Battle monsters, level up, and conquer epic bosses
+            </p>
           )}
         </div>
 
         {!isMobile && (
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap", flexShrink: 0 }}>
-          <button
-            onClick={() => setShowTutorial(true)}
-            style={{
-              padding: "8px 16px",
-              background: "rgba(59, 130, 246, 0.2)",
-              color: "#60a5fa",
-              border: "1px solid #3b82f6",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "clamp(12px, 3vw, 14px)",
-              display: "flex", alignItems: "center", gap: "6px",
-            }}
-          >
-            <span>📖</span><span>How to Play</span>
-          </button>
-
-          <button
-            onClick={audio.toggleMute}
-            style={{
-              padding: "8px 16px",
-              background: "rgba(255, 255, 255, 0.08)",
-              color: audio.isMuted ? "#666" : "#a3e635",
-              border: `1px solid ${audio.isMuted ? "#555" : "#65a30d"}`,
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "clamp(12px, 3vw, 14px)",
-              display: "flex", alignItems: "center", gap: "6px",
-            }}
-          >
-            <span>{audio.isMuted ? "🔇" : "🔊"}</span>
-            <span>{audio.isMuted ? "Muted" : "Music"}</span>
-          </button>
-
-          <button
-            onClick={() => setShowShop(true)}
-            style={{
-              padding: "8px 16px",
-              background: "rgba(251, 191, 36, 0.2)",
-              color: "#fbbf24",
-              border: "1px solid #fbbf24",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontWeight: "bold",
-              fontSize: "clamp(12px, 3vw, 14px)",
-              display: "flex", alignItems: "center", gap: "6px",
-            }}
-          >
-            <span>👑</span><span>VIP Store</span>
-          </button>
-
-          {showDevTools && (
+          <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap", flexShrink: 0 }}>
             <button
-              onClick={() => setShowTrainingHut(true)}
+              onClick={() => setShowTutorial(true)}
               style={{
                 padding: "8px 16px",
-                background: "rgba(245, 158, 11, 0.2)",
-                color: "#fbbf24",
-                border: "1px solid #f59e0b",
+                background: "rgba(59, 130, 246, 0.2)",
+                color: "#60a5fa",
+                border: "1px solid #3b82f6",
                 borderRadius: "8px",
                 cursor: "pointer",
                 fontWeight: "bold",
@@ -456,20 +394,69 @@ export function MiniLevelGame() {
                 display: "flex", alignItems: "center", gap: "6px",
               }}
             >
-              <span>🎯</span><span>Training Hut</span>
+              <span>📖</span><span>How to Play</span>
             </button>
-          )}
-        </div>
+
+            <button
+              onClick={audio.toggleMute}
+              style={{
+                padding: "8px 16px",
+                background: "rgba(255, 255, 255, 0.08)",
+                color: audio.isMuted ? "#666" : "#a3e635",
+                border: `1px solid ${audio.isMuted ? "#555" : "#65a30d"}`,
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                fontSize: "clamp(12px, 3vw, 14px)",
+                display: "flex", alignItems: "center", gap: "6px",
+              }}
+            >
+              <span>{audio.isMuted ? "🔇" : "🔊"}</span>
+              <span>{audio.isMuted ? "Muted" : "Music"}</span>
+            </button>
+
+            <button
+              onClick={() => setShowShop(true)}
+              style={{
+                padding: "8px 16px",
+                background: "rgba(251, 191, 36, 0.2)",
+                color: "#fbbf24",
+                border: "1px solid #fbbf24",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                fontSize: "clamp(12px, 3vw, 14px)",
+                display: "flex", alignItems: "center", gap: "6px",
+              }}
+            >
+              <span>👑</span><span>VIP Store</span>
+            </button>
+
+            {showDevTools && (
+              <button
+                onClick={() => setShowTrainingHut(true)}
+                style={{
+                  padding: "8px 16px",
+                  background: "rgba(245, 158, 11, 0.2)",
+                  color: "#fbbf24",
+                  border: "1px solid #f59e0b",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "clamp(12px, 3vw, 14px)",
+                  display: "flex", alignItems: "center", gap: "6px",
+                }}
+              >
+                <span>🎯</span><span>Training Hut</span>
+              </button>
+            )}
+          </div>
         )}
 
         {isMobile ? (
           /* ── Mobile: Bottom-nav tab layout ── */
           <>
-            {/* Always visible: core combat area — does not scroll.
-                maxHeight 45vh ensures combat zone never takes more than half the screen
-                on small phones (e.g. iPhone SE 667px), leaving ~55vh for tab content. */}
             <div style={{ flexShrink: 0, maxHeight: '45vh', overflowY: 'auto' }}>
-              {/* EnemyDisplay — attack/auto gated behind lives > 0 */}
               <EnemyDisplay
                 enemy={game.enemy}
                 currentZoneId={game.currentZoneId}
@@ -509,12 +496,11 @@ export function MiniLevelGame() {
                 overflowX: "hidden",
                 WebkitOverflowScrolling: "touch",
                 touchAction: "pan-y",
-                paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))", // 64px = BottomNavBar height
+                paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))",
               }}
             >
               {activeTab === 'combat' && (
                 <>
-                  {/* Mobile utility buttons — compacted row inside Combat tab */}
                   <div style={{ display: "flex", gap: "6px", marginBottom: "6px", flexWrap: "wrap" }}>
                     <button
                       onClick={() => setShowTutorial(true)}
@@ -602,13 +588,13 @@ export function MiniLevelGame() {
 
               {activeTab === 'stats' && (
                 <div data-tutorial="character-stats">
-                    <CharacterStats
-                      character={game.char}
-                      equipped={game.equipped}
-                      onAddStat={game.addStat}
-                      onOpenSkills={() => game.setShowSkillWindow(true)}
-                    />
-                  </div>
+                  <CharacterStats
+                    character={game.char}
+                    equipped={game.equipped}
+                    onAddStat={game.addStat}
+                    onOpenSkills={() => game.setShowSkillWindow(true)}
+                  />
+                </div>
               )}
 
               {activeTab === 'map' && (
@@ -631,24 +617,21 @@ export function MiniLevelGame() {
                   />
                 </div>
               )}
-
-              {/* Shop panel is now a slide-in overlay controlled by activeTab */}
             </div>
 
-            {/* Phase 2F: Shop as full-screen slide-in panel */}
-            <Shop
-              character={game.char}
-              isInTown={game.currentZoneId === 0}
-              inventory={game.inventory}
-              equipped={game.equipped}
-              onSellItem={wrappedSellItem}
-              onBuyHpPotion={game.buyHpPotion}
-              onBuyMpPotion={game.buyMpPotion}
-              onRefine={game.refineItem}
-              onJobChange={wrappedHandleJobChange}
-              isOpen={showGameShop}
-              onClose={() => setShowGameShop(false)}
-            />
+            {/* Town Shop — slide-in panel, only mounted when open */}
+            {showGameShop && (
+              <Shop
+                character={game.char}
+                isInTown={game.currentZoneId === 0}
+                inventory={game.inventory}
+                onSellItem={wrappedSellItem}
+                onBuyHpPotion={game.buyHpPotion}
+                onBuyMpPotion={game.buyMpPotion}
+                isOpen={showGameShop}
+                onClose={() => setShowGameShop(false)}
+              />
+            )}
 
             <BottomNavBar
               activeTab={activeTab}
@@ -729,7 +712,6 @@ export function MiniLevelGame() {
                 </button>
               </div>
 
-              {/* EnemyDisplay — attack/auto gated behind lives > 0 */}
               <EnemyDisplay
                 enemy={game.enemy}
                 currentZoneId={game.currentZoneId}
@@ -798,12 +780,9 @@ export function MiniLevelGame() {
                   character={game.char}
                   isInTown={game.currentZoneId === 0}
                   inventory={game.inventory}
-                  equipped={game.equipped}
                   onSellItem={wrappedSellItem}
                   onBuyHpPotion={game.buyHpPotion}
                   onBuyMpPotion={game.buyMpPotion}
-                  onRefine={game.refineItem}
-                  onJobChange={wrappedHandleJobChange}
                 />
               </div>
             </div>
@@ -986,7 +965,6 @@ export function MiniLevelGame() {
           <InterstitialAd onAdComplete={handleAdComplete} />
         )}
 
-        {/* FIX: No Lives Gate — blocks zone entry, shown as full-screen modal */}
         {showNoLivesGate && (
           <div
             style={{
