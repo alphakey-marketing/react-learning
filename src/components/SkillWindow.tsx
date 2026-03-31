@@ -1,11 +1,51 @@
 import { Character } from "../types/character";
 import { SKILLS_DB } from "../data/skills";
+import { calcEvasionStanceDodge } from "../logic/character";
 
 interface SkillWindowProps {
   character: Character;
   onLearnSkill: (skillId: string) => void;
   onSetAutoAttack: (skillId: string) => void;
   onClose: () => void;
+}
+
+// Returns a human-readable summary of what the passive actually does at the
+// current learned level, so the player can see real numbers not just text.
+function getPassiveSummary(skillId: string, character: Character): string | null {
+  const lv = character.learnedSkills[skillId] ?? 0;
+  if (lv === 0) return null;
+
+  switch (skillId) {
+    case "owl_eye": {
+      const dex = character.stats.dex;
+      const bonus = Math.floor(dex * (lv * 0.10));
+      return `Current bonus: +${bonus} DEX (${lv * 10}% of base ${dex} DEX) → effective DEX ${dex + bonus}`;
+    }
+    case "evasion_stance": {
+      const dodge = calcEvasionStanceDodge(character).toFixed(1);
+      return `Current dodge bonus: +${dodge}% (base ${lv * 3}% + AGI scaling)`;
+    }
+    case "iron_will": {
+      const { vit } = character.stats;
+      const approxSoftDef =
+        Math.floor(vit * 0.5) +
+        Math.floor(vit * 0.3) +
+        (character.learnedSkills["peco_peco_ride"] > 0 ? 15 : 0);
+      const bonus = Math.floor(approxSoftDef * 0.2);
+      return `Current bonus: +${bonus} ATK from DEF conversion (20% of ~${approxSoftDef} soft DEF)`;
+    }
+    case "peco_peco_ride": {
+      return `Current bonus: +15 flat DEF always active`;
+    }
+    case "counter_strike": {
+      return `15% chance to counter for 50% ATK on every hit taken`;
+    }
+    case "energy_coat": {
+      return `Reduces HP damage by 20%; absorbed portion converts to MP damage instead`;
+    }
+    default:
+      return null;
+  }
 }
 
 export function SkillWindow({
@@ -22,14 +62,16 @@ export function SkillWindow({
     return "#3b82f6";
   };
 
-  const getSkillBadge = (skillId: string) => {
-    // Highlight Jupitel Thunder for Wizards as boss DPS skill
+  const getSkillBadge = (skillId: string, learnedLevel: number) => {
+    if (learnedLevel > 0) {
+      // All passive skills get a PASSIVE badge when learned
+      const skill = skills.find(s => s.id === skillId);
+      if (skill?.effect === "passive") {
+        return { text: "✨ PASSIVE ACTIVE", color: "#8b5cf6" };
+      }
+    }
     if (character.jobClass === "Wizard" && skillId === "jupitel_thunder") {
       return { text: "⚡ BOSS DPS", color: "#f59e0b" };
-    }
-    // Highlight Energy Coat as defensive passive
-    if (character.jobClass === "Wizard" && skillId === "energy_coat") {
-      return { text: "🛡️ PASSIVE", color: "#8b5cf6" };
     }
     return null;
   };
@@ -72,13 +114,7 @@ export function SkillWindow({
             marginBottom: "15px",
           }}
         >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "22px",
-              color: "#60a5fa",
-            }}
-          >
+          <h2 style={{ margin: 0, fontSize: "22px", color: "#60a5fa" }}>
             📖 Skill Window
           </h2>
           <button
@@ -112,19 +148,35 @@ export function SkillWindow({
             💎 Skill Points: <strong>{character.skillPoints}</strong>
           </div>
           <div style={{ fontSize: "11px", color: "#aaa" }}>
-            Top Priority Skill: <strong>{character.autoAttackSkillId.replace('_', ' ').toUpperCase()}</strong>
+            Top Priority Skill:{" "}
+            <strong>
+              {character.autoAttackSkillId.replace("_", " ").toUpperCase()}
+            </strong>
           </div>
-          <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", fontStyle: "italic" }}>
-            (Smart rotation will attempt to use this skill first, then fallback to other available skills if on CD/no MP)
+          <div
+            style={{
+              fontSize: "11px",
+              color: "#888",
+              marginTop: "4px",
+              fontStyle: "italic",
+            }}
+          >
+            (Smart rotation uses this skill first, then falls back to other
+            skills if on CD / no MP)
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {skills.map((skill) => {
             const learnedLevel = character.learnedSkills[skill.id] || 0;
-            const canLearn = character.skillPoints > 0 && learnedLevel < skill.maxLevel;
+            const canLearn =
+              character.skillPoints > 0 && learnedLevel < skill.maxLevel;
             const isAutoAttack = character.autoAttackSkillId === skill.id;
-            const badge = getSkillBadge(skill.id);
+            const badge = getSkillBadge(skill.id, learnedLevel);
+            const isPassive = skill.effect === "passive";
+            const passiveSummary = isPassive
+              ? getPassiveSummary(skill.id, character)
+              : null;
 
             return (
               <div
@@ -137,7 +189,6 @@ export function SkillWindow({
                   position: "relative",
                 }}
               >
-                {/* Badge for special skills */}
                 {badge && (
                   <div
                     style={{
@@ -166,7 +217,13 @@ export function SkillWindow({
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "4px" }}>
+                    <div
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                        marginBottom: "4px",
+                      }}
+                    >
                       {skill.nameZh}
                       {isAutoAttack && (
                         <span
@@ -183,17 +240,48 @@ export function SkillWindow({
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: "12px", color: "#aaa", marginBottom: "6px" }}>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#aaa",
+                        marginBottom: "6px",
+                      }}
+                    >
                       {skill.description}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#888" }}>
-                      Level: {learnedLevel} / {skill.maxLevel} | MP: {skill.mpCost(learnedLevel || 1)} |
-                      DMG: {(skill.damageMultiplier(learnedLevel || 1) * 100).toFixed(0)}%
-                      {skill.cooldown > 0 && ` | CD: ${skill.cooldown}s`}
-                      {skill.targetCount && skill.targetCount > 1 && (
-                        <span style={{ color: "#f59e0b" }}> | AOE ({skill.targetCount} targets)</span>
-                      )}
-                    </div>
+
+                    {/* Passive: show real current numbers instead of DMG/CD */}
+                    {isPassive && passiveSummary ? (
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#a78bfa",
+                          background: "rgba(139,92,246,0.12)",
+                          border: "1px solid rgba(139,92,246,0.3)",
+                          borderRadius: "4px",
+                          padding: "5px 8px",
+                          marginTop: "4px",
+                        }}
+                      >
+                        📊 {passiveSummary}
+                      </div>
+                    ) : !isPassive ? (
+                      <div style={{ fontSize: "11px", color: "#888" }}>
+                        Level: {learnedLevel} / {skill.maxLevel} | MP:{" "}
+                        {skill.mpCost(learnedLevel || 1)} | DMG:{" "}
+                        {(skill.damageMultiplier(learnedLevel || 1) * 100).toFixed(0)}%
+                        {skill.cooldown > 0 && ` | CD: ${skill.cooldown}s`}
+                        {skill.targetCount && skill.targetCount > 1 && (
+                          <span style={{ color: "#f59e0b" }}>
+                            {" "}| AOE ({skill.targetCount} targets)
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "11px", color: "#888" }}>
+                        Level: {learnedLevel} / {skill.maxLevel}
+                      </div>
+                    )}
                   </div>
                   <div
                     style={{
@@ -229,28 +317,31 @@ export function SkillWindow({
                   >
                     {learnedLevel === 0 ? "📖 Learn" : "⬆️ Level Up"}
                   </button>
-                  {skill.effect !== "buff" && skill.effect !== "passive" && skill.effect !== "debuff" && learnedLevel > 0 && (
-                    <button
-                      onClick={() => onSetAutoAttack(skill.id)}
-                      disabled={isAutoAttack}
-                      style={{
-                        flex: 1,
-                        padding: "8px",
-                        background: isAutoAttack
-                          ? "#10b981"
-                          : "linear-gradient(to bottom, #f59e0b, #d97706)",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: isAutoAttack ? "not-allowed" : "pointer",
-                        fontSize: "12px",
-                        fontWeight: "bold",
-                        opacity: isAutoAttack ? 0.6 : 1,
-                      }}
-                    >
-                      {isAutoAttack ? "✓ Priority" : "⭐ Set Priority"}
-                    </button>
-                  )}
+                  {skill.effect !== "buff" &&
+                    skill.effect !== "passive" &&
+                    skill.effect !== "debuff" &&
+                    learnedLevel > 0 && (
+                      <button
+                        onClick={() => onSetAutoAttack(skill.id)}
+                        disabled={isAutoAttack}
+                        style={{
+                          flex: 1,
+                          padding: "8px",
+                          background: isAutoAttack
+                            ? "#10b981"
+                            : "linear-gradient(to bottom, #f59e0b, #d97706)",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: isAutoAttack ? "not-allowed" : "pointer",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                          opacity: isAutoAttack ? 0.6 : 1,
+                        }}
+                      >
+                        {isAutoAttack ? "✓ Priority" : "⭐ Set Priority"}
+                      </button>
+                    )}
                 </div>
               </div>
             );

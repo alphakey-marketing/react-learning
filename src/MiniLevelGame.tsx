@@ -22,8 +22,6 @@ import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
-import { useAchievements } from "./hooks/useAchievements";
-import { ACHIEVEMENTS_DB } from "./data/achievements";
 import { useGameAudio } from "./hooks/useGameAudio";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState, useRef } from "react";
@@ -40,7 +38,6 @@ export function MiniLevelGame() {
   const { floatingTexts, addFloatingText, removeFloatingText } = useFloatingText();
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
   const audio = useGameAudio();
-  const achievementData = useAchievements();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeTab, setActiveTab] = useState<MobileTab>('combat');
@@ -50,7 +47,6 @@ export function MiniLevelGame() {
   const [showGameComplete, setShowGameComplete] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEquippedGear, setShowEquippedGear] = useState(false);
-  const [showAchievements, setShowAchievements] = useState(false);
   const [showGameShop, setShowGameShop] = useState(false);
   const [playTimeMs, setPlayTimeMs] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
@@ -801,7 +797,6 @@ export function MiniLevelGame() {
           onOpenBlacksmith={() => setShowRefineNPC(true)}
           onOpenShop={() => setShowGameShop(true)}
           onOpenEquippedGear={() => setShowEquippedGear(true)}
-          onOpenAchievements={() => setShowAchievements(true)}
         />
 
         {/* ── Equipped Gear Overlay ────────────────────────────────────────── */}
@@ -867,53 +862,6 @@ export function MiniLevelGame() {
             </div>
           </div>
         )}
-
-        {/* ── Achievements Overlay ─────────────────────────────────────────── */}
-        {showAchievements && (() => {
-          const { playerAchievements, stats } = achievementData;
-          const allAch = ACHIEVEMENTS_DB;
-          const rarityColors: Record<string, string> = { common: "#9ca3af", rare: "#3b82f6", epic: "#a855f7", legendary: "#f59e0b" };
-          return (
-            <div
-              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1200, display: "flex", alignItems: "flex-end" }}
-              onClick={() => setShowAchievements(false)}
-            >
-              <div
-                onClick={e => e.stopPropagation()}
-                style={{ width: "100%", maxHeight: "80vh", overflowY: "auto", background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)", borderRadius: "16px 16px 0 0", padding: "16px 12px 80px", borderTop: "1px solid rgba(255,215,0,0.3)" }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                  <div style={{ fontSize: "14px", color: "#fbbf24", fontWeight: "bold" }}>🏆 Achievements ({playerAchievements.unlocked.size}/{allAch.length})</div>
-                  <button onClick={() => setShowAchievements(false)} style={{ background: "none", border: "none", color: "#64748b", fontSize: "20px", cursor: "pointer", padding: "4px 8px" }}>✕</button>
-                </div>
-                {allAch.map(achievement => {
-                  const isUnlocked = playerAchievements.unlocked.has(achievement.id);
-                  const current = stats[achievement.requirement.type] ?? 0;
-                  const target = achievement.requirement.target;
-                  const percent = Math.min(100, Math.floor((current / target) * 100));
-                  const color = rarityColors[achievement.rarity] || "#9ca3af";
-                  return (
-                    <div key={achievement.id} style={{ padding: "10px", marginBottom: "6px", background: isUnlocked ? "rgba(34,197,94,0.08)" : "#0f172a", border: "1px solid " + (isUnlocked ? "#22c55e" : "#1e293b"), borderRadius: "8px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: isUnlocked ? 0 : "6px" }}>
-                        <span style={{ fontSize: "18px" }}>{isUnlocked ? "✅" : "🔒"}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ color: isUnlocked ? color : "#64748b", fontWeight: "bold", fontSize: "12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{achievement.name}</div>
-                          <div style={{ color: "#475569", fontSize: "10px" }}>{achievement.description}</div>
-                        </div>
-                      </div>
-                      {!isUnlocked && (
-                        <div>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#64748b", marginBottom: "3px" }}><span>{percent}%</span><span>{Math.min(current, target)}/{target}</span></div>
-                          <div style={{ height: "6px", background: "#1e293b", borderRadius: "3px", overflow: "hidden" }}><div style={{ width: percent + "%", height: "100%", background: color, borderRadius: "3px" }} /></div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()}
 
         {game.showSkillWindow && (
           <SkillWindow

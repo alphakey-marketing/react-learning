@@ -1,7 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { Character, CharacterStats as Stats } from "../types/character";
 import { EquippedItems, calculateGearScore, calculateEquipmentStats } from "../types/equipment";
-import { calcPlayerAtk, calcPlayerMagicAtk, calcPlayerDef, calcCritChance, calcASPD, calcMaxHp, calcMaxMp } from "../logic/character";
+import {
+  calcPlayerAtk,
+  calcPlayerMagicAtk,
+  calcPlayerDef,
+  calcCritChance,
+  calcASPD,
+  calcMaxHp,
+  calcMaxMp,
+  calcEvasionStanceDodge,
+} from "../logic/character";
 
 interface CharacterStatsProps {
   character: Character;
@@ -10,7 +19,6 @@ interface CharacterStatsProps {
   onOpenSkills: () => void;
   selectedTitle?: string;
 }
-
 
 export function CharacterStats({
   character,
@@ -23,91 +31,57 @@ export function CharacterStats({
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
   }, []);
-  // Pending stats system
+
   const [pendingStats, setPendingStats] = useState<Record<keyof Stats, number>>({
-    str: 0,
-    agi: 0,
-    vit: 0,
-    int: 0,
-    dex: 0,
-    luk: 0,
+    str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0,
   });
 
-  const totalPendingPoints = Object.values(pendingStats).reduce((sum, val) => sum + val, 0);
+  const totalPendingPoints = Object.values(pendingStats).reduce((s, v) => s + v, 0);
   const remainingPoints = character.statPoints - totalPendingPoints;
   const hasPendingChanges = totalPendingPoints > 0;
 
   const addPendingStat = (stat: keyof Stats) => {
-    if (remainingPoints > 0) {
-      setPendingStats(prev => ({ ...prev, [stat]: prev[stat] + 1 }));
-    }
+    if (remainingPoints > 0)
+      setPendingStats((prev) => ({ ...prev, [stat]: prev[stat] + 1 }));
   };
-
   const removePendingStat = (stat: keyof Stats) => {
-    if (pendingStats[stat] > 0) {
-      setPendingStats(prev => ({ ...prev, [stat]: prev[stat] - 1 }));
-    }
+    if (pendingStats[stat] > 0)
+      setPendingStats((prev) => ({ ...prev, [stat]: prev[stat] - 1 }));
   };
-
   const confirmStats = () => {
     Object.entries(pendingStats).forEach(([stat, amount]) => {
-      for (let i = 0; i < amount; i++) {
-        onAddStat(stat as keyof Stats);
-      }
+      for (let i = 0; i < amount; i++) onAddStat(stat as keyof Stats);
     });
     setPendingStats({ str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 });
   };
-
-  const resetPending = () => {
+  const resetPending = () =>
     setPendingStats({ str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 });
-  };
 
   const expProgress = Math.floor((character.exp / character.expToNext) * 100);
   const hpPercent = Math.floor((character.hp / character.maxHp) * 100);
   const mpPercent = Math.floor((character.mp / character.maxMp) * 100);
-  const jobExpPercent = Math.floor(
-    (character.jobExp / character.jobExpToNext) * 100
-  );
+  const jobExpPercent = Math.floor((character.jobExp / character.jobExpToNext) * 100);
 
   const equipStats = calculateEquipmentStats(equipped);
   const armorBonus = equipStats.totalDef;
   const mdefBonus = equipStats.totalMdef;
-  
-  console.log('[CharacterStats] Equipment stats:', {
-    weaponAtk: equipStats.weaponAtk,
-    weaponLevel: equipStats.weaponLevel,
-    weaponRefine: equipStats.weaponRefine,
-    equipBonusAtk: equipStats.equipBonusAtk,
-    weaponType: equipStats.weaponType,
-    weapon: equipped.weapon,
-    basicStats: {
-      str: equipStats.bonusStr,
-      agi: equipStats.bonusAgi,
-      vit: equipStats.bonusVit,
-      int: equipStats.bonusInt,
-      dex: equipStats.bonusDex,
-      luk: equipStats.bonusLuk
-    }
-  });
-  
+
   const { attack: atkRange, passives } = calcPlayerAtk(
-    character, 
-    equipStats.weaponAtk, 
-    equipStats.weaponLevel, 
-    equipStats.weaponRefine, 
+    character,
+    equipStats.weaponAtk,
+    equipStats.weaponLevel,
+    equipStats.weaponRefine,
     equipStats.equipBonusAtk,
     equipStats.weaponType
   );
-  
-  console.log('[CharacterStats] ATK Range:', atkRange);
-  
-  const atkDisplay = atkRange.min === atkRange.max 
-    ? `${atkRange.max}` 
-    : `${atkRange.min} ~ ${atkRange.max}`;
-  
+  const atkDisplay =
+    atkRange.min === atkRange.max
+      ? `${atkRange.max}`
+      : `${atkRange.min} ~ ${atkRange.max}`;
+
   const { matk } = calcPlayerMagicAtk(
     character,
     equipStats.weaponMatk,
@@ -115,7 +89,7 @@ export function CharacterStats({
     equipStats.weaponRefine,
     equipStats.weaponType
   );
-  
+
   const def = calcPlayerDef(character, armorBonus, mdefBonus);
   const crit = calcCritChance(character, passives.critBonus);
   const aspd = calcASPD(character, passives.aspdBonus).toFixed(2);
@@ -123,9 +97,64 @@ export function CharacterStats({
   const defDisplay = `${def.softDef} + ${def.hardDefPercent}%`;
   const mdefDisplay = `${def.softMdef} + ${def.hardMdefPercent}%`;
 
+  // Build active passive bonuses list for display
+  const activePassiveBonuses: { label: string; value: string; color: string }[] = [];
+
+  if ((character.learnedSkills["owl_eye"] ?? 0) > 0) {
+    const lv = character.learnedSkills["owl_eye"];
+    const dex = character.stats.dex;
+    const bonus = Math.floor(dex * (lv * 0.10));
+    activePassiveBonuses.push({
+      label: "Owl's Eye",
+      value: `+${bonus} effective DEX (${lv * 10}%)`,
+      color: "#34d399",
+    });
+  }
+  if ((character.learnedSkills["evasion_stance"] ?? 0) > 0) {
+    const dodge = calcEvasionStanceDodge(character).toFixed(1);
+    activePassiveBonuses.push({
+      label: "Evasion Stance",
+      value: `+${dodge}% dodge chance`,
+      color: "#38bdf8",
+    });
+  }
+  if ((character.learnedSkills["iron_will"] ?? 0) > 0) {
+    const { vit } = character.stats;
+    const approxSoftDef =
+      Math.floor(vit * 0.5) +
+      Math.floor(vit * 0.3) +
+      ((character.learnedSkills["peco_peco_ride"] ?? 0) > 0 ? 15 : 0);
+    const bonus = Math.floor(approxSoftDef * 0.2);
+    activePassiveBonuses.push({
+      label: "Iron Will",
+      value: `+${bonus} ATK from DEF`,
+      color: "#f87171",
+    });
+  }
+  if ((character.learnedSkills["peco_peco_ride"] ?? 0) > 0) {
+    activePassiveBonuses.push({
+      label: "Peco Peco Ride",
+      value: "+15 flat DEF",
+      color: "#60a5fa",
+    });
+  }
+  if ((character.learnedSkills["counter_strike"] ?? 0) > 0) {
+    activePassiveBonuses.push({
+      label: "Counter Strike",
+      value: "15% counter on hit (50% ATK)",
+      color: "#fb923c",
+    });
+  }
+  if ((character.learnedSkills["energy_coat"] ?? 0) > 0) {
+    activePassiveBonuses.push({
+      label: "Energy Coat",
+      value: "−20% HP dmg → MP",
+      color: "#a78bfa",
+    });
+  }
+
   const previewStats = useMemo(() => {
     if (!hasPendingChanges) return null;
-
     const previewChar: Character = {
       ...character,
       stats: {
@@ -137,19 +166,18 @@ export function CharacterStats({
         luk: character.stats.luk + pendingStats.luk,
       },
     };
-
     const { attack: previewAtkRange, passives: previewPassives } = calcPlayerAtk(
-      previewChar, 
-      equipStats.weaponAtk, 
-      equipStats.weaponLevel, 
-      equipStats.weaponRefine, 
+      previewChar,
+      equipStats.weaponAtk,
+      equipStats.weaponLevel,
+      equipStats.weaponRefine,
       equipStats.equipBonusAtk,
       equipStats.weaponType
     );
-    const previewAtkDisplay = previewAtkRange.min === previewAtkRange.max 
-      ? `${previewAtkRange.max}` 
-      : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
-    
+    const previewAtkDisplay =
+      previewAtkRange.min === previewAtkRange.max
+        ? `${previewAtkRange.max}`
+        : `${previewAtkRange.min} ~ ${previewAtkRange.max}`;
     const { matk: previewMatk } = calcPlayerMagicAtk(
       previewChar,
       equipStats.weaponMatk,
@@ -157,13 +185,11 @@ export function CharacterStats({
       equipStats.weaponRefine,
       equipStats.weaponType
     );
-    
     const previewDef = calcPlayerDef(previewChar, armorBonus, mdefBonus);
     const previewCrit = calcCritChance(previewChar, previewPassives.critBonus);
     const previewAspd = calcASPD(previewChar, previewPassives.aspdBonus).toFixed(2);
     const previewMaxHp = calcMaxHp(character.level, previewChar.stats.vit, character.jobClass);
     const previewMaxMp = calcMaxMp(character.level, previewChar.stats.int, character.jobClass);
-
     return {
       atk: previewAtkDisplay,
       matk: previewMatk,
@@ -175,14 +201,17 @@ export function CharacterStats({
     };
   }, [hasPendingChanges, character, pendingStats, equipStats, armorBonus, mdefBonus]);
 
-  const previewDefDisplay = previewStats ? `${previewStats.def.softDef} + ${previewStats.def.hardDefPercent}%` : null;
-  const previewMdefDisplay = previewStats ? `${previewStats.def.softMdef} + ${previewStats.def.hardMdefPercent}%` : null;
+  const previewDefDisplay = previewStats
+    ? `${previewStats.def.softDef} + ${previewStats.def.hardDefPercent}%`
+    : null;
+  const previewMdefDisplay = previewStats
+    ? `${previewStats.def.softMdef} + ${previewStats.def.hardMdefPercent}%`
+    : null;
 
   const totalEquipPower = Object.values(equipped)
-    .filter(item => item !== null)
+    .filter((item) => item !== null)
     .reduce((sum, item) => sum + calculateGearScore(item as any), 0);
-    
-  const basePower = (character.level * 10) + (character.jobLevel * 5);
+  const basePower = character.level * 10 + character.jobLevel * 5;
   const totalPower = basePower + totalEquipPower;
 
   const getPlayerAvatar = () => {
@@ -190,28 +219,30 @@ export function CharacterStats({
     return `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}&backgroundColor=transparent`;
   };
 
-  const renderStatWithPreview = (label: string, current: number | string, preview: number | string | null, color: string) => {
+  const renderStatWithPreview = (
+    label: string,
+    current: number | string,
+    preview: number | string | null,
+    color: string
+  ) => {
     const diffNode = (() => {
       if (preview === null) return null;
-      if (typeof current === 'string' || typeof preview === 'string') {
-        if (current !== preview) {
+      if (typeof current === "string" || typeof preview === "string") {
+        if (current !== preview)
           return (
             <span style={{ color: "#22c55e", marginLeft: "4px" }}>
               → {preview}
             </span>
           );
-        }
         return null;
       }
-      
       const diff = preview - current;
-      if (diff !== 0) {
+      if (diff !== 0)
         return (
           <span style={{ color: "#22c55e", marginLeft: "4px" }}>
             → {preview} (+{diff > 0 ? diff.toFixed(label === "ASPD" ? 2 : 0) : 0})
           </span>
         );
-      }
       return null;
     })();
 
@@ -233,30 +264,16 @@ export function CharacterStats({
       vit: equipStats.bonusVit,
       int: equipStats.bonusInt,
       dex: equipStats.bonusDex,
-      luk: equipStats.bonusLuk
+      luk: equipStats.bonusLuk,
     };
     return bonusMap[statKey];
   };
 
   return (
     <div style={{ fontSize: "11px", lineHeight: "1.3" }}>
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          minHeight: 0,
-        }}
-      >
-        {/* ── Core Stats ── */}
-        <div
-          style={{
-            minWidth: "100%",
-            padding: "0 2px",
-          }}
-        >
-          {/* FIX BUG 4: Changed from implicit overflow (which clips the -16px
-              badge) to overflow:visible. Added paddingTop to push content
-              down so the absolutely-positioned Combat Power badge is visible. */}
+      <div style={{ display: "flex", width: "100%", minHeight: 0 }}>
+        <div style={{ minWidth: "100%", padding: "0 2px" }}>
+          {/* ── Character card ── */}
           <div
             style={{
               marginBottom: "15px",
@@ -270,60 +287,71 @@ export function CharacterStats({
               marginTop: "20px",
             }}
           >
-            {/* Total Combat Power Badge */}
-            <div style={{
-              position: "absolute",
-              top: "-16px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "linear-gradient(90deg, #b45309, #f59e0b, #b45309)",
-              padding: "6px 20px",
-              borderRadius: "24px",
-              fontWeight: "900",
-              color: "white",
-              fontSize: "16px",
-              boxShadow: "0 6px 15px rgba(245, 158, 11, 0.5)",
-              border: "2px solid #fcd34d",
-              whiteSpace: "nowrap",
-              zIndex: 10,
-              textShadow: "1px 1px 2px rgba(0,0,0,0.5)"
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                top: "-16px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "linear-gradient(90deg, #b45309, #f59e0b, #b45309)",
+                padding: "6px 20px",
+                borderRadius: "24px",
+                fontWeight: "900",
+                color: "white",
+                fontSize: "16px",
+                boxShadow: "0 6px 15px rgba(245, 158, 11, 0.5)",
+                border: "2px solid #fcd34d",
+                whiteSpace: "nowrap",
+                zIndex: 10,
+                textShadow: "1px 1px 2px rgba(0,0,0,0.5)",
+              }}
+            >
               ⚔️ Combat Power: {totalPower}
             </div>
 
-            {/* Character Header with Avatar */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "15px",
-              marginTop: "12px",
-              marginBottom: "15px",
-              padding: "10px",
-              background: "rgba(0,0,0,0.3)",
-              borderRadius: "8px",
-              border: "1px solid #333"
-            }}>
-              <div style={{
-                width: "60px",
-                height: "60px",
-                background: "#111",
-                borderRadius: "50%",
-                border: "2px solid #fcd34d",
-                overflow: "hidden",
+            <div
+              style={{
                 display: "flex",
-                justifyContent: "center",
                 alignItems: "center",
-                boxShadow: "0 0 10px rgba(251, 191, 36, 0.2)"
-              }}>
-                <img 
-                  src={getPlayerAvatar()} 
-                  alt="Player" 
-                  style={{ width: "120%", height: "120%", objectFit: "cover", marginTop: "10px" }} 
+                gap: "15px",
+                marginTop: "12px",
+                marginBottom: "15px",
+                padding: "10px",
+                background: "rgba(0,0,0,0.3)",
+                borderRadius: "8px",
+                border: "1px solid #333",
+              }}
+            >
+              <div
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  background: "#111",
+                  borderRadius: "50%",
+                  border: "2px solid #fcd34d",
+                  overflow: "hidden",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  boxShadow: "0 0 10px rgba(251, 191, 36, 0.2)",
+                }}
+              >
+                <img
+                  src={getPlayerAvatar()}
+                  alt="Player"
+                  style={{ width: "120%", height: "120%", objectFit: "cover", marginTop: "10px" }}
                 />
               </div>
 
               <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    marginBottom: "2px",
+                  }}
+                >
                   <span style={{ fontSize: "18px", fontWeight: "bold", color: "#fff" }}>
                     Lv.{character.level}
                   </span>
@@ -331,7 +359,6 @@ export function CharacterStats({
                     {character.jobClass}
                   </span>
                 </div>
-                
                 {selectedTitle && (
                   <div
                     style={{
@@ -347,58 +374,154 @@ export function CharacterStats({
                     <span>"{selectedTitle}"</span>
                   </div>
                 )}
-                
                 <div style={{ fontSize: "11px", color: "#888", marginTop: "4px" }}>
                   Job Lv.{character.jobLevel}
                 </div>
               </div>
             </div>
 
-            {/* HP/MP Bars with Preview — hidden on mobile (shown in TopHUDBar) */}
+            {/* EXP bars */}
             <div style={{ background: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "6px" }}>
               <div style={{ display: "none" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
-                <span style={{ color: "#f87171" }}>HP</span>
-                <span>
-                  {character.hp} / {character.maxHp}
-                  {previewStats && previewStats.maxHp !== character.maxHp && (
-                    <span style={{ color: "#22c55e", marginLeft: "4px" }}>
-                      → {previewStats.maxHp} (+{previewStats.maxHp - character.maxHp})
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div style={{ width: "100%", height: "14px", background: "#333", borderRadius: "7px", overflow: "hidden", marginBottom: "10px", border: "1px solid #222" }}>
-                <div style={{ width: `${hpPercent}%`, height: "100%", background: "linear-gradient(90deg, #ef4444, #f87171)", transition: "width 0.2s" }} />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
-                <span style={{ color: "#60a5fa" }}>MP</span>
-                <span>
-                  {character.mp} / {character.maxMp}
-                  {previewStats && previewStats.maxMp !== character.maxMp && (
-                    <span style={{ color: "#22c55e", marginLeft: "4px" }}>
-                      → {previewStats.maxMp} (+{previewStats.maxMp - character.maxMp})
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div style={{ width: "100%", height: "10px", background: "#333", borderRadius: "5px", overflow: "hidden", marginBottom: "15px", border: "1px solid #222" }}>
-                <div style={{ width: `${mpPercent}%`, height: "100%", background: "linear-gradient(90deg, #3b82f6, #60a5fa)", transition: "width 0.2s" }} />
-              </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "12px",
+                    marginBottom: "4px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <span style={{ color: "#f87171" }}>HP</span>
+                  <span>
+                    {character.hp} / {character.maxHp}
+                    {previewStats && previewStats.maxHp !== character.maxHp && (
+                      <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+                        → {previewStats.maxHp} (+{previewStats.maxHp - character.maxHp})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "14px",
+                    background: "#333",
+                    borderRadius: "7px",
+                    overflow: "hidden",
+                    marginBottom: "10px",
+                    border: "1px solid #222",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${hpPercent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #ef4444, #f87171)",
+                      transition: "width 0.2s",
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "12px",
+                    marginBottom: "4px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <span style={{ color: "#60a5fa" }}>MP</span>
+                  <span>
+                    {character.mp} / {character.maxMp}
+                    {previewStats && previewStats.maxMp !== character.maxMp && (
+                      <span style={{ color: "#22c55e", marginLeft: "4px" }}>
+                        → {previewStats.maxMp} (+{previewStats.maxMp - character.maxMp})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "10px",
+                    background: "#333",
+                    borderRadius: "5px",
+                    overflow: "hidden",
+                    marginBottom: "15px",
+                    border: "1px solid #222",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${mpPercent}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #3b82f6, #60a5fa)",
+                      transition: "width 0.2s",
+                    }}
+                  />
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: "10px" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "9px", color: "#10b981", marginBottom: "2px", textAlign: "right" }}>Base EXP: {Math.floor(expProgress)}%</div>
-                  <div style={{ width: "100%", height: "4px", background: "#333", borderRadius: "2px", overflow: "hidden" }}>
-                    <div style={{ width: `${expProgress}%`, height: "100%", background: "#10b981", transition: "width 0.2s" }} />
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      color: "#10b981",
+                      marginBottom: "2px",
+                      textAlign: "right",
+                    }}
+                  >
+                    Base EXP: {Math.floor(expProgress)}%
+                  </div>
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "4px",
+                      background: "#333",
+                      borderRadius: "2px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${expProgress}%`,
+                        height: "100%",
+                        background: "#10b981",
+                        transition: "width 0.2s",
+                      }}
+                    />
                   </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "9px", color: "#f97316", marginBottom: "2px", textAlign: "right" }}>Job EXP: {Math.floor(jobExpPercent)}%</div>
-                  <div style={{ width: "100%", height: "4px", background: "#333", borderRadius: "2px", overflow: "hidden" }}>
-                    <div style={{ width: `${jobExpPercent}%`, height: "100%", background: "#f97316", transition: "width 0.2s" }} />
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      color: "#f97316",
+                      marginBottom: "2px",
+                      textAlign: "right",
+                    }}
+                  >
+                    Job EXP: {Math.floor(jobExpPercent)}%
+                  </div>
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "4px",
+                      background: "#333",
+                      borderRadius: "2px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${jobExpPercent}%`,
+                        height: "100%",
+                        background: "#f97316",
+                        transition: "width 0.2s",
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -414,13 +537,14 @@ export function CharacterStats({
                 padding: "8px",
                 background: "rgba(0,0,0,0.3)",
                 borderRadius: "6px",
-                border: "1px solid #444"
+                border: "1px solid #444",
               }}
             >
               💰 Gold: {character.gold.toLocaleString()}
             </div>
           </div>
 
+          {/* ── Stat grid ── */}
           <div
             style={{
               display: "grid",
@@ -428,7 +552,7 @@ export function CharacterStats({
               gap: "8px",
             }}
           >
-            {/* Base Stats Column with Pending System */}
+            {/* Base Stats column */}
             <div
               style={{
                 background: "#111",
@@ -447,13 +571,18 @@ export function CharacterStats({
                 }}
               >
                 <span style={{ color: "#a78bfa", fontWeight: "bold" }}>📊 Base Stats</span>
-                <span style={{ color: remainingPoints > 0 ? "#22c55e" : "#888", fontWeight: "bold" }}>
+                <span
+                  style={{
+                    color: remainingPoints > 0 ? "#22c55e" : "#888",
+                    fontWeight: "bold",
+                  }}
+                >
                   Pts: {remainingPoints}
                 </span>
               </div>
+
               {(["str", "agi", "vit", "int", "dex", "luk"] as const).map((key) => {
                 const equipBonus = getEquipmentBonusForStat(key);
-                
                 return (
                   <div
                     key={key}
@@ -470,7 +599,10 @@ export function CharacterStats({
                     <span style={{ width: "auto", fontWeight: "bold", minWidth: "24px" }}>
                       {character.stats[key]}
                       {equipBonus > 0 && (
-                        <span style={{ color: "#22c55e", marginLeft: "2px", fontSize: "10px" }} title={`+${equipBonus} from equipment`}>
+                        <span
+                          style={{ color: "#22c55e", marginLeft: "2px", fontSize: "10px" }}
+                          title={`+${equipBonus} from equipment`}
+                        >
                           +{equipBonus}
                         </span>
                       )}
@@ -491,7 +623,10 @@ export function CharacterStats({
                           fontSize: "18px",
                           borderRadius: "6px",
                           border: "none",
-                          background: pendingStats[key] > 0 ? "linear-gradient(to bottom, #dc2626, #991b1b)" : "#333",
+                          background:
+                            pendingStats[key] > 0
+                              ? "linear-gradient(to bottom, #dc2626, #991b1b)"
+                              : "#333",
                           color: "white",
                           cursor: pendingStats[key] > 0 ? "pointer" : "not-allowed",
                           opacity: pendingStats[key] > 0 ? 1 : 0.3,
@@ -512,14 +647,18 @@ export function CharacterStats({
                           fontSize: "18px",
                           borderRadius: "6px",
                           border: "none",
-                          background: remainingPoints > 0 ? "linear-gradient(to bottom, #22c55e, #16a34a)" : "#333",
+                          background:
+                            remainingPoints > 0
+                              ? "linear-gradient(to bottom, #22c55e, #16a34a)"
+                              : "#333",
                           color: "white",
                           cursor: remainingPoints > 0 ? "pointer" : "not-allowed",
                           opacity: remainingPoints > 0 ? 1 : 0.3,
                           fontWeight: "bold",
                           touchAction: "manipulation",
                           lineHeight: 1,
-                          boxShadow: remainingPoints > 0 ? "0 0 8px rgba(34,197,94,0.5)" : "none",
+                          boxShadow:
+                            remainingPoints > 0 ? "0 0 8px rgba(34,197,94,0.5)" : "none",
                         }}
                       >
                         +
@@ -529,7 +668,6 @@ export function CharacterStats({
                 );
               })}
 
-              {/* Confirmation Buttons */}
               {hasPendingChanges && (
                 <div style={{ marginTop: "8px", display: "flex", gap: "4px" }}>
                   <button
@@ -568,7 +706,7 @@ export function CharacterStats({
               )}
             </div>
 
-            {/* Derived Stats Column with Preview */}
+            {/* Combat Stats column */}
             <div
               style={{
                 background: "#111",
@@ -586,19 +724,74 @@ export function CharacterStats({
               >
                 <span style={{ color: "#38bdf8", fontWeight: "bold" }}>⚔️ Combat Stats</span>
               </div>
-              
+
               {renderStatWithPreview("ATK", atkDisplay, previewStats?.atk || null, "#f87171")}
               {renderStatWithPreview("MATK", matk, previewStats?.matk || null, "#c084fc")}
               {renderStatWithPreview("DEF", defDisplay, previewDefDisplay, "#60a5fa")}
               {renderStatWithPreview("MDEF", mdefDisplay, previewMdefDisplay, "#818cf8")}
               {renderStatWithPreview("CRIT", crit + "%", previewStats ? previewStats.crit + "%" : null, "#fbbf24")}
               {renderStatWithPreview("ASPD", aspd, previewStats?.aspd || null, "#2dd4bf")}
-              
-              <div style={{ marginTop: "8px", fontSize: "9px", color: "#666", fontStyle: "italic", borderTop: "1px solid #222", paddingTop: "4px" }}>
-                {character.jobClass === "Swordsman" || character.jobClass === "Knight" ? "STR increases ATK greatly" : ""}
-                {character.jobClass === "Archer" || character.jobClass === "Hunter" ? "DEX & AGI increase ATK" : ""}
-                {character.jobClass === "Mage" || character.jobClass === "Wizard" ? "INT increases MATK & MDEF" : ""}
-                {character.jobClass === "Novice" ? "Distribute stats to prepare for job change" : ""}
+
+              {/* Active Passive Bonuses */}
+              {activePassiveBonuses.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    borderTop: "1px solid #222",
+                    paddingTop: "6px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      color: "#a78bfa",
+                      fontWeight: "bold",
+                      marginBottom: "4px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    📘 Active Passives
+                  </div>
+                  {activePassiveBonuses.map((p) => (
+                    <div
+                      key={p.label}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "3px",
+                        fontSize: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#888" }}>{p.label}</span>
+                      <span style={{ color: p.color, fontWeight: "bold" }}>{p.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div
+                style={{
+                  marginTop: "8px",
+                  fontSize: "9px",
+                  color: "#666",
+                  fontStyle: "italic",
+                  borderTop: "1px solid #222",
+                  paddingTop: "4px",
+                }}
+              >
+                {character.jobClass === "Swordsman" || character.jobClass === "Knight"
+                  ? "STR increases ATK greatly"
+                  : ""}
+                {character.jobClass === "Archer" || character.jobClass === "Hunter"
+                  ? "DEX & AGI increase ATK"
+                  : ""}
+                {character.jobClass === "Mage" || character.jobClass === "Wizard"
+                  ? "INT increases MATK & MDEF"
+                  : ""}
+                {character.jobClass === "Novice"
+                  ? "Distribute stats to prepare for job change"
+                  : ""}
               </div>
             </div>
           </div>
@@ -616,12 +809,17 @@ export function CharacterStats({
                 cursor: "pointer",
                 fontWeight: "bold",
                 fontSize: "13px",
-                boxShadow: character.skillPoints > 0 ? "0 0 15px rgba(124, 58, 237, 0.6)" : "none",
-                animation: character.skillPoints > 0 ? "pulse 2s infinite" : "none",
-                transition: "all 0.2s"
+                boxShadow:
+                  character.skillPoints > 0
+                    ? "0 0 15px rgba(124, 58, 237, 0.6)"
+                    : "none",
+                animation:
+                  character.skillPoints > 0 ? "pulse 2s infinite" : "none",
+                transition: "all 0.2s",
               }}
             >
-              📖 Skill Tree {character.skillPoints > 0 ? `(Points: ${character.skillPoints}!)` : ""}
+              📖 Skill Tree{" "}
+              {character.skillPoints > 0 ? `(Points: ${character.skillPoints}!)` : ""}
             </button>
           </div>
         </div>

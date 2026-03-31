@@ -11,7 +11,6 @@ interface MoreMenuProps {
   onOpenBlacksmith: () => void;
   onOpenShop: () => void;
   onOpenEquippedGear: () => void;
-  onOpenAchievements: () => void;
 }
 
 export function MoreMenu({
@@ -25,7 +24,6 @@ export function MoreMenu({
   onOpenBlacksmith,
   onOpenShop,
   onOpenEquippedGear,
-  onOpenAchievements,
 }: MoreMenuProps) {
   if (!isOpen) return null;
 
@@ -77,19 +75,10 @@ export function MoreMenu({
       border: "1px solid #374151",
       glow: "none",
     },
-    {
-      icon: "🏆",
-      label: "Achievements",
-      onClick: () => handleAction(onOpenAchievements),
-      bg: "linear-gradient(135deg, #374151, #1f2937)",
-      border: "1px solid #374151",
-      glow: "none",
-    },
   ];
 
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
@@ -100,7 +89,6 @@ export function MoreMenu({
         }}
       />
 
-      {/* Bottom sheet */}
       <div
         style={{
           position: "fixed",
@@ -114,7 +102,6 @@ export function MoreMenu({
           padding: "16px 12px 12px",
         }}
       >
-        {/* Handle bar */}
         <div
           style={{
             width: "40px",
@@ -125,7 +112,17 @@ export function MoreMenu({
           }}
         />
 
-        <div style={{ fontSize: "12px", color: "#64748b", textAlign: "center", marginBottom: "12px", fontWeight: "bold", letterSpacing: "1px", textTransform: "uppercase" }}>
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#64748b",
+            textAlign: "center",
+            marginBottom: "12px",
+            fontWeight: "bold",
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+          }}
+        >
           Menu
         </div>
 
