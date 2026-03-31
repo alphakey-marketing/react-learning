@@ -33,6 +33,7 @@ import { LivesBar } from "./components/LivesBar";
 import { ShopModal } from "./components/ShopModal";
 import { InterstitialAd } from "./components/InterstitialAd";
 import { MoreMenu } from "./components/MoreMenu";
+import { TopHUDBar } from "./components/TopHUDBar"; 
 
 export function MiniLevelGame() {
   const { logs, addLog } = useBattleLog();
