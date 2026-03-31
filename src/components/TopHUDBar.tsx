@@ -4,10 +4,12 @@ interface TopHUDBarProps {
   level: number;
   hp: number;
   maxHp: number;
+  mp: number;
+  maxMp: number;
 }
 
-export function TopHUDBar({ level, hp, maxHp }: TopHUDBarProps) {
-  const { coins, lives, isPremium } = useMonetization();
+export function TopHUDBar({ level, hp, maxHp, mp, maxMp }: TopHUDBarProps) {
+  const { lives, isPremium } = useMonetization();
 
   const hpPercent = maxHp > 0 ? (hp / maxHp) * 100 : 0;
   const hpBarColor =
@@ -16,6 +18,8 @@ export function TopHUDBar({ level, hp, maxHp }: TopHUDBarProps) {
       : hpPercent > 25
       ? "#fbbf24"
       : "#ef4444";
+
+  const mpPercent = maxMp > 0 ? (mp / maxMp) * 100 : 0;
 
   return (
     <div
@@ -86,21 +90,38 @@ export function TopHUDBar({ level, hp, maxHp }: TopHUDBarProps) {
         </div>
       </div>
 
-      {/* Coin count */}
-      <div
-        style={{
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          gap: "3px",
-          fontSize: "11px",
-          fontWeight: "bold",
-          color: "#fbbf24",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <span>🪙</span>
-        <span>{coins.toLocaleString()}</span>
+      {/* MP bar */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            width: "100%",
+            height: "10px",
+            background: "#1f2937",
+            borderRadius: "5px",
+            overflow: "hidden",
+            border: "1px solid #374151",
+          }}
+        >
+          <div
+            style={{
+              width: `${mpPercent}%`,
+              height: "100%",
+              background: "#3b82f6",
+              borderRadius: "5px",
+              transition: "width 0.3s ease-out",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            fontSize: "9px",
+            color: "#9ca3af",
+            marginTop: "1px",
+            textAlign: "right",
+          }}
+        >
+          {mp}/{maxMp} MP
+        </div>
       </div>
 
       {/* Lives or PRO badge */}

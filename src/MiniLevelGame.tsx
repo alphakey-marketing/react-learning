@@ -332,6 +332,8 @@ export function MiniLevelGame() {
           level={game.char.level}
           hp={game.char.hp}
           maxHp={game.char.maxHp}
+          mp={game.char.mp}
+          maxMp={game.char.maxMp}
         />
       )}
 

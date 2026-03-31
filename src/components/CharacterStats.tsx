@@ -521,8 +521,9 @@ export function CharacterStats({
               </div>
             </div>
 
-            {/* HP/MP Bars with Preview */}
+            {/* HP/MP Bars with Preview — hidden on mobile (shown in TopHUDBar) */}
             <div style={{ background: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "6px" }}>
+              <div style={{ display: "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px", fontWeight: "bold" }}>
                 <span style={{ color: "#f87171" }}>HP</span>
                 <span>
@@ -551,6 +552,7 @@ export function CharacterStats({
               </div>
               <div style={{ width: "100%", height: "10px", background: "#333", borderRadius: "5px", overflow: "hidden", marginBottom: "15px", border: "1px solid #222" }}>
                 <div style={{ width: `${mpPercent}%`, height: "100%", background: "linear-gradient(90deg, #3b82f6, #60a5fa)", transition: "width 0.2s" }} />
+              </div>
               </div>
 
               <div style={{ display: "flex", gap: "10px" }}>
