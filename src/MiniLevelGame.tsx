@@ -881,7 +881,7 @@ export function MiniLevelGame() {
               <div style={{ marginTop: "10px", padding: "10px", background: "#0f172a", borderRadius: "6px", border: "1px solid #1e293b", textAlign: "center" }}>
                 <div style={{ fontSize: "11px", color: "#64748b" }}>Total Gear Score</div>
                 <div style={{ fontSize: "16px", fontWeight: "bold", color: "#fbbf24" }}>
-                  ⭐ {Object.values(game.equipped).filter(Boolean).reduce((sum, item) => sum + calculateGearScore(item as any), 0)}
+                  ⭐ {(Object.values(game.equipped).filter(Boolean) as Equipment[]).reduce((sum, item) => sum + calculateGearScore(item), 0)}
                 </div>
               </div>
             </div>
@@ -908,7 +908,7 @@ export function MiniLevelGame() {
                 </div>
                 {allAch.map(achievement => {
                   const isUnlocked = playerAchievements.unlocked.has(achievement.id);
-                  const current = (stats as Record<string, number>)[achievement.requirement.type] ?? 0;
+                  const current = stats[achievement.requirement.type] ?? 0;
                   const target = achievement.requirement.target;
                   const percent = Math.min(100, Math.floor((current / target) * 100));
                   const color = rarityColors[achievement.rarity] || "#9ca3af";
