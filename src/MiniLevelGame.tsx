@@ -11,7 +11,6 @@ import { BossChallenge } from "./components/BossChallenge";
 import { JobChangeNPC } from "./components/JobChangeNPC";
 import { RefineNPC } from "./components/RefineNPC";
 import { TrainingHut } from "./components/TrainingHut";
-import { CombatHUD } from "./components/CombatHUD";
 import { FloatingText } from "./components/FloatingText";
 import { ItemDropAnimation } from "./components/ItemDropAnimation";
 import { TutorialOverlay } from "./components/TutorialOverlay";
@@ -315,17 +314,6 @@ export function MiniLevelGame() {
       <FloatingText items={floatingTexts} onRemove={removeFloatingText} />
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
 
-      <CombatHUD
-        character={game.char}
-        hpPotions={game.hpPotions}
-        mpPotions={game.mpPotions}
-        autoHpPercent={game.autoHpPercent}
-        autoMpPercent={game.autoMpPercent}
-        onUseHpPotion={wrappedUseHpPotion}
-        onUseMpPotion={wrappedUseMpPotion}
-        inTown={game.currentZoneId === 0}
-      />
-
       {/* Phase 2A: TopHUDBar — mobile-only persistent top bar */}
       {isMobile && (
         <TopHUDBar
@@ -487,6 +475,7 @@ export function MiniLevelGame() {
                   if (lives === 0) return;
                   game.toggleAutoAttack();
                 }}
+                onEscapeToTown={game.escapeToTown}
               />
 
               <CombatStatusDisplay
@@ -804,6 +793,7 @@ export function MiniLevelGame() {
                   if (lives === 0) return;
                   game.toggleAutoAttack();
                 }}
+                onEscapeToTown={game.escapeToTown}
               />
 
               <CombatStatusDisplay

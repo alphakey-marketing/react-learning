@@ -10,6 +10,7 @@ interface EnemyDisplayProps {
   attackCooldownPercent: number;
   autoAttackEnabled: boolean;
   onToggleAutoAttack: () => void;
+  onEscapeToTown: () => void;
 }
 
 export function EnemyDisplay({ 
@@ -21,6 +22,7 @@ export function EnemyDisplay({
   attackCooldownPercent,
   autoAttackEnabled,
   onToggleAutoAttack,
+  onEscapeToTown,
 }: EnemyDisplayProps) {
   const hpPercent = (enemy.hp / enemy.maxHp) * 100;
   const isBoss = enemy.name.includes("Boss");
@@ -428,6 +430,31 @@ export function EnemyDisplay({
       <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.6)", marginTop: "12px", position: "relative", zIndex: 1 }}>
         {isGroup && "Tip: AOE skills deal bonus damage to groups!"}
       </div>
+
+      {/* Escape button — only shown in battle (not in town) */}
+      {!inTown && (
+        <button
+          onClick={onEscapeToTown}
+          style={{
+            marginTop: "8px",
+            width: "100%",
+            padding: isMobile ? "8px" : "10px",
+            background: "linear-gradient(to bottom, #10b981, #059669)",
+            color: "white",
+            border: "1px solid #34d399",
+            borderRadius: "6px",
+            fontSize: isMobile ? "12px" : "13px",
+            fontWeight: "bold",
+            cursor: "pointer",
+            boxShadow: "0 4px 10px rgba(16,185,129,0.3)",
+            position: "relative",
+            zIndex: 1,
+            touchAction: "manipulation",
+          }}
+        >
+          🏛️ Escape to Town
+        </button>
+      )}
 
       <style>{`
         @keyframes float {
