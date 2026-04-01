@@ -28,11 +28,13 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
   const [selectedEquippedSlot, setSelectedEquippedSlot] = useState<keyof EquippedItems | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  const filteredInventory = inventory.filter(item => {
-    if (category === "all") return true;
-    if (category === "equipment") return EQUIPMENT_TYPES.includes(item.type);
-    return false;
-  });
+ const filteredInventory = inventory.filter(item => {
+  if (category === "all") return true;
+  if (category === "equipment") return EQUIPMENT_TYPES.includes(item.type);
+  if (category === "consumables") return item.type === "consumable";
+  if (category === "quest") return item.type === "quest";
+  return false;
+});
 
   const sortedInventory = [...filteredInventory].sort((a, b) => {
     switch (sortBy) {

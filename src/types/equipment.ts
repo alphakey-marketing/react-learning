@@ -6,7 +6,9 @@ export type EquipmentType =
   | "head" 
   | "garment" 
   | "footgear" 
-  | "accessory";
+  | "accessory"
+  | "consumable"
+  | "quest";
 
 export type WeaponType = "sword" | "bow" | "wand";
 
@@ -24,15 +26,15 @@ export interface Equipment {
   rarity: EquipmentRarity;
   
   // RO-style stats
-  atk?: number;        // Attack power (physical weapons ONLY)
-  matk?: number;       // Magic Attack power (wands ONLY)
-  def?: number;        // Defense (armor, head, garment, footgear ONLY)
-  mdef?: number;       // Magic Defense percentage (armor, head, garment, footgear ONLY)
-  slots?: number;      // Card slots (0-4)
-  weight?: number;     // Weight in RO style
-  refinement?: number; // +0 to +10 refine level
-  weaponLevel?: number; // Weapon level (1-4), affects variance and refine scaling
-  weaponType?: WeaponType; // Weapon sub-type (sword/bow/wand)
+  atk?: number;
+  matk?: number;
+  def?: number;
+  mdef?: number;
+  slots?: number;
+  weight?: number;
+  refinement?: number;
+  weaponLevel?: number;
+  weaponType?: WeaponType;
   
   // Bonus stats
   str?: number;
@@ -43,7 +45,12 @@ export interface Equipment {
   luk?: number;
   
   // Legacy support
-  stat?: number;       // For backward compatibility
+  stat?: number;
+
+  // Consumable-specific
+  quantity?: number;
+  hpRestore?: number;
+  mpRestore?: number;
 }
 
 export interface EquippedItems {
@@ -59,7 +66,7 @@ export interface EquippedItems {
 // Helper to get equipment icon
 export function getEquipmentIcon(itemOrType: Equipment | EquipmentType): string {
   const type = typeof itemOrType === 'string' ? itemOrType : itemOrType.type;
-  const weaponType = typeof itemOrType === 'string' ? undefined : itemOrType.weaponType;
+  const weaponType = typeof itemOrType === 'string' ? undefined : (itemOrType as Equipment).weaponType;
 
   if (type === "weapon" && weaponType) {
     const weaponIcons: Record<WeaponType, string> = {
@@ -70,6 +77,15 @@ export function getEquipmentIcon(itemOrType: Equipment | EquipmentType): string 
     return weaponIcons[weaponType] || "⚔️";
   }
 
+  if (type === "consumable") {
+    if (typeof itemOrType !== 'string') {
+      const name = (itemOrType as Equipment).name.toLowerCase();
+      if (name.includes("mp") || name.includes("mana") || name.includes("blue")) return "💧";
+      if (name.includes("hp") || name.includes("health") || name.includes("red")) return "🧪";
+    }
+    return "🧪";
+  }
+
   const icons: Record<EquipmentType, string> = {
     weapon: "⚔️",
     armor: "🛡️",
@@ -77,8 +93,10 @@ export function getEquipmentIcon(itemOrType: Equipment | EquipmentType): string 
     garment: "🧥",
     footgear: "👢",
     accessory: "💍",
+    consumable: "🧪",
+    quest: "📜",
   };
-  return icons[type];
+  return icons[type] ?? "❓";
 }
 
 // Helper to get weapon type icon
@@ -95,11 +113,11 @@ export function getWeaponTypeIcon(weaponType?: WeaponType): string {
 // Helper to get rarity color
 export function getRarityColor(rarity: EquipmentRarity): string {
   const colors: Record<EquipmentRarity, string> = {
-    common: "#9ca3af",      // Gray
-    uncommon: "#22c55e",    // Green
-    rare: "#3b82f6",        // Blue
-    epic: "#a855f7",        // Purple
-    legendary: "#f59e0b",   // Orange/Gold
+    common: "#9ca3af",
+    uncommon: "#22c55e",
+    rare: "#3b82f6",
+    epic: "#a855f7",
+    legendary: "#f59e0b",
   };
   return colors[rarity];
 }
@@ -122,17 +140,16 @@ export function calculateRefinementBonus(
   // +7 to +10: Apply rarity multiplier to the +7+ levels
   const normalLevels = 6;
   const bonusLevels = refineLevel - normalLevels;
-  
   const rarityMultiplier = RARITY_REFINE_BONUS[item.rarity];
   
-  // Normal bonus for +1 to +6, multiplied bonus for +7+
   return (baseBonus * normalLevels) + (baseBonus * rarityMultiplier * bonusLevels);
 }
 
-// Phase 3: Calculate Gear Score with TYPE SPECIALIZATION
-// Only count stats that are actually relevant to each equipment type
+// Calculate Gear Score with TYPE SPECIALIZATION
+// Consumables and quest items return 0 — they have no gear score
 export function calculateGearScore(item: Equipment): number {
   if (!item) return 0;
+  if (item.type === "consumable" || item.type === "quest") return 0;
   
   let score = 0;
   
@@ -145,7 +162,6 @@ export function calculateGearScore(item: Equipment): number {
     score += ((item.atk || 0) + weaponRefineBonus) * 2;
     score += ((item.matk || 0) + weaponRefineBonus) * 2;
     
-    // Weapon level bonus (only weapons have this)
     if (item.weaponLevel) {
       score += item.weaponLevel * 5;
     }
@@ -155,7 +171,7 @@ export function calculateGearScore(item: Equipment): number {
   if (isArmor) {
     const armorRefineBonus = calculateRefinementBonus(item, REFINEMENT_ARMOR_BONUS);
     score += ((item.def || 0) + armorRefineBonus) * 1.5;
-    score += ((item.mdef || 0) + Math.floor(armorRefineBonus * 0.5)) * 2; // MDEF is valuable, gets half armor bonus
+    score += ((item.mdef || 0) + Math.floor(armorRefineBonus * 0.5)) * 2;
   }
   
   // Bonus stats: ALL equipment types can have these
@@ -164,7 +180,7 @@ export function calculateGearScore(item: Equipment): number {
     score += (item[stat] || 0) * 5;
   });
   
-  // Refinement bonus: All equipment except accessories (already counted above in ATK/DEF calculation)
+  // Refinement bonus for non-accessories (already counted above in ATK/DEF)
   if (item.type !== 'accessory' && item.refinement) {
     score += item.refinement * 3;
   }
@@ -172,8 +188,7 @@ export function calculateGearScore(item: Equipment): number {
   return Math.floor(score);
 }
 
-// Phase 4: Calculate total stats from equipment with WEAPON TYPE support
-// Swords/Bows provide ATK, Wands provide MATK
+// Calculate total stats from equipment with WEAPON TYPE support
 export function calculateEquipmentStats(equipped: EquippedItems): {
   weaponAtk: number;
   weaponMatk: number;
@@ -210,35 +225,27 @@ export function calculateEquipmentStats(equipped: EquippedItems): {
   const weaponRefine = weapon?.refinement || 0;
   const weaponType = weapon?.weaponType || null;
   
-  // Phase 3: Non-weapon items should NOT provide ATK (accessories/armor don't boost attack)
-  // Legacy items with ATK in wrong slots are ignored
+  // Non-weapon items do not provide ATK
   const equipBonusAtk = 0;
 
   // === ARMOR TYPES: DEF & MDEF with refinement bonuses ===
-  // Only armor, head, garment, footgear contribute to DEF
-  // Accessories and weapons do NOT provide DEF
   const defenseSlots: EquipmentType[] = ['armor', 'head', 'garment', 'footgear'];
   
   const totalDef = items.reduce((sum, item) => {
     if (!defenseSlots.includes(item.type)) return sum;
-    // Base DEF from the item
     const baseDef = item.def || 0;
-    // Rarity-scaled refine bonus
     const refineBonus = calculateRefinementBonus(item, REFINEMENT_ARMOR_BONUS);
     return sum + baseDef + refineBonus;
   }, 0);
 
   const totalMdef = items.reduce((sum, item) => {
     if (!defenseSlots.includes(item.type)) return sum;
-    // Base MDEF from the item
     const baseMdef = item.mdef || 0;
-    // MDEF gets half the armor refine bonus
     const refineBonus = Math.floor(calculateRefinementBonus(item, REFINEMENT_ARMOR_BONUS) * 0.5);
     return sum + baseMdef + refineBonus;
   }, 0);
 
   // === BONUS STATS: ALL EQUIPMENT ===
-  // Any equipment can provide stat bonuses (STR ring, DEX boots, etc.)
   return {
     weaponAtk,
     weaponMatk,
