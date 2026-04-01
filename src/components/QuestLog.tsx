@@ -37,6 +37,16 @@ export function QuestLog({
     : false;
   const showEndingChoice = chain3AllStepsDone && questEnding === null;
 
+  function handleSeal() {
+    onSealBloodline();
+    onClose();
+  }
+
+  function handleUnbound() {
+    onRemainUnbound();
+    onClose();
+  }
+
   return (
     <>
       {/* Backdrop */}
@@ -100,7 +110,7 @@ export function QuestLog({
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <button
-                onClick={() => { onSealBloodline(); onClose(); }}
+                onClick={handleSeal}
                 style={{
                   padding: "12px 14px",
                   background: "linear-gradient(135deg, #1e3a5f, #1e40af)",
@@ -116,7 +126,7 @@ export function QuestLog({
                 <div style={{ color: "#93c5fd", fontSize: "11px" }}>{ENDING_CHOICES.seal.description}</div>
               </button>
               <button
-                onClick={() => { onRemainUnbound(); onClose(); }}
+                onClick={handleUnbound}
                 style={{
                   padding: "12px 14px",
                   background: "linear-gradient(135deg, #3b0a0a, #7f1d1d)",

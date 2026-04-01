@@ -144,7 +144,7 @@ export const ENDING_CHOICES = {
     label: "Seal the Bloodline",
     description:
       "Hand over the core, the sigil, the fang. Lock it back in. Live as close to human as you will ever get.",
-    corruptionChange: -20, // corruption drops
+    corruptionChange: -20, // reduces corruption by 20
     epilogue:
       "You handed everything over. The sage sealed the pass again without ceremony. You walked back down the mountain and tried to forget the inscription. You almost succeeded. Some nights you still hear the wolf fang hum against the glass where you keep it. You didn't give her everything.",
   },

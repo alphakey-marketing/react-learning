@@ -72,6 +72,19 @@ export interface ActiveSelfBuff {
   skillLevel: number;
 }
 
+// Helper: find the quest step that requires a given item ID.
+// Pure function — operates only on static QUEST_CHAINS data.
+function findQuestStepByItemId(itemId: string): { chainId: string; stepId: string; corruptionGain: number } | null {
+  for (const chain of QUEST_CHAINS) {
+    for (const step of chain.steps) {
+      if (step.requiredItemId === itemId) {
+        return { chainId: chain.id, stepId: step.id, corruptionGain: step.corruptionGain };
+      }
+    }
+  }
+  return null;
+}
+
 export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
   const initialLevel = 1;
   const initialStats = { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 };
@@ -607,18 +620,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   // ── Quest System ─────────────────────────────────────────────────────────
 
-  // Helper: find the quest step that requires a given item ID
-  function findQuestStepByItemId(itemId: string): { chainId: string; stepId: string; corruptionGain: number } | null {
-    for (const chain of QUEST_CHAINS) {
-      for (const step of chain.steps) {
-        if (step.requiredItemId === itemId) {
-          return { chainId: chain.id, stepId: step.id, corruptionGain: step.corruptionGain };
-        }
-      }
-    }
-    return null;
-  }
-
   // Player chooses to seal the bloodline (ending A)
   function sealBloodline() {
     if (questEnding !== null) return;
@@ -975,6 +976,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
         setActiveDebuffs([]);
 
+        // Compute collected quest item IDs once, shared by boss and normal kill paths
+        const collectedQuestItemIds = inventoryRef.current
+          .filter(i => i.type === "quest" && i.questItemId)
+          .map(i => i.questItemId!);
+
         if (currentIsBossFight) {
           addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
           setBossDefeated(true);
@@ -1009,10 +1015,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
 
           // Quest item drop check for boss kill
-          const collectedIds = inventoryRef.current
-            .filter(i => i.type === "quest" && i.questItemId)
-            .map(i => i.questItemId!);
-          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, true, collectedIds);
+          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, true, collectedQuestItemIds);
           if (questDrop && questDrop.questItemId) {
             setInventory(prev => [...prev, questDrop]);
             addLog(`📜 Quest Item: ${questDrop.name}!`);
@@ -1072,10 +1075,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           }
 
           // Quest item drop check for normal kill
-          const collectedIds = inventoryRef.current
-            .filter(i => i.type === "quest" && i.questItemId)
-            .map(i => i.questItemId!);
-          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, false, collectedIds);
+          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, false, collectedQuestItemIds);
           if (questDrop && questDrop.questItemId) {
             setInventory(prev => [...prev, questDrop]);
             addLog(`📜 Quest Item: ${questDrop.name}!`);
