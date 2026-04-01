@@ -7,6 +7,10 @@ interface EnhancedInventoryProps {
   equipped: EquippedItems;
   onEquip: (item: Equipment) => void;
   onUnequip?: (slotKey: keyof EquippedItems) => void;
+  hpPotions?: number;
+  mpPotions?: number;
+  onUseHpPotion?: () => void;
+  onUseMpPotion?: () => void;
 }
 
 type CategoryFilter = "all" | "equipment" | "consumables" | "quest";
@@ -21,20 +25,62 @@ const CATEGORY_TABS: { id: CategoryFilter; label: string }[] = [
   { id: "quest", label: "Quest" },
 ];
 
-export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: EnhancedInventoryProps) {
+// Synthetic IDs that will never collide with real loot IDs
+const HP_POTION_ID = -1;
+const MP_POTION_ID = -2;
+
+function buildPotionItems(hpPotions: number, mpPotions: number): Equipment[] {
+  const items: Equipment[] = [];
+  if (hpPotions > 0) {
+    items.push({
+      id: HP_POTION_ID,
+      name: `HP Potion ×${hpPotions}`,
+      type: "consumable",
+      rarity: "common",
+      hpRestore: 1,
+      quantity: hpPotions,
+    });
+  }
+  if (mpPotions > 0) {
+    items.push({
+      id: MP_POTION_ID,
+      name: `MP Potion ×${mpPotions}`,
+      type: "consumable",
+      rarity: "common",
+      mpRestore: 1,
+      quantity: mpPotions,
+    });
+  }
+  return items;
+}
+
+export function EnhancedInventory({
+  inventory,
+  equipped,
+  onEquip,
+  onUnequip,
+  hpPotions = 0,
+  mpPotions = 0,
+  onUseHpPotion,
+  onUseMpPotion,
+}: EnhancedInventoryProps) {
   const [category, setCategory] = useState<CategoryFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("type");
   const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
   const [selectedEquippedSlot, setSelectedEquippedSlot] = useState<keyof EquippedItems | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
- const filteredInventory = inventory.filter(item => {
-  if (category === "all") return true;
-  if (category === "equipment") return EQUIPMENT_TYPES.includes(item.type);
-  if (category === "consumables") return item.type === "consumable";
-  if (category === "quest") return item.type === "quest";
-  return false;
-});
+  // Merge synthetic potion entries with real inventory
+  const potionItems = buildPotionItems(hpPotions, mpPotions);
+  const fullInventory = [...potionItems, ...inventory];
+
+  const filteredInventory = fullInventory.filter(item => {
+    if (category === "all") return true;
+    if (category === "equipment") return EQUIPMENT_TYPES.includes(item.type);
+    if (category === "consumables") return item.type === "consumable";
+    if (category === "quest") return item.type === "quest";
+    return false;
+  });
 
   const sortedInventory = [...filteredInventory].sort((a, b) => {
     switch (sortBy) {
@@ -85,7 +131,21 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
     setShowDetail(false);
   };
 
+  // Handle "use" action for consumables
+  const handleUseConsumable = (item: Equipment) => {
+    if (item.id === HP_POTION_ID && onUseHpPotion) {
+      onUseHpPotion();
+    } else if (item.id === MP_POTION_ID && onUseMpPotion) {
+      onUseMpPotion();
+    }
+    setShowDetail(false);
+    setSelectedItem(null);
+  };
+
+  const isConsumable = (item: Equipment) => item.type === "consumable";
+
   const isUpgrade = (item: Equipment) => {
+    if (isConsumable(item)) return false;
     if (item.type === "accessory") {
       const acc1Score = equipped.accessory1 ? calculateGearScore(equipped.accessory1) : 0;
       const acc2Score = equipped.accessory2 ? calculateGearScore(equipped.accessory2) : 0;
@@ -165,7 +225,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
           🎒 Inventory
         </h3>
         <span style={{ fontSize: "11px", color: "#9ca3af" }}>
-          {inventory.length} items
+          {fullInventory.length} items
         </span>
       </div>
 
@@ -333,19 +393,22 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                   </div>
                 </div>
 
+                {/* Show gear score for equipment, quantity for consumables */}
                 <div
                   style={{
                     flexShrink: 0,
                     fontSize: "11px",
                     fontWeight: "bold",
-                    color: "#fbbf24",
+                    color: isConsumable(item) ? "#34d399" : "#fbbf24",
                     background: "#0f172a",
                     borderRadius: "6px",
                     padding: "3px 7px",
                     border: "1px solid #334155",
                   }}
                 >
-                  ⭐ {gearScore}
+                  {isConsumable(item)
+                    ? `×${item.quantity ?? 0}`
+                    : `⭐ ${gearScore}`}
                 </div>
 
                 <span style={{ color: "#475569", fontSize: "14px" }}>›</span>
@@ -411,7 +474,8 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                 )}
               </div>
               <div style={{ fontSize: "11px", color: "#64748b", textTransform: "capitalize" }}>
-                {selectedItem.type} · {selectedItem.rarity} · ⭐ {calculateGearScore(selectedItem)}
+                {selectedItem.type} · {selectedItem.rarity}
+                {!isConsumable(selectedItem) && ` · ⭐ ${calculateGearScore(selectedItem)}`}
               </div>
             </div>
           </div>
@@ -430,34 +494,61 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
                 border: `1px solid ${getRarityColor(selectedItem.rarity)}`,
               }}
             >
-              {selectedItem.atk !== undefined && selectedItem.atk > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "11px" }}>
-                  <span style={{ color: "#94a3b8" }}>ATK</span>
-                  <span style={{ color: "#fb923c", fontWeight: "bold" }}>+{selectedItem.atk}</span>
-                </div>
-              )}
-              {selectedItem.matk !== undefined && selectedItem.matk > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
-                  <span style={{ color: "#94a3b8" }}>MATK</span>
-                  <span style={{ color: "#a78bfa", fontWeight: "bold" }}>+{selectedItem.matk}</span>
-                </div>
-              )}
-              {selectedItem.def !== undefined && selectedItem.def > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
-                  <span style={{ color: "#94a3b8" }}>DEF</span>
-                  <span style={{ color: "#60a5fa", fontWeight: "bold" }}>+{selectedItem.def}</span>
-                </div>
-              )}
-              {(["str", "agi", "vit", "int", "dex", "luk"] as const).map(stat => {
-                const val = selectedItem[stat];
-                if (!val) return null;
-                return (
-                  <div key={stat} style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
-                    <span style={{ color: "#94a3b8", textTransform: "uppercase" }}>{stat}</span>
-                    <span style={{ color: "#22c55e", fontWeight: "bold" }}>+{val}</span>
+              {/* Consumable detail */}
+              {isConsumable(selectedItem) && (
+                <>
+                  {selectedItem.hpRestore !== undefined && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>Restores</span>
+                      <span style={{ color: "#34d399", fontWeight: "bold" }}>HP</span>
+                    </div>
+                  )}
+                  {selectedItem.mpRestore !== undefined && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>Restores</span>
+                      <span style={{ color: "#60a5fa", fontWeight: "bold" }}>MP</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "13px" }}>
+                    <span style={{ color: "#94a3b8" }}>Quantity</span>
+                    <span style={{ color: "#fbbf24", fontWeight: "bold" }}>{selectedItem.quantity ?? 0}</span>
                   </div>
-                );
-              })}
+                </>
+              )}
+
+              {/* Equipment stats */}
+              {!isConsumable(selectedItem) && (
+                <>
+                  {selectedItem.atk !== undefined && selectedItem.atk > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "11px" }}>
+                      <span style={{ color: "#94a3b8" }}>ATK</span>
+                      <span style={{ color: "#fb923c", fontWeight: "bold" }}>+{selectedItem.atk}</span>
+                    </div>
+                  )}
+                  {selectedItem.matk !== undefined && selectedItem.matk > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>MATK</span>
+                      <span style={{ color: "#a78bfa", fontWeight: "bold" }}>+{selectedItem.matk}</span>
+                    </div>
+                  )}
+                  {selectedItem.def !== undefined && selectedItem.def > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>DEF</span>
+                      <span style={{ color: "#60a5fa", fontWeight: "bold" }}>+{selectedItem.def}</span>
+                    </div>
+                  )}
+                  {(["str", "agi", "vit", "int", "dex", "luk"] as const).map(stat => {
+                    const val = selectedItem[stat];
+                    if (!val) return null;
+                    return (
+                      <div key={stat} style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                        <span style={{ color: "#94a3b8", textTransform: "uppercase" }}>{stat}</span>
+                        <span style={{ color: "#22c55e", fontWeight: "bold" }}>+{val}</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </div>
 
@@ -471,23 +562,43 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
               paddingBottom: "calc(14px + env(safe-area-inset-bottom, 0px))",
             }}
           >
-            <button
-              onClick={handleEquipClick}
-              style={{
-                flex: 1,
-                minHeight: "52px",
-                background: "linear-gradient(135deg, #059669, #047857)",
-                color: "white",
-                border: "none",
-                borderRadius: "10px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                fontSize: "14px",
-                touchAction: "manipulation",
-              }}
-            >
-              ⚔️ Equip
-            </button>
+            {isConsumable(selectedItem) ? (
+              <button
+                onClick={() => handleUseConsumable(selectedItem)}
+                style={{
+                  flex: 1,
+                  minHeight: "52px",
+                  background: "linear-gradient(135deg, #0369a1, #0284c7)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "14px",
+                  touchAction: "manipulation",
+                }}
+              >
+                {selectedItem.hpRestore !== undefined ? "🧪 Use HP Potion" : "💧 Use MP Potion"}
+              </button>
+            ) : (
+              <button
+                onClick={handleEquipClick}
+                style={{
+                  flex: 1,
+                  minHeight: "52px",
+                  background: "linear-gradient(135deg, #059669, #047857)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "14px",
+                  touchAction: "manipulation",
+                }}
+              >
+                ⚔️ Equip
+              </button>
+            )}
             <button
               onClick={() => { setShowDetail(false); setSelectedItem(null); }}
               style={{
@@ -588,7 +699,7 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
         (selectedItem.type !== "accessory" ||
           !equipped.accessory1 ||
           !equipped.accessory2 ||
-          selectedEquippedSlot) && showDetail === false && (
+          selectedEquippedSlot) && showDetail === false && !isConsumable(selectedItem) && (
           <EquipmentComparisonModal
             newItem={selectedItem}
             currentItem={getCurrentlyEquipped(selectedItem)}
