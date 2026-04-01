@@ -1,3 +1,5 @@
+import { QuestEndingChoice } from "../data/questChains";
+
 export type JobClass = "Novice" | "Swordsman" | "Mage" | "Archer" | "Knight" | "Wizard" | "Hunter";
 
 export interface CharacterStats {
@@ -46,4 +48,8 @@ export interface Character {
 
   // "You Are the Monster" — corruption accumulates as the player kills and completes quests
   corruptionLevel: number; // 0–100
+
+  // Quest system state — persisted on Character so it survives component remounts
+  completedStepIds: Record<string, boolean>;
+  questEnding: QuestEndingChoice;
 }

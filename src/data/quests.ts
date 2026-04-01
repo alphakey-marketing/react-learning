@@ -95,3 +95,25 @@ export function getQuestItem(id: string): QuestItem | undefined {
 export function getQuestItemsForChain(chainId: string): QuestItem[] {
   return QUEST_ITEMS.filter((q) => q.chainId === chainId);
 }
+
+/**
+ * Get all quest items whose drop.enemyName matches the given name.
+ * Strips the boss prefix ("👹 Boss: ") before comparing, so callers can
+ * pass the raw enemy name from game state without pre-processing it.
+ * 
+ * Used by the combat engine to look up which quest items can drop
+ * from a given enemy without scanning QUEST_ITEMS directly.
+ */
+export function getQuestItemsByEnemyName(
+  rawEnemyName: string,
+  zoneId: number,
+  isBoss: boolean
+): QuestItem[] {
+  const cleanName = rawEnemyName.replace(/^👹 Boss: /, "");
+  return QUEST_ITEMS.filter((qi) => {
+    if (qi.drop.enemyName !== cleanName) return false;
+    if (qi.drop.zoneId !== zoneId) return false;
+    if (qi.drop.isBossOnly && !isBoss) return false;
+    return true;
+  });
+}

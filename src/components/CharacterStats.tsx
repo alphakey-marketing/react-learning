@@ -20,6 +20,40 @@ interface CharacterStatsProps {
   selectedTitle?: string;
 }
 
+// Derive active corruption effects from the corruption level
+function getCorruptionEffects(level: number): { label: string; value: string; color: string }[] {
+  const effects: { label: string; value: string; color: string }[] = [];
+  if (level >= 25) {
+    effects.push({
+      label: "Marked by Blood",
+      value: "ATK +5%, enemies more aggressive",
+      color: "#a855f7",
+    });
+  }
+  if (level >= 50) {
+    effects.push({
+      label: "Tainted",
+      value: "Rare drops slightly buffed",
+      color: "#f97316",
+    });
+  }
+  if (level >= 75) {
+    effects.push({
+      label: "Devoured (Passive)",
+      value: "Lifesteal on kill",
+      color: "#dc2626",
+    });
+  }
+  if (level >= 100) {
+    effects.push({
+      label: "UNBOUND",
+      value: "Ending unlocked",
+      color: "#ef4444",
+    });
+  }
+  return effects;
+}
+
 export function CharacterStats({
   character,
   equipped,
@@ -268,6 +302,17 @@ export function CharacterStats({
     };
     return bonusMap[statKey];
   };
+
+  // Corruption effects derived from character state
+  const corruptionEffects = getCorruptionEffects(character.corruptionLevel);
+  const corruptionColor =
+    character.corruptionLevel >= 75
+      ? "#dc2626"
+      : character.corruptionLevel >= 50
+      ? "#f97316"
+      : character.corruptionLevel >= 25
+      ? "#a855f7"
+      : "#6b7280";
 
   return (
     <div style={{ fontSize: "11px", lineHeight: "1.3" }}>
@@ -765,6 +810,48 @@ export function CharacterStats({
                     >
                       <span style={{ color: "#888" }}>{p.label}</span>
                       <span style={{ color: p.color, fontWeight: "bold" }}>{p.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Corruption Effects ── */}
+              {corruptionEffects.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    borderTop: "1px solid #222",
+                    paddingTop: "6px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      color: corruptionColor,
+                      fontWeight: "bold",
+                      marginBottom: "4px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <span>🌑</span>
+                    <span>Corruption ({Math.floor(character.corruptionLevel)}%)</span>
+                  </div>
+                  {corruptionEffects.map((e) => (
+                    <div
+                      key={e.label}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "3px",
+                        fontSize: "10px",
+                      }}
+                    >
+                      <span style={{ color: "#888" }}>{e.label}</span>
+                      <span style={{ color: e.color, fontWeight: "bold" }}>{e.value}</span>
                     </div>
                   ))}
                 </div>
