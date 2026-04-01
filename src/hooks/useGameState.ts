@@ -85,6 +85,20 @@ function findQuestStepByItemId(itemId: string): { chainId: string; stepId: strin
   return null;
 }
 
+// Helper: derive the set of already-obtained quest item IDs from completed step IDs.
+// Used to prevent re-dropping items whose steps are already done.
+function getCollectedQuestItemIds(completedStepIds: Record<string, boolean>): string[] {
+  const itemIds: string[] = [];
+  for (const chain of QUEST_CHAINS) {
+    for (const step of chain.steps) {
+      if (completedStepIds[step.id] && step.requiredItemId) {
+        itemIds.push(step.requiredItemId);
+      }
+    }
+  }
+  return itemIds;
+}
+
 export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
   const initialLevel = 1;
   const initialStats = { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 };
@@ -113,6 +127,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     elunium: STARTING_RESOURCES.elunium,
     oridecon: STARTING_RESOURCES.oridecon,
     corruptionLevel: 0,
+    completedStepIds: {},
+    questEnding: null,
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -122,12 +138,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   // BALANCE: Start with both weapons in inventory - player chooses their path
   const [inventory, setInventory] = useState<Equipment[]>([STARTING_WEAPON, NOVICE_WAND]);
 
-  // Quest system — "You Are the Monster"
-  // completedStepIds: tracks which quest step IDs the player has completed
-  const [completedStepIds, setCompletedStepIds] = useState<Record<string, boolean>>({});
-  // questEnding: null until Chain 3 is complete and the player makes a choice
-  const [questEnding, setQuestEnding] = useState<QuestEndingChoice>(null);
-  
   // BALANCE: Start with no weapon equipped - player must choose
   const [equipped, setEquipped] = useState<EquippedItems>({
     weapon: null,
@@ -195,7 +205,6 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const killCountRef = useRef<number>(killCount);
   const isBossFightRef = useRef<boolean>(isBossFight);
   const inventoryRef = useRef<Equipment[]>(inventory);
-  const completedStepIdsRef = useRef<Record<string, boolean>>(completedStepIds);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -222,8 +231,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     killCountRef.current = killCount;
     isBossFightRef.current = isBossFight;
     inventoryRef.current = inventory;
-    completedStepIdsRef.current = completedStepIds;
-  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs, skillCooldowns, killCount, isBossFight, inventory, completedStepIds]);
+  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs, skillCooldowns, killCount, isBossFight, inventory]);
 
   // PERF FIX: Only recalculate equipStats when equipment actually changes
   const equipStats = useMemo(() => {
@@ -622,10 +630,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   // Player chooses to seal the bloodline (ending A)
   function sealBloodline() {
-    if (questEnding !== null) return;
-    setQuestEnding("seal");
+    if (char.questEnding !== null) return;
     setChar(prev => ({
       ...prev,
+      questEnding: "seal",
       corruptionLevel: Math.max(0, prev.corruptionLevel + ENDING_CHOICES.seal.corruptionChange),
     }));
     addLog(`🔒 You sealed the bloodline. The pass goes quiet.`);
@@ -633,10 +641,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   // Player chooses to remain unbound (ending B)
   function remainUnbound() {
-    if (questEnding !== null) return;
-    setQuestEnding("unbound");
+    if (char.questEnding !== null) return;
     setChar(prev => ({
       ...prev,
+      questEnding: "unbound",
       corruptionLevel: Math.min(100, prev.corruptionLevel + ENDING_CHOICES.unbound.corruptionChange),
     }));
     addLog(`🌑 You walked through the pass. You are still writing.`);
@@ -862,6 +870,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       let nextCharElunium = currentChar.elunium;
       let nextCharOridecon = currentChar.oridecon;
+      let nextCompletedStepIds = currentChar.completedStepIds;
       
       let didLevelUp = false;
 
@@ -976,10 +985,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
         setActiveDebuffs([]);
 
-        // Compute collected quest item IDs once, shared by boss and normal kill paths
-        const collectedQuestItemIds = inventoryRef.current
-          .filter(i => i.type === "quest" && i.questItemId)
-          .map(i => i.questItemId!);
+        // Sprint 4: derive collected quest item IDs from completedStepIds (not inventory)
+        const collectedQuestItemIds = getCollectedQuestItemIds(currentChar.completedStepIds);
 
         if (currentIsBossFight) {
           addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
@@ -1014,14 +1021,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           callbacksRef.current?.onMaterialDrop?.('elunium', numElu);
           callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
 
-          // Quest item drop check for boss kill
+          // Sprint 4: quest item auto-completes the step — item is consumed, not added to inventory
           const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, true, collectedQuestItemIds);
           if (questDrop && questDrop.questItemId) {
-            setInventory(prev => [...prev, questDrop]);
-            addLog(`📜 Quest Item: ${questDrop.name}!`);
             const stepInfo = findQuestStepByItemId(questDrop.questItemId);
             if (stepInfo) {
-              setCompletedStepIds(prev => ({ ...prev, [stepInfo.stepId]: true }));
+              nextCompletedStepIds = { ...nextCompletedStepIds, [stepInfo.stepId]: true };
+              addLog(`📜 Quest Item obtained: ${questDrop.name}!`);
               if (stepInfo.corruptionGain > 0) {
                 nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
                 addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
@@ -1074,14 +1080,13 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             }
           }
 
-          // Quest item drop check for normal kill
+          // Sprint 4: quest item auto-completes the step — item is consumed, not added to inventory
           const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, false, collectedQuestItemIds);
           if (questDrop && questDrop.questItemId) {
-            setInventory(prev => [...prev, questDrop]);
-            addLog(`📜 Quest Item: ${questDrop.name}!`);
             const stepInfo = findQuestStepByItemId(questDrop.questItemId);
             if (stepInfo) {
-              setCompletedStepIds(prev => ({ ...prev, [stepInfo.stepId]: true }));
+              nextCompletedStepIds = { ...nextCompletedStepIds, [stepInfo.stepId]: true };
+              addLog(`📜 Quest Item obtained: ${questDrop.name}!`);
               if (stepInfo.corruptionGain > 0) {
                 nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
                 addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
@@ -1134,6 +1139,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         elunium: nextCharElunium,
         oridecon: nextCharOridecon,
         corruptionLevel: nextCorruptionLevel,
+        completedStepIds: nextCompletedStepIds,
+        questEnding: currentChar.questEnding,
       });
 
       setEnemy(nextEnemy);
@@ -1607,9 +1614,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     canAttack,
     attackCooldownPercent,
     autoAttackEnabled,
-    // Quest system
-    completedStepIds,
-    questEnding,
+    // Quest system — now stored inside char
+    completedStepIds: char.completedStepIds,
+    questEnding: char.questEnding,
     setShowSkillWindow,
     setShowJobChangeNPC,
     setAutoHpPercent,
