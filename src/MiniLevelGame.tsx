@@ -17,6 +17,8 @@ import { TutorialOverlay } from "./components/TutorialOverlay";
 import { DevToolsPanel } from "./components/DevToolsPanel";
 import { CombatStatusDisplay } from "./components/CombatStatusDisplay";
 import { GameCompleteModal } from "./components/GameCompleteModal";
+import { QuestLog } from "./components/QuestLog";
+import { CorruptionMeter } from "./components/CorruptionMeter";
 import { Equipment, calculateGearScore, getEquipmentIcon } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
 import { useGameState } from "./hooks/useGameState";
@@ -48,6 +50,7 @@ export function MiniLevelGame() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showEquippedGear, setShowEquippedGear] = useState(false);
   const [showGameShop, setShowGameShop] = useState(false);
+  const [showQuestLog, setShowQuestLog] = useState(false);
   const [playTimeMs, setPlayTimeMs] = useState(0);
   const startTimeRef = useRef<number>(Date.now());
 
@@ -311,13 +314,20 @@ export function MiniLevelGame() {
       <ItemDropAnimation items={droppingItems} onAnimationComplete={removeDroppedItem} />
 
       {isMobile && (
-        <TopHUDBar
-          level={game.char.level}
-          hp={game.char.hp}
-          maxHp={game.char.maxHp}
-          mp={game.char.mp}
-          maxMp={game.char.maxMp}
-        />
+        <>
+          <TopHUDBar
+            level={game.char.level}
+            hp={game.char.hp}
+            maxHp={game.char.maxHp}
+            mp={game.char.mp}
+            maxMp={game.char.maxMp}
+          />
+          {game.char.corruptionLevel > 0 && (
+            <div style={{ padding: "0 10px 4px", background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)", borderBottom: "1px solid rgba(139,92,246,0.2)" }}>
+              <CorruptionMeter corruptionLevel={game.char.corruptionLevel} />
+            </div>
+          )}
+        </>
       )}
 
       <div
@@ -801,6 +811,8 @@ export function MiniLevelGame() {
           onOpenBlacksmith={() => setShowRefineNPC(true)}
           onOpenShop={() => setShowGameShop(true)}
           onOpenEquippedGear={() => setShowEquippedGear(true)}
+          onOpenQuestLog={() => setShowQuestLog(true)}
+          hasNewQuestProgress={Object.keys(game.completedStepIds).length > 0}
         />
 
         {/* ── Equipped Gear Overlay ────────────────────────────────────────── */}
@@ -902,6 +914,17 @@ export function MiniLevelGame() {
             onClose={() => setShowTrainingHut(false)}
           />
         )}
+
+        {/* ── Quest Log Overlay ────────────────────────────────────────────── */}
+        <QuestLog
+          isOpen={showQuestLog}
+          onClose={() => setShowQuestLog(false)}
+          completedStepIds={game.completedStepIds}
+          questEnding={game.questEnding}
+          inventory={game.inventory}
+          onSealBloodline={game.sealBloodline}
+          onRemainUnbound={game.remainUnbound}
+        />
 
         {/* ── Monetization Modals ─────────────────────────────────────────── */}
 

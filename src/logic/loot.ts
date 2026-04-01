@@ -1,5 +1,6 @@
 import { Equipment, EquipmentType, EquipmentRarity, WeaponType } from "../types/equipment";
 import { DROP_CHANCE } from "../data/constants";
+import { QUEST_ITEMS } from "../data/quests";
 
 // RO-inspired equipment names
 const EQUIPMENT_NAMES: Omit<Record<EquipmentType, string[]>, "weapon"> = {
@@ -317,4 +318,47 @@ export function generateBossLoot(playerLevel: number): Equipment {
   equipment.stat = equipment.atk || equipment.matk || equipment.def || baseValue;
   
   return equipment;
+}
+
+/**
+ * Pure drop check for quest items. No side effects.
+ *
+ * @param enemyName - The raw enemy name (boss prefix stripped internally)
+ * @param zoneId - Current zone ID
+ * @param isBoss - Whether this is a boss kill
+ * @param collectedQuestItemIds - IDs of quest items already in the player's inventory
+ * @returns Equipment (type:"quest") if a quest item should drop, otherwise null
+ */
+export function checkQuestItemDrop(
+  enemyName: string,
+  zoneId: number,
+  isBoss: boolean,
+  collectedQuestItemIds: string[]
+): Equipment | null {
+  // Strip boss prefix so "👹 Boss: Poring" matches "Poring"
+  const cleanName = enemyName.replace(/^👹 Boss: /, "");
+
+  for (const qi of QUEST_ITEMS) {
+    // Already collected — skip
+    if (collectedQuestItemIds.includes(qi.id)) continue;
+
+    const { drop } = qi;
+    if (drop.zoneId !== zoneId) continue;
+    if (drop.enemyName !== cleanName) continue;
+    if (drop.isBossOnly && !isBoss) continue;
+
+    // Roll for drop
+    if (Math.random() < drop.dropChance) {
+      const item: Equipment = {
+        id: Date.now() + Math.random(),
+        name: qi.name,
+        type: "quest",
+        rarity: "common",
+        questItemId: qi.id,
+      };
+      return item;
+    }
+  }
+
+  return null;
 }

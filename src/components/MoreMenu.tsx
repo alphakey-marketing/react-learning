@@ -11,6 +11,8 @@ interface MoreMenuProps {
   onOpenBlacksmith: () => void;
   onOpenShop: () => void;
   onOpenEquippedGear: () => void;
+  onOpenQuestLog: () => void;
+  hasNewQuestProgress?: boolean;
 }
 
 export function MoreMenu({
@@ -24,6 +26,8 @@ export function MoreMenu({
   onOpenBlacksmith,
   onOpenShop,
   onOpenEquippedGear,
+  onOpenQuestLog,
+  hasNewQuestProgress = false,
 }: MoreMenuProps) {
   if (!isOpen) return null;
 
@@ -74,6 +78,16 @@ export function MoreMenu({
       bg: "linear-gradient(135deg, #374151, #1f2937)",
       border: "1px solid #374151",
       glow: "none",
+    },
+    {
+      icon: "📜",
+      label: hasNewQuestProgress ? "Quest Log (!)" : "Quest Log",
+      onClick: () => handleAction(onOpenQuestLog),
+      bg: hasNewQuestProgress
+        ? "linear-gradient(135deg, #4c1d95, #3b0764)"
+        : "linear-gradient(135deg, #374151, #1f2937)",
+      border: hasNewQuestProgress ? "1px solid #8b5cf6" : "1px solid #374151",
+      glow: hasNewQuestProgress ? "0 0 12px rgba(139,92,246,0.5)" : "none",
     },
   ];
 

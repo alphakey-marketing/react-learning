@@ -51,6 +51,9 @@ export interface Equipment {
   quantity?: number;
   hpRestore?: number;
   mpRestore?: number;
+
+  // Quest item link — matches QuestItem.id in src/data/quests.ts
+  questItemId?: string;
 }
 
 export interface EquippedItems {

@@ -31,7 +31,9 @@ import {
   shouldDropLoot,
   generateLoot,
   generateBossLoot,
+  checkQuestItemDrop,
 } from "../logic/loot";
+import { QUEST_CHAINS, QuestEndingChoice, ENDING_CHOICES } from "../data/questChains";
 import {
   KILLS_FOR_BOSS,
   BOSS_HP_MULTIPLIER,
@@ -70,6 +72,19 @@ export interface ActiveSelfBuff {
   skillLevel: number;
 }
 
+// Helper: find the quest step that requires a given item ID.
+// Pure function — operates only on static QUEST_CHAINS data.
+function findQuestStepByItemId(itemId: string): { chainId: string; stepId: string; corruptionGain: number } | null {
+  for (const chain of QUEST_CHAINS) {
+    for (const step of chain.steps) {
+      if (step.requiredItemId === itemId) {
+        return { chainId: chain.id, stepId: step.id, corruptionGain: step.corruptionGain };
+      }
+    }
+  }
+  return null;
+}
+
 export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
   const initialLevel = 1;
   const initialStats = { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 };
@@ -97,6 +112,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     autoAttackSkillId: "basic_attack",
     elunium: STARTING_RESOURCES.elunium,
     oridecon: STARTING_RESOURCES.oridecon,
+    corruptionLevel: 0,
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -105,6 +121,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   // BALANCE: Start with both weapons in inventory - player chooses their path
   const [inventory, setInventory] = useState<Equipment[]>([STARTING_WEAPON, NOVICE_WAND]);
+
+  // Quest system — "You Are the Monster"
+  // completedStepIds: tracks which quest step IDs the player has completed
+  const [completedStepIds, setCompletedStepIds] = useState<Record<string, boolean>>({});
+  // questEnding: null until Chain 3 is complete and the player makes a choice
+  const [questEnding, setQuestEnding] = useState<QuestEndingChoice>(null);
   
   // BALANCE: Start with no weapon equipped - player must choose
   const [equipped, setEquipped] = useState<EquippedItems>({
@@ -172,6 +194,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const equipStatsRef = useRef<ReturnType<typeof calculateEquipmentStats>>(calculateEquipmentStats(equipped));
   const killCountRef = useRef<number>(killCount);
   const isBossFightRef = useRef<boolean>(isBossFight);
+  const inventoryRef = useRef<Equipment[]>(inventory);
+  const completedStepIdsRef = useRef<Record<string, boolean>>(completedStepIds);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -197,7 +221,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     skillCooldownsRef.current = skillCooldowns;
     killCountRef.current = killCount;
     isBossFightRef.current = isBossFight;
-  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs, skillCooldowns, killCount, isBossFight]);
+    inventoryRef.current = inventory;
+    completedStepIdsRef.current = completedStepIds;
+  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs, skillCooldowns, killCount, isBossFight, inventory, completedStepIds]);
 
   // PERF FIX: Only recalculate equipStats when equipment actually changes
   const equipStats = useMemo(() => {
@@ -592,6 +618,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, []);
 
+  // ── Quest System ─────────────────────────────────────────────────────────
+
+  // Player chooses to seal the bloodline (ending A)
+  function sealBloodline() {
+    if (questEnding !== null) return;
+    setQuestEnding("seal");
+    setChar(prev => ({
+      ...prev,
+      corruptionLevel: Math.max(0, prev.corruptionLevel + ENDING_CHOICES.seal.corruptionChange),
+    }));
+    addLog(`🔒 You sealed the bloodline. The pass goes quiet.`);
+  }
+
+  // Player chooses to remain unbound (ending B)
+  function remainUnbound() {
+    if (questEnding !== null) return;
+    setQuestEnding("unbound");
+    setChar(prev => ({
+      ...prev,
+      corruptionLevel: Math.min(100, prev.corruptionLevel + ENDING_CHOICES.unbound.corruptionChange),
+    }));
+    addLog(`🌑 You walked through the pass. You are still writing.`);
+  }
+
   // STABILITY FIX: battleAction no longer depends on state that changes during execution
   // Instead it uses refs for real-time values
   const battleAction = useCallback((skillId?: string) => {
@@ -863,6 +913,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       let nextJobExp = currentChar.jobExp;
       let nextJobExpToNext = currentChar.jobExpToNext;
       let nextSkillPoints = currentChar.skillPoints;
+      let nextCorruptionLevel = currentChar.corruptionLevel;
 
       if (nextEnemyHp <= 0) {
         const enemyCount = currentEnemy.count || 1;
@@ -925,6 +976,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
         setActiveDebuffs([]);
 
+        // Compute collected quest item IDs once, shared by boss and normal kill paths
+        const collectedQuestItemIds = inventoryRef.current
+          .filter(i => i.type === "quest" && i.questItemId)
+          .map(i => i.questItemId!);
+
         if (currentIsBossFight) {
           addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
           setBossDefeated(true);
@@ -957,6 +1013,24 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           addLog(`💎 Boss Drop: ${numElu}x Elunium, ${numOri}x Oridecon!`);
           callbacksRef.current?.onMaterialDrop?.('elunium', numElu);
           callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
+
+          // Quest item drop check for boss kill
+          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, true, collectedQuestItemIds);
+          if (questDrop && questDrop.questItemId) {
+            setInventory(prev => [...prev, questDrop]);
+            addLog(`📜 Quest Item: ${questDrop.name}!`);
+            const stepInfo = findQuestStepByItemId(questDrop.questItemId);
+            if (stepInfo) {
+              setCompletedStepIds(prev => ({ ...prev, [stepInfo.stepId]: true }));
+              if (stepInfo.corruptionGain > 0) {
+                nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
+                addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
+              }
+            }
+          }
+
+          // Boss kill corruption: +1.0 per boss
+          nextCorruptionLevel = Math.min(100, nextCorruptionLevel + 1.0);
 
           nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
           addLog(`👾 A wild ${nextEnemy.name} appeared!`);
@@ -1000,6 +1074,24 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             }
           }
 
+          // Quest item drop check for normal kill
+          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, false, collectedQuestItemIds);
+          if (questDrop && questDrop.questItemId) {
+            setInventory(prev => [...prev, questDrop]);
+            addLog(`📜 Quest Item: ${questDrop.name}!`);
+            const stepInfo = findQuestStepByItemId(questDrop.questItemId);
+            if (stepInfo) {
+              setCompletedStepIds(prev => ({ ...prev, [stepInfo.stepId]: true }));
+              if (stepInfo.corruptionGain > 0) {
+                nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
+                addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
+              }
+            }
+          }
+
+          // Normal kill corruption: +0.2 per kill (fractional, visible only after many kills)
+          nextCorruptionLevel = Math.min(100, nextCorruptionLevel + 0.2 * enemyCount);
+
           nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
           const nextEnemyCount = nextEnemy.count || 1;
           if (nextEnemyCount > 1) {
@@ -1041,6 +1133,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         autoAttackSkillId: currentChar.autoAttackSkillId,
         elunium: nextCharElunium,
         oridecon: nextCharOridecon,
+        corruptionLevel: nextCorruptionLevel,
       });
 
       setEnemy(nextEnemy);
@@ -1514,6 +1607,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     canAttack,
     attackCooldownPercent,
     autoAttackEnabled,
+    // Quest system
+    completedStepIds,
+    questEnding,
     setShowSkillWindow,
     setShowJobChangeNPC,
     setAutoHpPercent,
@@ -1537,6 +1633,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     openJobChangeNPC,
     handleRespawn,
     escapeToTown,
+    sealBloodline,
+    remainUnbound,
     devAddBaseLevel,
     devAddJobLevel,
     devAddGold,

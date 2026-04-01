@@ -43,4 +43,7 @@ export interface Character {
   
   elunium: number; // Armor refine material
   oridecon: number; // Weapon refine material
+
+  // "You Are the Monster" — corruption accumulates as the player kills and completes quests
+  corruptionLevel: number; // 0–100
 }
