@@ -605,12 +605,16 @@ export function MiniLevelGame() {
 
               {activeTab === 'inventory' && (
                 <div data-tutorial="inventory">
-                  <EnhancedInventory
-                    inventory={game.inventory}
-                    equipped={game.equipped}
-                    onEquip={game.equipItem}
-                    onUnequip={game.unequipItem}
-                  />
+                <EnhancedInventory
+  inventory={game.inventory}
+  equipped={game.equipped}
+  onEquip={game.equipItem}
+  onUnequip={game.unequipItem}
+  hpPotions={game.hpPotions}
+  mpPotions={game.mpPotions}
+  onUseHpPotion={wrappedUseHpPotion}
+  onUseMpPotion={wrappedUseMpPotion}
+/>
                 </div>
               )}
             </div>
