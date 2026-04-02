@@ -39,15 +39,25 @@ export function QuestLog({
   const chain3AllStepsDone = chain3 ? chain3.steps.every(s => completedStepIds[s.id]) : false;
   const showEndingChoice = chain3AllStepsDone && questEnding === null;
 
-  function handleSeal() { onSealBloodline(); onClose(); }
-  function handleUnbound() { onRemainUnbound(); onClose(); }
+  function handleSeal() {
+    onSealBloodline();
+    onClose();
+  }
+
+  function handleUnbound() {
+    onRemainUnbound();
+    onClose();
+  }
 
   function handleAccept(stepId: string) {
     onAcceptStep(stepId);
     setExpandedIntro(null);
   }
 
-  function handleChoiceClick(stepId: string, choice: { label: string; text: string; corruptionDelta: number }) {
+  function handleChoiceClick(
+    stepId: string,
+    choice: { label: string; text: string; corruptionDelta: number }
+  ) {
     onSubmitStep(stepId, choice);
     setSubmittingStep(null);
   }

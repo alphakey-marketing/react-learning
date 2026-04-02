@@ -35,6 +35,7 @@ import {
 } from "../logic/loot";
 import { getCorruptionModifiers } from "../logic/corruption";
 import { QUEST_CHAINS, QuestEndingChoice, ENDING_CHOICES, isChainComplete, QUEST_CHAIN_ORDER } from "../data/questChains";
+import { QUEST_ITEMS } from "../data/quests";
 import {
   KILLS_FOR_BOSS,
   BOSS_HP_MULTIPLIER,
@@ -1141,12 +1142,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             if (stepInfo && currentChar.acceptedStepIds[stepInfo.stepId]) {
               nextHeldQuestItems = { ...nextHeldQuestItems, [stepInfo.stepId]: true };
               addLog(`📜 Quest Item found: ${questDrop.name}! Visit the Quest Log to submit.`);
-              const questItem = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepInfo.stepId);
+              const questItem = QUEST_ITEMS.find(qi => qi.id === questDrop.questItemId);
               setQuestItemPickup({
                 chainTitle: stepInfo.chainTitle,
                 stepTitle: stepInfo.stepTitle,
                 itemName: questDrop.name,
-                itemIcon: questItem ? "📜" : "📜",
+                itemIcon: questItem?.icon ?? "📜",
               });
             }
           }
@@ -1206,17 +1207,17 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             if (stepInfo && currentChar.acceptedStepIds[stepInfo.stepId]) {
               nextHeldQuestItems = { ...nextHeldQuestItems, [stepInfo.stepId]: true };
               addLog(`📜 Quest Item found: ${questDrop.name}! Visit the Quest Log to submit.`);
-              const questItem = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepInfo.stepId);
+              const questItem = QUEST_ITEMS.find(qi => qi.id === questDrop.questItemId);
               setQuestItemPickup({
                 chainTitle: stepInfo.chainTitle,
                 stepTitle: stepInfo.stepTitle,
                 itemName: questDrop.name,
-                itemIcon: questItem ? "📜" : "📜",
+                itemIcon: questItem?.icon ?? "📜",
               });
             }
           }
 
-          // Normal kill corruption: +0.2 per kill (fractional, visible only after many kills)
+          // Normal kill corruption: +0.2 per kill
           nextCorruptionLevel = Math.min(100, nextCorruptionLevel + 0.2 * enemyCount);
 
           nextEnemy = applyCorruptionScaling(

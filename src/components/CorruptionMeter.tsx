@@ -152,7 +152,7 @@ function EffectRow({ label, mult, color }: { label: string; mult: number; color:
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <span style={{ color: "#94a3b8" }}>{label}</span>
       <span style={{ color: pct > 0 ? color : "#6b7280", fontWeight: "bold" }}>
-        ×{mult.toFixed(2)} {pct > 0 ? `(+${pct}%)` : ""}
+        ×{mult.toFixed(2)}{pct > 0 ? ` (+${pct}%)` : ""}
       </span>
     </div>
   );
