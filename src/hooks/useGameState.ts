@@ -100,13 +100,16 @@ function findQuestStepByItemId(itemId: string): {
   return null;
 }
 
-// Helper: derive the set of already-obtained quest item IDs from completed step IDs.
-// Used to prevent re-dropping items whose steps are already done.
-function getCollectedQuestItemIds(completedStepIds: Record<string, boolean>): string[] {
+// Helper: derive the set of already-obtained quest item IDs from completed step IDs AND held items.
+// Used to prevent re-dropping items whose steps are already done or whose item is already held.
+function getCollectedQuestItemIds(
+  completedStepIds: Record<string, boolean>,
+  heldQuestItems: Record<string, boolean>
+): string[] {
   const itemIds: string[] = [];
   for (const chain of QUEST_CHAINS) {
     for (const step of chain.steps) {
-      if (completedStepIds[step.id] && step.requiredItemId) {
+      if ((completedStepIds[step.id] || heldQuestItems[step.id]) && step.requiredItemId) {
         itemIds.push(step.requiredItemId);
       }
     }
@@ -159,8 +162,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     elunium: STARTING_RESOURCES.elunium,
     oridecon: STARTING_RESOURCES.oridecon,
     corruptionLevel: 0,
+    acceptedStepIds: {},
+    heldQuestItems: {},
     completedStepIds: {},
     questEnding: null,
+    questChoicesMade: {},
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -209,11 +215,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
 
   // ── Quest modal state ─────────────────────────────────────────────────────
-  const [questStepCompleted, setQuestStepCompleted] = useState<{
+  // Popup shown when a quest item is picked up in battle (directs player to Quest Log)
+  const [questItemPickup, setQuestItemPickup] = useState<{
     chainTitle: string;
     stepTitle: string;
-    completionText: string;
-    corruptionGain: number;
+    itemName: string;
+    itemIcon: string;
   } | null>(null);
   const [showEndingChoice, setShowEndingChoice] = useState<boolean>(false);
   // Tracks whether we have already auto-shown the ending modal this session
@@ -719,6 +726,42 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     addLog(`🌑 You walked through the pass. You are still writing.`);
   }
 
+  // Accept a quest step — player has seen the intro dialogue and clicked Accept
+  function acceptQuestStep(stepId: string) {
+    setChar(prev => ({
+      ...prev,
+      acceptedStepIds: { ...prev.acceptedStepIds, [stepId]: true },
+    }));
+    const stepData = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepId);
+    addLog(`📜 Quest accepted: "${stepData?.title ?? stepId}". Start hunting!`);
+  }
+
+  // Submit a held quest item and apply the chosen dialogue's corruption effect
+  function submitQuestStep(
+    stepId: string,
+    choice: { label: string; text: string; corruptionDelta: number }
+  ) {
+    const stepData = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepId);
+    setChar(prev => {
+      const heldQuestItems = { ...prev.heldQuestItems };
+      delete heldQuestItems[stepId];
+      const newCorruption = Math.max(0, Math.min(100, prev.corruptionLevel + choice.corruptionDelta));
+      return {
+        ...prev,
+        completedStepIds: { ...prev.completedStepIds, [stepId]: true },
+        heldQuestItems,
+        corruptionLevel: newCorruption,
+        questChoicesMade: { ...prev.questChoicesMade, [stepId]: choice },
+      };
+    });
+    addLog(`📜 Quest step complete: "${stepData?.title ?? stepId}".`);
+    if (choice.corruptionDelta > 0) {
+      addLog(`🩸 Corruption rises... (+${choice.corruptionDelta})`);
+    } else if (choice.corruptionDelta < 0) {
+      addLog(`✨ Corruption eases... (${choice.corruptionDelta})`);
+    }
+  }
+
   // STABILITY FIX: battleAction no longer depends on state that changes during execution
   // Instead it uses refs for real-time values
   const battleAction = useCallback((skillId?: string) => {
@@ -940,6 +983,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       let nextCharElunium = currentChar.elunium;
       let nextCharOridecon = currentChar.oridecon;
       let nextCompletedStepIds = currentChar.completedStepIds;
+      let nextHeldQuestItems = currentChar.heldQuestItems;
       
       let didLevelUp = false;
 
@@ -1054,8 +1098,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
         setActiveDebuffs([]);
 
-        // Sprint 4: derive collected quest item IDs from completedStepIds (not inventory)
-        const collectedQuestItemIds = getCollectedQuestItemIds(currentChar.completedStepIds);
+        // Derive collected quest item IDs from completedStepIds AND heldQuestItems
+        const collectedQuestItemIds = getCollectedQuestItemIds(currentChar.completedStepIds, currentChar.heldQuestItems);
 
         if (currentIsBossFight) {
           addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
@@ -1090,22 +1134,19 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           callbacksRef.current?.onMaterialDrop?.('elunium', numElu);
           callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
 
-          // Sprint 4: quest item auto-completes the step — item is consumed, not added to inventory
+          // Quest item drop: only triggers if step is accepted by player; item is held (not auto-completed)
           const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, true, collectedQuestItemIds);
           if (questDrop && questDrop.questItemId) {
             const stepInfo = findQuestStepByItemId(questDrop.questItemId);
-            if (stepInfo) {
-              nextCompletedStepIds = { ...nextCompletedStepIds, [stepInfo.stepId]: true };
-              addLog(`📜 Quest Item obtained: ${questDrop.name}!`);
-              if (stepInfo.corruptionGain > 0) {
-                nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
-                addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
-              }
-              setQuestStepCompleted({
+            if (stepInfo && currentChar.acceptedStepIds[stepInfo.stepId]) {
+              nextHeldQuestItems = { ...nextHeldQuestItems, [stepInfo.stepId]: true };
+              addLog(`📜 Quest Item found: ${questDrop.name}! Visit the Quest Log to submit.`);
+              const questItem = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepInfo.stepId);
+              setQuestItemPickup({
                 chainTitle: stepInfo.chainTitle,
                 stepTitle: stepInfo.stepTitle,
-                completionText: stepInfo.completionText,
-                corruptionGain: stepInfo.corruptionGain,
+                itemName: questDrop.name,
+                itemIcon: questItem ? "📜" : "📜",
               });
             }
           }
@@ -1158,22 +1199,19 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             }
           }
 
-          // Sprint 4: quest item auto-completes the step — item is consumed, not added to inventory
+          // Quest item drop: only triggers if step is accepted by player; item is held (not auto-completed)
           const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, false, collectedQuestItemIds);
           if (questDrop && questDrop.questItemId) {
             const stepInfo = findQuestStepByItemId(questDrop.questItemId);
-            if (stepInfo) {
-              nextCompletedStepIds = { ...nextCompletedStepIds, [stepInfo.stepId]: true };
-              addLog(`📜 Quest Item obtained: ${questDrop.name}!`);
-              if (stepInfo.corruptionGain > 0) {
-                nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
-                addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
-              }
-              setQuestStepCompleted({
+            if (stepInfo && currentChar.acceptedStepIds[stepInfo.stepId]) {
+              nextHeldQuestItems = { ...nextHeldQuestItems, [stepInfo.stepId]: true };
+              addLog(`📜 Quest Item found: ${questDrop.name}! Visit the Quest Log to submit.`);
+              const questItem = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepInfo.stepId);
+              setQuestItemPickup({
                 chainTitle: stepInfo.chainTitle,
                 stepTitle: stepInfo.stepTitle,
-                completionText: stepInfo.completionText,
-                corruptionGain: stepInfo.corruptionGain,
+                itemName: questDrop.name,
+                itemIcon: questItem ? "📜" : "📜",
               });
             }
           }
@@ -1226,8 +1264,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         elunium: nextCharElunium,
         oridecon: nextCharOridecon,
         corruptionLevel: nextCorruptionLevel,
+        acceptedStepIds: currentChar.acceptedStepIds,
+        heldQuestItems: nextHeldQuestItems,
         completedStepIds: nextCompletedStepIds,
         questEnding: currentChar.questEnding,
+        questChoicesMade: currentChar.questChoicesMade,
       });
 
       setEnemy(nextEnemy);
@@ -1707,9 +1748,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     // Quest system — now stored inside char
     completedStepIds: char.completedStepIds,
     questEnding: char.questEnding,
+    acceptedStepIds: char.acceptedStepIds,
+    heldQuestItems: char.heldQuestItems,
+    questChoicesMade: char.questChoicesMade,
     // Quest modals
-    questStepCompleted,
-    clearQuestStepCompleted: () => setQuestStepCompleted(null),
+    questItemPickup,
+    clearQuestItemPickup: () => setQuestItemPickup(null),
     showEndingChoice,
     clearShowEndingChoice: () => setShowEndingChoice(false),
     setShowSkillWindow,
@@ -1737,6 +1781,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     escapeToTown,
     sealBloodline,
     remainUnbound,
+    acceptQuestStep,
+    submitQuestStep,
     devAddBaseLevel,
     devAddJobLevel,
     devAddGold,

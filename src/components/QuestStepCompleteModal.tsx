@@ -1,14 +1,14 @@
 import React from "react";
 
-interface QuestStepCompleteData {
+interface QuestItemPickupData {
   chainTitle: string;
   stepTitle: string;
-  completionText: string;
-  corruptionGain: number;
+  itemName: string;
+  itemIcon: string;
 }
 
 interface QuestStepCompleteModalProps {
-  data: QuestStepCompleteData | null;
+  data: QuestItemPickupData | null;
   onClose: () => void;
 }
 
@@ -20,7 +20,7 @@ export function QuestStepCompleteModal({ data, onClose }: QuestStepCompleteModal
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.78)",
+        background: "rgba(0,0,0,0.72)",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -36,12 +36,14 @@ export function QuestStepCompleteModal({ data, onClose }: QuestStepCompleteModal
           border: "2px solid rgba(124,58,237,0.55)",
           borderRadius: "16px",
           padding: "24px 20px",
-          maxWidth: "420px",
+          maxWidth: "380px",
           width: "100%",
           color: "white",
-          boxShadow: "0 0 40px rgba(124,58,237,0.28), inset 0 0 20px rgba(124,58,237,0.04)",
+          boxShadow: "0 0 40px rgba(124,58,237,0.28)",
+          textAlign: "center",
         }}
       >
+        <div style={{ fontSize: "36px", marginBottom: "8px" }}>{data.itemIcon}</div>
         <div
           style={{
             fontSize: "10px",
@@ -49,46 +51,32 @@ export function QuestStepCompleteModal({ data, onClose }: QuestStepCompleteModal
             fontWeight: "bold",
             letterSpacing: "1px",
             textTransform: "uppercase",
-            marginBottom: "4px",
+            marginBottom: "6px",
           }}
         >
-          📜 Bloodline Memory Unlocked
+          📜 Quest Item Found!
+        </div>
+        <div style={{ fontSize: "15px", fontWeight: "bold", color: "#e2d9f3", marginBottom: "4px" }}>
+          {data.itemName}
         </div>
         <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "16px" }}>
           {data.chainTitle} — {data.stepTitle}
         </div>
 
-        <div style={{ borderTop: "1px solid rgba(124,58,237,0.3)", paddingTop: "14px", marginBottom: "16px" }}>
-          <p
-            style={{
-              fontSize: "13px",
-              color: "#e2d9f3",
-              lineHeight: "1.75",
-              fontStyle: "italic",
-              margin: 0,
-            }}
-          >
-            {data.completionText}
-          </p>
+        <div
+          style={{
+            padding: "10px 14px",
+            background: "rgba(124,58,237,0.12)",
+            border: "1px solid rgba(124,58,237,0.3)",
+            borderRadius: "8px",
+            fontSize: "12px",
+            color: "#c084fc",
+            marginBottom: "16px",
+            lineHeight: "1.6",
+          }}
+        >
+          Visit the <strong>Quest Log</strong> to submit this item and discover what it means.
         </div>
-
-        {data.corruptionGain > 0 && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "8px 12px",
-              background: "rgba(124,58,237,0.15)",
-              borderRadius: "8px",
-              marginBottom: "16px",
-              fontSize: "12px",
-              color: "#a855f7",
-            }}
-          >
-            🩸 Corruption +{data.corruptionGain}
-          </div>
-        )}
 
         <button
           onClick={onClose}
@@ -104,7 +92,7 @@ export function QuestStepCompleteModal({ data, onClose }: QuestStepCompleteModal
             fontSize: "13px",
           }}
         >
-          Continue
+          Got It
         </button>
       </div>
     </div>

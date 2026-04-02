@@ -50,8 +50,14 @@ export interface Character {
 
   // "You Are the Monster" — corruption accumulates as the player kills and completes quests
   corruptionLevel: number; // 0–100
-  // Quest progress: step IDs the player has completed
+  // Quest progress: step IDs the player has accepted (intro seen, quest active)
+  acceptedStepIds: Record<string, boolean>;
+  // Quest items found but not yet submitted at the Quest Log
+  heldQuestItems: Record<string, boolean>; // stepId → true
+  // Quest progress: step IDs the player has completed (item submitted + choice made)
   completedStepIds: Record<string, boolean>;
   // Ending choice made at the conclusion of Chain 3 (null until chosen)
   questEnding: QuestEndingChoice;
+  // The dialogue choice text selected for each completed step (stepId → chosen text)
+  questChoicesMade: Record<string, { label: string; text: string; corruptionDelta: number }>;
 }

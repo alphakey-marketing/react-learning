@@ -933,16 +933,20 @@ export function MiniLevelGame() {
           isOpen={showQuestLog}
           onClose={() => setShowQuestLog(false)}
           completedStepIds={game.completedStepIds}
+          acceptedStepIds={game.acceptedStepIds}
+          heldQuestItems={game.heldQuestItems}
+          questChoicesMade={game.questChoicesMade}
           questEnding={game.questEnding}
-          inventory={game.inventory}
+          onAcceptStep={game.acceptQuestStep}
+          onSubmitStep={game.submitQuestStep}
           onSealBloodline={game.sealBloodline}
           onRemainUnbound={game.remainUnbound}
         />
 
-        {/* ── Quest Step Complete Modal ─────────────────────────────────────── */}
+        {/* ── Quest Item Pickup Modal ───────────────────────────────────────── */}
         <QuestStepCompleteModal
-          data={game.questStepCompleted}
-          onClose={game.clearQuestStepCompleted}
+          data={game.questItemPickup}
+          onClose={game.clearQuestItemPickup}
         />
 
         {/* ── Quest Ending Choice Modal ─────────────────────────────────────── */}
