@@ -1,22 +1,15 @@
 import React from "react";
+import { getCorruptionModifiers } from "../logic/corruption";
 
 interface CorruptionMeterProps {
   corruptionLevel: number; // 0–100
 }
 
-function getCorruptionLabel(level: number): string {
-  if (level < 10) return "Untouched";
-  if (level < 25) return "Stirring";
-  if (level < 45) return "Awakening";
-  if (level < 65) return "Ascendant";
-  if (level < 85) return "Consuming";
-  return "Devoured";
-}
-
 function getCorruptionColor(level: number): string {
-  if (level < 25) return "#7c3aed";
-  if (level < 50) return "#9333ea";
-  if (level < 75) return "#a21caf";
+  if (level < 20) return "#7c3aed";
+  if (level < 40) return "#8b3cf7";
+  if (level < 60) return "#9333ea";
+  if (level < 80) return "#a21caf";
   return "#be123c";
 }
 
@@ -24,7 +17,7 @@ export function CorruptionMeter({ corruptionLevel }: CorruptionMeterProps) {
   const clampedLevel = Math.max(0, Math.min(100, corruptionLevel));
   const displayLevel = Math.floor(clampedLevel);
   const color = getCorruptionColor(clampedLevel);
-  const label = getCorruptionLabel(clampedLevel);
+  const label = getCorruptionModifiers(clampedLevel).tierName;
 
   if (clampedLevel === 0) return null;
 

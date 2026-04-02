@@ -18,6 +18,9 @@ import { DevToolsPanel } from "./components/DevToolsPanel";
 import { CombatStatusDisplay } from "./components/CombatStatusDisplay";
 import { GameCompleteModal } from "./components/GameCompleteModal";
 import { QuestLog } from "./components/QuestLog";
+import { QuestPulseBanner } from "./components/QuestPulseBanner";
+import { QuestStepCompleteModal } from "./components/QuestStepCompleteModal";
+import { QuestEndingModal } from "./components/QuestEndingModal";
 import { CorruptionMeter } from "./components/CorruptionMeter";
 import { Equipment, calculateGearScore, getEquipmentIcon } from "./types/equipment";
 import { useBattleLog } from "./hooks/useBattleLog";
@@ -571,6 +574,11 @@ export function MiniLevelGame() {
                       </button>
                     )}
                   </div>
+                  <QuestPulseBanner
+                    completedStepIds={game.completedStepIds}
+                    questEnding={game.questEnding}
+                    onOpenQuestLog={() => setShowQuestLog(true)}
+                  />
                   <BattleLog logs={logs} />
                   <PotionBar
                     character={game.char}
@@ -754,6 +762,11 @@ export function MiniLevelGame() {
             </div>
 
             <div style={{ minWidth: 0 }}>
+              <QuestPulseBanner
+                completedStepIds={game.completedStepIds}
+                questEnding={game.questEnding}
+                onOpenQuestLog={() => setShowQuestLog(true)}
+              />
               <BattleLog logs={logs} />
 
               <PotionBar
@@ -925,6 +938,21 @@ export function MiniLevelGame() {
           onSealBloodline={game.sealBloodline}
           onRemainUnbound={game.remainUnbound}
         />
+
+        {/* ── Quest Step Complete Modal ─────────────────────────────────────── */}
+        <QuestStepCompleteModal
+          data={game.questStepCompleted}
+          onClose={game.clearQuestStepCompleted}
+        />
+
+        {/* ── Quest Ending Choice Modal ─────────────────────────────────────── */}
+        {game.showEndingChoice && game.questEnding === null && (
+          <QuestEndingModal
+            onSealBloodline={game.sealBloodline}
+            onRemainUnbound={game.remainUnbound}
+            onClose={game.clearShowEndingChoice}
+          />
+        )}
 
         {/* ── Monetization Modals ─────────────────────────────────────────── */}
 

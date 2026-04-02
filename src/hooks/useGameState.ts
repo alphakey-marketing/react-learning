@@ -33,7 +33,8 @@ import {
   generateBossLoot,
   checkQuestItemDrop,
 } from "../logic/loot";
-import { QUEST_CHAINS, QuestEndingChoice, ENDING_CHOICES } from "../data/questChains";
+import { getCorruptionModifiers } from "../logic/corruption";
+import { QUEST_CHAINS, QuestEndingChoice, ENDING_CHOICES, isChainComplete } from "../data/questChains";
 import {
   KILLS_FOR_BOSS,
   BOSS_HP_MULTIPLIER,
@@ -74,11 +75,25 @@ export interface ActiveSelfBuff {
 
 // Helper: find the quest step that requires a given item ID.
 // Pure function — operates only on static QUEST_CHAINS data.
-function findQuestStepByItemId(itemId: string): { chainId: string; stepId: string; corruptionGain: number } | null {
+function findQuestStepByItemId(itemId: string): {
+  chainId: string;
+  chainTitle: string;
+  stepId: string;
+  stepTitle: string;
+  completionText: string;
+  corruptionGain: number;
+} | null {
   for (const chain of QUEST_CHAINS) {
     for (const step of chain.steps) {
       if (step.requiredItemId === itemId) {
-        return { chainId: chain.id, stepId: step.id, corruptionGain: step.corruptionGain };
+        return {
+          chainId: chain.id,
+          chainTitle: chain.title,
+          stepId: step.id,
+          stepTitle: step.title,
+          completionText: step.completionText,
+          corruptionGain: step.corruptionGain,
+        };
       }
     }
   }
@@ -97,6 +112,23 @@ function getCollectedQuestItemIds(completedStepIds: Record<string, boolean>): st
     }
   }
   return itemIds;
+}
+
+// Helper: apply corruption-tier stat multipliers to a freshly spawned enemy.
+// Call only at spawn time — never on every tick.
+function applyCorruptionScaling(enemy: Enemy, corruptionLevel: number): Enemy {
+  const mods = getCorruptionModifiers(corruptionLevel);
+  if (mods.enemyHpMult === 1.0 && mods.enemyAtkMult === 1.0 && mods.enemyDefMult === 1.0) {
+    return enemy;
+  }
+  return {
+    ...enemy,
+    hp: Math.floor(enemy.hp * mods.enemyHpMult),
+    maxHp: Math.floor(enemy.maxHp * mods.enemyHpMult),
+    atk: Math.floor(enemy.atk * mods.enemyAtkMult),
+    softDef: Math.floor(enemy.softDef * mods.enemyDefMult),
+    hardDefPercent: Math.min(80, Math.floor(enemy.hardDefPercent * mods.enemyDefMult)),
+  };
 }
 
 export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
@@ -175,6 +207,17 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const [attackCooldownPercent, setAttackCooldownPercent] = useState<number>(100);
   
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
+
+  // ── Quest modal state ─────────────────────────────────────────────────────
+  const [questStepCompleted, setQuestStepCompleted] = useState<{
+    chainTitle: string;
+    stepTitle: string;
+    completionText: string;
+    corruptionGain: number;
+  } | null>(null);
+  const [showEndingChoice, setShowEndingChoice] = useState<boolean>(false);
+  // Tracks whether we have already auto-shown the ending modal this session
+  const endingChoiceShownRef = useRef<boolean>(false);
 
   const enemyAttackTimerRef = useRef<number | null>(null);
   const autoPotionTimerRef = useRef<number | null>(null);
@@ -628,6 +671,33 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   // ── Quest System ─────────────────────────────────────────────────────────
 
+  // Log a message when corruption crosses a new tier threshold
+  const prevCorruptionLevelRef = useRef<number>(char.corruptionLevel);
+  useEffect(() => {
+    const prev = prevCorruptionLevelRef.current;
+    const curr = char.corruptionLevel;
+    prevCorruptionLevelRef.current = curr;
+    const thresholds = [20, 40, 60, 80, 100];
+    for (const t of thresholds) {
+      if (prev < t && curr >= t) {
+        const tier = getCorruptionModifiers(curr).tierName;
+        addLog(`🩸 Corruption: ${tier} — enemies grow stronger. Drops grow stranger.`);
+        break;
+      }
+    }
+  }, [char.corruptionLevel]);
+
+  // Auto-show the ending choice modal when all quest chains are complete
+  useEffect(() => {
+    if (char.questEnding !== null || endingChoiceShownRef.current) return;
+    const chainIds = ["chain_birthmark", "chain_mountain", "chain_rite"];
+    const allComplete = chainIds.every(id => isChainComplete(id, char.completedStepIds));
+    if (allComplete) {
+      endingChoiceShownRef.current = true;
+      setShowEndingChoice(true);
+    }
+  }, [char.completedStepIds, char.questEnding]);
+
   // Player chooses to seal the bloodline (ending A)
   function sealBloodline() {
     if (char.questEnding !== null) return;
@@ -1008,7 +1078,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             addLog(`🏆 You cleared all zones!`);
           }
 
-          const bossGear = generateBossLoot(nextCharLevel);
+          const bossGear = generateBossLoot(nextCharLevel, nextCorruptionLevel);
           setInventory((prev) => [...prev, bossGear]);
           addLog(`🎁 Boss Drop: ${bossGear.name}!`);
           callbacksRef.current?.onItemDrop?.(bossGear);
@@ -1032,13 +1102,22 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
                 nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
                 addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
               }
+              setQuestStepCompleted({
+                chainTitle: stepInfo.chainTitle,
+                stepTitle: stepInfo.stepTitle,
+                completionText: stepInfo.completionText,
+                corruptionGain: stepInfo.corruptionGain,
+              });
             }
           }
 
           // Boss kill corruption: +1.0 per boss
           nextCorruptionLevel = Math.min(100, nextCorruptionLevel + 1.0);
 
-          nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
+          nextEnemy = applyCorruptionScaling(
+            getRandomEnemyForZone(currentZone, nextCharLevel),
+            nextCorruptionLevel
+          );
           addLog(`👾 A wild ${nextEnemy.name} appeared!`);
         } else {
           const nextKillCount = currentKillCount + 1;
@@ -1052,7 +1131,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           if (isGroup) {
             for (let i = 0; i < enemyCount; i++) {
               if (shouldDropLoot()) {
-                const newGear = generateLoot(nextCharLevel);
+                const newGear = generateLoot(nextCharLevel, nextCorruptionLevel);
                 setInventory((prev) => [...prev, newGear]);
                 addLog(`🎁 Looted: ${newGear.name}!`);
                 callbacksRef.current?.onItemDrop?.(newGear);
@@ -1060,7 +1139,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             }
           } else {
             if (shouldDropLoot()) {
-              const newGear = generateLoot(nextCharLevel);
+              const newGear = generateLoot(nextCharLevel, nextCorruptionLevel);
               setInventory((prev) => [...prev, newGear]);
               addLog(`🎁 Looted: ${newGear.name}!`);
               callbacksRef.current?.onItemDrop?.(newGear);
@@ -1091,13 +1170,22 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
                 nextCorruptionLevel = Math.min(100, nextCorruptionLevel + stepInfo.corruptionGain);
                 addLog(`🌑 Corruption rises... (+${stepInfo.corruptionGain})`);
               }
+              setQuestStepCompleted({
+                chainTitle: stepInfo.chainTitle,
+                stepTitle: stepInfo.stepTitle,
+                completionText: stepInfo.completionText,
+                corruptionGain: stepInfo.corruptionGain,
+              });
             }
           }
 
           // Normal kill corruption: +0.2 per kill (fractional, visible only after many kills)
           nextCorruptionLevel = Math.min(100, nextCorruptionLevel + 0.2 * enemyCount);
 
-          nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
+          nextEnemy = applyCorruptionScaling(
+            getRandomEnemyForZone(currentZone, nextCharLevel),
+            nextCorruptionLevel
+          );
           const nextEnemyCount = nextEnemy.count || 1;
           if (nextEnemyCount > 1) {
             addLog(`👾 A group of ${nextEnemyCount}x ${nextEnemy.name} appeared!`);
@@ -1365,7 +1453,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
     setCurrentZoneId(zoneId);
-    setEnemy(getRandomEnemyForZone(zoneId, char.level));
+    setEnemy(applyCorruptionScaling(getRandomEnemyForZone(zoneId, char.level), char.corruptionLevel));
     setActiveDebuffs([]);
     setActiveSelfBuffs([]);
     setSkillCooldowns({});
@@ -1374,7 +1462,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   function challengeBoss() {
     setIsBossFight(true);
-    const bossTemplate = getRandomEnemyForZone(currentZoneId, char.level);
+    const bossTemplate = applyCorruptionScaling(
+      getRandomEnemyForZone(currentZoneId, char.level),
+      char.corruptionLevel
+    );
     const bossEnemy: Enemy = {
       ...bossTemplate,
       name: `👹 Boss: ${bossTemplate.name}`,
@@ -1617,6 +1708,11 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     // Quest system — now stored inside char
     completedStepIds: char.completedStepIds,
     questEnding: char.questEnding,
+    // Quest modals
+    questStepCompleted,
+    clearQuestStepCompleted: () => setQuestStepCompleted(null),
+    showEndingChoice,
+    clearShowEndingChoice: () => setShowEndingChoice(false),
     setShowSkillWindow,
     setShowJobChangeNPC,
     setAutoHpPercent,

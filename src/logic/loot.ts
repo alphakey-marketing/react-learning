@@ -1,6 +1,7 @@
 import { Equipment, EquipmentType, EquipmentRarity, WeaponType } from "../types/equipment";
 import { DROP_CHANCE } from "../data/constants";
 import { QUEST_ITEMS } from "../data/quests";
+import { getCorruptionModifiers, CorruptionModifiers } from "./corruption";
 
 // RO-inspired equipment names
 const EQUIPMENT_NAMES: Omit<Record<EquipmentType, string[]>, "weapon"> = {
@@ -86,6 +87,19 @@ function determineRarity(playerLevel: number): EquipmentRarity {
   if (rarityRoll > 0.40) return "epic";        // 45%
   if (rarityRoll > 0.10) return "rare";        // 30%
   return "uncommon";                           // 10%
+}
+
+// Corruption bias roll — gives a chance to skip to a higher rarity tier before normal table
+function determineRarityWithBias(
+  playerLevel: number,
+  bias: CorruptionModifiers["rarityBias"]
+): EquipmentRarity {
+  const biasRoll = Math.random() * 100;
+  if (bias.legendary && biasRoll < bias.legendary) return "legendary";
+  if (bias.epic && biasRoll < bias.epic) return "epic";
+  if (bias.rare && biasRoll < bias.rare) return "rare";
+  if (bias.uncommon && biasRoll < bias.uncommon) return "uncommon";
+  return determineRarity(playerLevel);
 }
 
 // Boss loot rarity based on zone
@@ -217,7 +231,7 @@ function generateStatsByType(
   return stats;
 }
 
-export function generateLoot(playerLevel: number): Equipment {
+export function generateLoot(playerLevel: number, corruptionLevel = 0): Equipment {
   // Random equipment type
   const types: EquipmentType[] = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
   const type = types[Math.floor(Math.random() * types.length)];
@@ -242,8 +256,8 @@ export function generateLoot(playerLevel: number): Equipment {
   // Refinement chance: 15% for +1 to +4
   const refinement = Math.random() > 0.85 ? Math.floor(Math.random() * 4) + 1 : 0;
   
-  // ZONE-PROGRESSIVE RARITY
-  const rarity = determineRarity(playerLevel);
+  // ZONE-PROGRESSIVE RARITY with corruption bias
+  const rarity = determineRarityWithBias(playerLevel, getCorruptionModifiers(corruptionLevel).rarityBias);
   
   // Generate base equipment
   const equipment: Equipment = {
@@ -266,7 +280,7 @@ export function generateLoot(playerLevel: number): Equipment {
   return equipment;
 }
 
-export function generateBossLoot(playerLevel: number): Equipment {
+export function generateBossLoot(playerLevel: number, corruptionLevel = 0): Equipment {
   const types: EquipmentType[] = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
   const type = types[Math.floor(Math.random() * types.length)];
   
@@ -287,8 +301,18 @@ export function generateBossLoot(playerLevel: number): Equipment {
   const baseValue = Math.floor(Math.random() * 10) + 5 + Math.floor(playerLevel * 2.5);
   const refinement = Math.floor(Math.random() * 5) + 3; // +3 to +7
   
-  // ZONE-PROGRESSIVE BOSS RARITY
-  const rarity = determineBossRarity(playerLevel);
+  // ZONE-PROGRESSIVE BOSS RARITY with corruption bias
+  const { rarityBias } = getCorruptionModifiers(corruptionLevel);
+  const bossBaseRarity = determineBossRarity(playerLevel);
+  // Boss rarity is already elevated — bias only upgrades if bias roll exceeds boss rarity
+  const rarityOrder: EquipmentRarity[] = ["common", "uncommon", "rare", "epic", "legendary"];
+  const biasRoll = Math.random() * 100;
+  let biasRarity: EquipmentRarity | null = null;
+  if (rarityBias.legendary && biasRoll < rarityBias.legendary) biasRarity = "legendary";
+  else if (rarityBias.epic && biasRoll < rarityBias.epic) biasRarity = "epic";
+  const rarity = (biasRarity && rarityOrder.indexOf(biasRarity) > rarityOrder.indexOf(bossBaseRarity))
+    ? biasRarity
+    : bossBaseRarity;
   
   const equipment: Equipment = {
     id: Date.now() + Math.random(),
