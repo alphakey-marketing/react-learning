@@ -34,7 +34,7 @@ import {
   checkQuestItemDrop,
 } from "../logic/loot";
 import { getCorruptionModifiers } from "../logic/corruption";
-import { QUEST_CHAINS, QuestEndingChoice, ENDING_CHOICES, isChainComplete } from "../data/questChains";
+import { QUEST_CHAINS, QuestEndingChoice, ENDING_CHOICES, isChainComplete, QUEST_CHAIN_ORDER } from "../data/questChains";
 import {
   KILLS_FOR_BOSS,
   BOSS_HP_MULTIPLIER,
@@ -690,8 +690,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   // Auto-show the ending choice modal when all quest chains are complete
   useEffect(() => {
     if (char.questEnding !== null || endingChoiceShownRef.current) return;
-    const chainIds = ["chain_birthmark", "chain_mountain", "chain_rite"];
-    const allComplete = chainIds.every(id => isChainComplete(id, char.completedStepIds));
+    const allComplete = QUEST_CHAIN_ORDER.every(id => isChainComplete(id, char.completedStepIds));
     if (allComplete) {
       endingChoiceShownRef.current = true;
       setShowEndingChoice(true);

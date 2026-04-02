@@ -109,6 +109,13 @@ export const QUEST_CHAINS: Omit<QuestChain, "isComplete">[] = [
   },
 ];
 
+// The canonical order in which quest chains unlock
+export const QUEST_CHAIN_ORDER: readonly string[] = [
+  "chain_birthmark",
+  "chain_mountain",
+  "chain_rite",
+];
+
 // Lookup by chain id
 export function getQuestChain(chainId: string): Omit<QuestChain, "isComplete"> | undefined {
   return QUEST_CHAINS.find((c) => c.id === chainId);

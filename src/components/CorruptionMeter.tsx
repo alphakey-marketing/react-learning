@@ -5,19 +5,21 @@ interface CorruptionMeterProps {
   corruptionLevel: number; // 0–100
 }
 
-function getCorruptionColor(level: number): string {
-  if (level < 20) return "#7c3aed";
-  if (level < 40) return "#8b3cf7";
-  if (level < 60) return "#9333ea";
-  if (level < 80) return "#a21caf";
-  return "#be123c";
-}
+const TIER_COLORS: Record<string, string> = {
+  Untouched: "#7c3aed",
+  Stirring: "#8b3cf7",
+  Marked: "#9333ea",
+  Bleeding: "#a21caf",
+  Unravelling: "#b91c5c",
+  Devoured: "#be123c",
+};
 
 export function CorruptionMeter({ corruptionLevel }: CorruptionMeterProps) {
   const clampedLevel = Math.max(0, Math.min(100, corruptionLevel));
   const displayLevel = Math.floor(clampedLevel);
-  const color = getCorruptionColor(clampedLevel);
-  const label = getCorruptionModifiers(clampedLevel).tierName;
+  const mods = getCorruptionModifiers(clampedLevel);
+  const label = mods.tierName;
+  const color = TIER_COLORS[label] ?? "#be123c";
 
   if (clampedLevel === 0) return null;
 

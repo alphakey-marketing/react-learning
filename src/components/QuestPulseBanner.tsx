@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { QUEST_CHAINS, isChainComplete, QuestEndingChoice } from "../data/questChains";
-
-interface QuestPulseBannerProps {
-  completedStepIds: Record<string, boolean>;
-  questEnding: QuestEndingChoice;
-  onOpenQuestLog: () => void;
-}
-
-const CHAIN_ORDER = ["chain_birthmark", "chain_mountain", "chain_rite"];
+import { QUEST_CHAINS, QUEST_CHAIN_ORDER, isChainComplete, QuestEndingChoice } from "../data/questChains";
 
 export function QuestPulseBanner({ completedStepIds, questEnding, onOpenQuestLog }: QuestPulseBannerProps) {
   const [isPulsing, setIsPulsing] = useState(false);
@@ -25,11 +17,11 @@ export function QuestPulseBanner({ completedStepIds, questEnding, onOpenQuestLog
   let activeChainIndex = -1;
   let activeStepIndex = -1;
 
-  for (let i = 0; i < CHAIN_ORDER.length; i++) {
-    const isUnlocked = i === 0 || isChainComplete(CHAIN_ORDER[i - 1], completedStepIds);
+  for (let i = 0; i < QUEST_CHAIN_ORDER.length; i++) {
+    const isUnlocked = i === 0 || isChainComplete(QUEST_CHAIN_ORDER[i - 1], completedStepIds);
     if (!isUnlocked) break;
 
-    const chain = QUEST_CHAINS.find(c => c.id === CHAIN_ORDER[i]);
+    const chain = QUEST_CHAINS.find(c => c.id === QUEST_CHAIN_ORDER[i]);
     if (!chain) continue;
 
     const stepIdx = chain.steps.findIndex(s => !completedStepIds[s.id]);
@@ -40,7 +32,7 @@ export function QuestPulseBanner({ completedStepIds, questEnding, onOpenQuestLog
     }
   }
 
-  const activeChain = activeChainIndex !== -1 ? QUEST_CHAINS.find(c => c.id === CHAIN_ORDER[activeChainIndex]) : null;
+  const activeChain = activeChainIndex !== -1 ? QUEST_CHAINS.find(c => c.id === QUEST_CHAIN_ORDER[activeChainIndex]) : null;
   const activeStep = activeChain ? activeChain.steps[activeStepIndex] : null;
 
   const bannerStyle: React.CSSProperties = {
