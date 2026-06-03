@@ -212,14 +212,16 @@ export function MiniLevelGame() {
 
   // P3.11: On orientation change, scroll the combat area back into view.
   useEffect(() => {
+    const orientation = screen.orientation;
+    if (!orientation) return;
     const handleOrientationChange = () => {
       setTimeout(() => {
         const combatEl = document.getElementById('game-container');
         if (combatEl) combatEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 300);
     };
-    screen.orientation?.addEventListener('change', handleOrientationChange);
-    return () => screen.orientation?.removeEventListener('change', handleOrientationChange);
+    orientation.addEventListener('change', handleOrientationChange);
+    return () => orientation.removeEventListener('change', handleOrientationChange);
   }, []);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const BGM_TRACKS: Record<string, string> = {
   town: "/audio/town.mp3",
@@ -62,14 +62,14 @@ export function useGameAudio() {
   };
 
   // P0: Call this once on the first user tap/click to unlock audio
-  const unlockAudio = () => {
+  const unlockAudio = useCallback(() => {
     if (userHasInteractedRef.current) return;
     userHasInteractedRef.current = true;
     const trackToPlay = pendingTrackRef.current || currentTrackRef.current;
     if (trackToPlay) {
       resetAndPlay(trackToPlay);
     }
-  };
+  }, []);
 
   const playSFX = (trackKey: string) => {
     if (isMutedRef.current) return;
