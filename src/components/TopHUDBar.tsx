@@ -80,7 +80,7 @@ export function TopHUDBar({ level, hp, maxHp, mp, maxMp }: TopHUDBarProps) {
         </div>
         <div
           style={{
-            fontSize: "9px",
+            fontSize: "11px",
             color: "#9ca3af",
             marginTop: "1px",
             textAlign: "right",
@@ -114,7 +114,7 @@ export function TopHUDBar({ level, hp, maxHp, mp, maxMp }: TopHUDBarProps) {
         </div>
         <div
           style={{
-            fontSize: "9px",
+            fontSize: "11px",
             color: "#9ca3af",
             marginTop: "1px",
             textAlign: "right",

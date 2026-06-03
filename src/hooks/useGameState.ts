@@ -1487,6 +1487,21 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     return () => clearInterval(id);
   }, [currentZoneId]);
 
+  // P0: Prevent death-on-resume when tab becomes visible again.
+  // We only reset the enemy attack timestamp; we do NOT stop timers because
+  // the intervals keep running anyway in hidden tabs (they just tick less
+  // accurately). Resetting the reference is enough to prevent a burst of
+  // "catch-up" attacks the moment the player returns.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        lastEnemyAttackTimeRef.current = Date.now();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   function travelToZone(zoneId: number) {
     const targetZone = ZONES.find((z) => z.id === zoneId);
     if (!targetZone || !unlockedZoneIds.includes(zoneId)) {

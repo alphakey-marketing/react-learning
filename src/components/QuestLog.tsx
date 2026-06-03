@@ -83,7 +83,7 @@ export function QuestLog({
           borderRadius: "16px 16px 0 0",
           borderTop: "1px solid rgba(139,92,246,0.4)",
           zIndex: 1201,
-          padding: "16px 12px 80px",
+          padding: "16px 12px calc(80px + env(safe-area-inset-bottom, 0px))",
         }}
         onClick={e => e.stopPropagation()}
       >

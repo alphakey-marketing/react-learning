@@ -98,6 +98,7 @@ export function SkillWindow({
           border: "2px solid #3b82f6",
           borderRadius: "12px",
           padding: "20px",
+          paddingBottom: "calc(20px + env(safe-area-inset-bottom, 0px))",
           maxWidth: "600px",
           width: "90%",
           maxHeight: "80vh",

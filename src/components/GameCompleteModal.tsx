@@ -26,7 +26,7 @@ export function GameCompleteModal({ character, playTimeMs, onClose }: GameComple
     background: "linear-gradient(135deg, #1e3a8a 0%, #312e81 100%)",
     border: "4px solid #fbbf24",
     borderRadius: "16px",
-    padding: "40px",
+    padding: "clamp(20px, 5vw, 40px)",
     maxWidth: "600px",
     width: "100%",
     color: "white",
@@ -71,7 +71,7 @@ export function GameCompleteModal({ character, playTimeMs, onClose }: GameComple
         <h1
           style={{
             margin: "0 0 10px 0",
-            fontSize: "42px",
+            fontSize: "clamp(24px, 8vw, 42px)",
             color: "#fbbf24",
             fontWeight: "bold",
             textShadow: "0 2px 4px rgba(0,0,0,0.5)",
@@ -98,7 +98,7 @@ export function GameCompleteModal({ character, playTimeMs, onClose }: GameComple
             The Void Dimension has been conquered, and peace has returned to the realm. Your journey from a humble Novice to a legendary hero will be remembered for generations!
           </p>
           
-          <div style={{ display: "flex", justifyContent: "center", gap: "20px", fontSize: "18px" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: "20px", fontSize: "18px", flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <span style={{ color: "#9ca3af", fontSize: "12px", textTransform: "uppercase" }}>Final Level</span>
               <span style={{ fontWeight: "bold", color: "#fbbf24" }}>Lv.{character.level}</span>

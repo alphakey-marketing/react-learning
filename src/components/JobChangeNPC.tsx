@@ -283,6 +283,7 @@ export function JobChangeNPC({
           border: "2px solid #fbbf24",
           borderRadius: "12px",
           padding: "30px",
+          paddingBottom: "calc(30px + env(safe-area-inset-bottom, 0px))",
           maxWidth: "600px",
           width: "90%",
           color: "white",

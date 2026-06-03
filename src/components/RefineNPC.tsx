@@ -156,6 +156,7 @@ export function RefineNPC({ character, inventory, equipped, onRefine, onClose, e
         display: "flex",
         flexDirection: "column",
         boxShadow: "0 0 30px rgba(251, 191, 36, 0.2)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}>
         
         {/* Header */}

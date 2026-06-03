@@ -28,6 +28,7 @@ import { useGameState } from "./hooks/useGameState";
 import { useFloatingText } from "./hooks/useFloatingText";
 import { useItemDropAnimation } from "./hooks/useItemDropAnimation";
 import { useGameAudio } from "./hooks/useGameAudio";
+import { useIsMobile } from "./hooks/useIsMobile";
 import { canChangeJob } from "./data/jobs";
 import { useEffect, useState, useRef } from "react";
 import { BottomNavBar, MobileTab } from "./components/BottomNavBar";
@@ -44,7 +45,7 @@ export function MiniLevelGame() {
   const { droppingItems, addDroppingItem, removeDroppedItem } = useItemDropAnimation();
   const audio = useGameAudio();
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<MobileTab>('combat');
   const [newItemBadge, setNewItemBadge] = useState(0);
   const [showRefineNPC, setShowRefineNPC] = useState(false);
@@ -143,19 +144,18 @@ export function MiniLevelGame() {
       }
     },
     onEnemyDamageDealt: (damage: number) => {
-      const windowCenterX = window.innerWidth / 2;
       const randomOffset = Math.random() * 30 - 15;
       if (damage === 0) {
         addFloatingText(`✨ Dodged!`, {
           color: '#34d399',
-          x: (windowCenterX + 200) + randomOffset,
-          y: (window.innerHeight * 0.4) + randomOffset,
+          x: undefined,
+          y: undefined,
         });
       } else {
         addFloatingText(`-${damage}`, {
           color: '#ff6b6b',
-          x: (windowCenterX + 200) + randomOffset,
-          y: (window.innerHeight * 0.4) + randomOffset,
+          x: undefined,
+          y: undefined,
         });
       }
     },
@@ -202,10 +202,24 @@ export function MiniLevelGame() {
 
   const canChangeJobNow = canChangeJob(game.char.jobClass, game.char.jobLevel);
 
+  // P0/P3.14: Unlock audio and retry pending BGM on first user gesture.
+  // Mobile browsers block autoplay until a real user interaction occurs.
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
+    const unlock = () => audio.unlockAudio();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    return () => window.removeEventListener('pointerdown', unlock);
+  }, [audio.unlockAudio]);
+
+  // P3.11: On orientation change, scroll the combat area back into view.
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      setTimeout(() => {
+        const combatEl = document.getElementById('game-container');
+        if (combatEl) combatEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    };
+    screen.orientation?.addEventListener('change', handleOrientationChange);
+    return () => screen.orientation?.removeEventListener('change', handleOrientationChange);
   }, []);
 
   useEffect(() => {
@@ -276,7 +290,7 @@ export function MiniLevelGame() {
           onClose={() => {
             setShowTutorial(false);
             setActiveTab('combat');
-            audio.playBGM(game.currentZoneId === 0 ? "town" : "fight");
+            audio.resetAndPlay(game.currentZoneId === 0 ? "town" : "fight");
           }}
           onBeforeStep={(stepIndex) => {
             if (!isMobile) return;

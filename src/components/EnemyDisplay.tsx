@@ -1,5 +1,6 @@
 import { Enemy } from "../types/enemy";
 import { useState, useEffect, useMemo } from "react";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 interface EnemyDisplayProps {
   enemy: Enemy;
@@ -30,7 +31,7 @@ export function EnemyDisplay({
   const isLowHp = hpPercent < 30;
   
   const [enemyAttackProgress, setEnemyAttackProgress] = useState(0);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const isMobile = useIsMobile();
   const [isHit, setIsHit] = useState(false);
   const [prevHp, setPrevHp] = useState(enemy.hp);
 
@@ -80,11 +81,11 @@ export function EnemyDisplay({
     setPrevHp(enemy.hp);
   }, [enemy.hp, prevHp]);
 
+  // Reset avatar state when enemy changes (new enemy = new avatar URL)
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, []);
+    setAvatarLoaded(false);
+    setAvatarError(false);
+  }, [enemy.name]);
 
   useEffect(() => {
     if (inTown || enemy.attackSpeed <= 0) {
@@ -105,7 +106,7 @@ export function EnemyDisplay({
       } else {
         setEnemyAttackProgress(progress);
       }
-    }, 50);
+    }, 100);
 
     return () => clearInterval(interval);
   }, [enemy.attackSpeed, inTown]);
@@ -117,6 +118,9 @@ export function EnemyDisplay({
     }
     return `https://api.dicebear.com/7.x/adventurer/svg?seed=${enemy.name}&backgroundColor=transparent`;
   };
+
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   if (inTown) {
     return (
@@ -186,10 +190,27 @@ export function EnemyDisplay({
         position: "relative",
         zIndex: 1,
       }}>
+        {/* P3: Placeholder shown while DiceBear avatar loads */}
+        {!avatarLoaded && !avatarError && (
+          <div style={{
+            height: isBoss ? (isMobile ? "70px" : "120px") : (isMobile ? "55px" : "100px"),
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: isBoss ? (isMobile ? "40px" : "70px") : (isMobile ? "32px" : "60px"),
+            opacity: 0.6,
+          }}>
+            {isBoss ? "💀" : "👾"}
+          </div>
+        )}
         <img 
           src={getAvatarUrl()} 
           alt={enemy.name}
+          loading="lazy"
+          onLoad={() => setAvatarLoaded(true)}
+          onError={() => setAvatarError(true)}
           style={{
+            display: avatarLoaded ? undefined : "none",
             height: isBoss ? (isMobile ? "70px" : "120px") : (isMobile ? "55px" : "100px"),
             filter: isHit ? "brightness(2) sepia(1) hue-rotate(300deg) saturate(10000%)" : "drop-shadow(0 10px 15px rgba(0,0,0,0.7))",
             transform: isHit ? "scale(0.95) translateX(5px)" : (isLowHp ? "scale(1)" : "scale(1) translateY(0)"),
@@ -402,6 +423,9 @@ export function EnemyDisplay({
             }}
             onMouseLeave={(e) => {
               if (canAttack) e.currentTarget.style.transform = "translateY(0)";
+            }}
+            onTouchEnd={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
             }}
           >
             ⚔️ ATTACK

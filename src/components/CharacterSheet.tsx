@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Character } from '../types/character';
 import { getAvailableStatPoints } from '../logic/progression';
 
@@ -20,6 +20,12 @@ interface CharacterSheetProps {
 
 export function CharacterSheet({ character, onAllocateStat, combatStats }: CharacterSheetProps) {
   const availablePoints = getAvailableStatPoints(character);
+  // P2.9: track which tooltip is open (supports both hover on desktop & tap on mobile)
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  const toggleTooltip = (id: string) => {
+    setActiveTooltip(prev => (prev === id ? null : id));
+  };
 
   const renderStatRow = (
     stat: keyof Character['stats'],
@@ -30,11 +36,17 @@ export function CharacterSheet({ character, onAllocateStat, combatStats }: Chara
     // Highlight when a stat reaches a major power spike (multiple of 10)
     const isSpike = value > 1 && value % 10 === 0;
     const isNearSpike = value % 10 === 9;
+    const tooltipId = `stat-${stat}`;
+    const isOpen = activeTooltip === tooltipId;
 
     return (
       <div className="flex items-center justify-between py-1 group relative">
         <div className="flex items-center gap-2">
-          <span className="font-medium w-12 text-gray-300" title={tooltip}>
+          <span
+            className="font-medium w-12 text-gray-300 cursor-help"
+            title={tooltip}
+            onClick={() => toggleTooltip(tooltipId)}
+          >
             {label}
           </span>
           <span className={`w-8 text-right font-mono ${isSpike ? 'text-yellow-400 font-bold' : ''}`}>
@@ -67,8 +79,8 @@ export function CharacterSheet({ character, onAllocateStat, combatStats }: Chara
           </button>
         )}
 
-        {/* Custom Tooltip */}
-        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-gray-900 border border-gray-700 rounded shadow-xl text-xs text-gray-300 z-10">
+        {/* Tooltip — visible on hover (desktop) or tap (mobile) */}
+        <div className={`absolute left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 border border-gray-700 rounded shadow-xl text-xs text-gray-300 z-10 ${isOpen ? 'block' : 'hidden group-hover:block'}`}>
           {tooltip}
           {['str', 'int', 'dex'].includes(stat) && (
             <div className="mt-1 pt-1 border-t border-gray-700 text-blue-400 font-medium">
@@ -141,13 +153,16 @@ export function CharacterSheet({ character, onAllocateStat, combatStats }: Chara
             <div className="my-2 border-t border-gray-800 pt-2"></div>
             
             <div className="flex justify-between group relative">
-              <span className="text-gray-400 cursor-help border-b border-gray-600 border-dotted">ATK</span>
+              <span
+                className="text-gray-400 cursor-help border-b border-gray-600 border-dotted"
+                onClick={() => toggleTooltip('atk')}
+              >ATK</span>
               <span className="font-mono text-white">
                 {combatStats.minAtk === combatStats.maxAtk 
                   ? combatStats.maxAtk 
                   : `${combatStats.minAtk} ~ ${combatStats.maxAtk}`}
               </span>
-              <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block w-48 p-2 bg-gray-800 text-xs text-gray-300 rounded shadow-lg z-10">
+              <div className={`absolute right-0 bottom-full mb-1 w-48 p-2 bg-gray-800 text-xs text-gray-300 rounded shadow-lg z-10 ${activeTooltip === 'atk' ? 'block' : 'hidden group-hover:block'}`}>
                 Physical Damage. High DEX reduces the gap between minimum and maximum damage.
               </div>
             </div>
@@ -158,11 +173,14 @@ export function CharacterSheet({ character, onAllocateStat, combatStats }: Chara
             </div>
             
             <div className="flex justify-between group relative">
-              <span className="text-gray-400 cursor-help border-b border-gray-600 border-dotted">DEF</span>
+              <span
+                className="text-gray-400 cursor-help border-b border-gray-600 border-dotted"
+                onClick={() => toggleTooltip('def')}
+              >DEF</span>
               <span className="font-mono text-orange-300">
                 {combatStats.softDef} + {combatStats.hardDefPercent}%
               </span>
-              <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block w-48 p-2 bg-gray-800 text-xs text-gray-300 rounded shadow-lg z-10">
+              <div className={`absolute right-0 bottom-full mb-1 w-48 p-2 bg-gray-800 text-xs text-gray-300 rounded shadow-lg z-10 ${activeTooltip === 'def' ? 'block' : 'hidden group-hover:block'}`}>
                 Reduces physical damage. Left number (from VIT) subtracts flat damage. Right number (from Armor) reduces damage by a percentage.
               </div>
             </div>
