@@ -23,32 +23,30 @@ export function CombatHUD({
   inTown,
 }: CombatHUDProps) {
   const [isMinimized, setIsMinimized] = useState(false);
-  
+
   if (inTown) return null;
 
   const hpPercent = (character.hp / character.maxHp) * 100;
   const mpPercent = (character.mp / character.maxMp) * 100;
   const isHpLow = hpPercent < 30;
 
-  // Minimized view - just show compact bars and toggle button
   if (isMinimized) {
     return (
       <div
         style={{
           position: "fixed",
-          bottom: "20px",
-          left: "20px",
+          bottom: "76px",
+          left: "10px",
           background: "rgba(17, 24, 39, 0.95)",
           border: "2px solid #374151",
           borderRadius: "12px",
           padding: "8px",
-          minWidth: "120px",
+          width: "130px",
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)",
           backdropFilter: "blur(10px)",
           zIndex: 999,
         }}
       >
-        {/* Compact HP Bar */}
         <div style={{ marginBottom: "6px" }}>
           <div
             style={{
@@ -75,8 +73,6 @@ export function CombatHUD({
             />
           </div>
         </div>
-        
-        {/* Compact MP Bar */}
         <div style={{ marginBottom: "6px" }}>
           <div
             style={{
@@ -98,8 +94,6 @@ export function CombatHUD({
             />
           </div>
         </div>
-        
-        {/* Expand Button */}
         <button
           onClick={() => setIsMinimized(false)}
           style={{
@@ -124,60 +118,60 @@ export function CombatHUD({
     <div
       style={{
         position: "fixed",
-        bottom: "20px",
-        left: "20px",
+        bottom: "76px",
+        left: "10px",
         background: "rgba(17, 24, 39, 0.95)",
         border: "2px solid #374151",
         borderRadius: "12px",
-        padding: "15px",
-        minWidth: "280px",
-        maxWidth: "90vw", // Mobile responsive
+        padding: "12px",
+        width: "min(280px, calc(50vw - 16px))",
         boxShadow: "0 4px 20px rgba(0, 0, 0, 0.5)",
         backdropFilter: "blur(10px)",
         zIndex: 999,
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
       }}
     >
-      {/* Minimize Button */}
       <button
         onClick={() => setIsMinimized(true)}
         style={{
           position: "absolute",
-          top: "8px",
-          right: "8px",
+          top: "6px",
+          right: "6px",
           background: "#374151",
           color: "#9ca3af",
           border: "none",
           borderRadius: "4px",
-          padding: "4px 8px",
+          padding: "2px 6px",
           fontSize: "12px",
           cursor: "pointer",
           fontWeight: "bold",
         }}
-        title="Minimize"
       >
         ➖
       </button>
-      
+
       {/* HP Bar */}
-      <div style={{ marginBottom: "12px" }}>
+      <div>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             marginBottom: "4px",
-            fontSize: "12px",
+            fontSize: "10px",
             fontWeight: "bold",
           }}
         >
           <span style={{ color: "#ef4444" }}>❤️ HP</span>
           <span style={{ color: "#fff" }}>
-            {character.hp} / {character.maxHp} ({Math.floor(hpPercent)}%)
+            {character.hp}/{character.maxHp}
           </span>
         </div>
         <div
           style={{
             width: "100%",
-            height: "24px",
+            height: "16px",
             background: "#1f2937",
             borderRadius: "6px",
             overflow: "hidden",
@@ -216,25 +210,25 @@ export function CombatHUD({
       </div>
 
       {/* MP Bar */}
-      <div style={{ marginBottom: "12px" }}>
+      <div>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             marginBottom: "4px",
-            fontSize: "12px",
+            fontSize: "11px",
             fontWeight: "bold",
           }}
         >
           <span style={{ color: "#3b82f6" }}>💙 MP</span>
           <span style={{ color: "#fff" }}>
-            {character.mp} / {character.maxMp} ({Math.floor(mpPercent)}%)
+            {character.mp}/{character.maxMp}
           </span>
         </div>
         <div
           style={{
             width: "100%",
-            height: "24px",
+            height: "16px",
             background: "#1f2937",
             borderRadius: "6px",
             overflow: "hidden",
@@ -267,13 +261,14 @@ export function CombatHUD({
       </div>
 
       {/* Quick Potion Buttons */}
-      <div style={{ display: "flex", gap: "8px" }}>
+      <div style={{ display: "flex", gap: "6px" }}>
         <button
           onClick={onUseHpPotion}
           disabled={hpPotions <= 0 || character.hp >= character.maxHp}
           style={{
             flex: 1,
-            padding: "10px",
+            minHeight: "44px",
+            padding: "6px",
             background:
               hpPotions > 0 && character.hp < character.maxHp
                 ? "linear-gradient(to bottom, #ef4444, #dc2626)"
@@ -281,7 +276,7 @@ export function CombatHUD({
             color: "white",
             border: "none",
             borderRadius: "6px",
-            fontSize: "13px",
+            fontSize: "10px",
             fontWeight: "bold",
             cursor:
               hpPotions > 0 && character.hp < character.maxHp
@@ -292,18 +287,20 @@ export function CombatHUD({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "4px",
+            justifyContent: "center",
+            gap: "2px",
           }}
         >
-          <span>🍖 HP Pot</span>
-          <span style={{ fontSize: "11px" }}>({hpPotions})</span>
+          <span>🍖</span>
+          <span>({hpPotions})</span>
         </button>
         <button
           onClick={onUseMpPotion}
           disabled={mpPotions <= 0 || character.mp >= character.maxMp}
           style={{
             flex: 1,
-            padding: "10px",
+            minHeight: "44px",
+            padding: "6px",
             background:
               mpPotions > 0 && character.mp < character.maxMp
                 ? "linear-gradient(to bottom, #3b82f6, #2563eb)"
@@ -311,7 +308,7 @@ export function CombatHUD({
             color: "white",
             border: "none",
             borderRadius: "6px",
-            fontSize: "13px",
+            fontSize: "11px",
             fontWeight: "bold",
             cursor:
               mpPotions > 0 && character.mp < character.maxMp
@@ -322,11 +319,12 @@ export function CombatHUD({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: "4px",
+            justifyContent: "center",
+            gap: "2px",
           }}
         >
-          <span>🧪 MP Pot</span>
-          <span style={{ fontSize: "11px" }}>({mpPotions})</span>
+          <span>🧪</span>
+          <span>({mpPotions})</span>
         </button>
       </div>
 

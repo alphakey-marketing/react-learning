@@ -26,7 +26,7 @@ To prevent overwhelming new players, systems are introduced progressively. Playe
 ### ✅ Phase 1: The Dopamine Hook (Levels 1-20)
 *Focus: Visual rewards, simple numbers, and immediate gratification.*
 - ✅ **Commit 1:** Loot Explosion System - Visual feedback & physics drops
-- ✅ **Commit 2:** Achievement System - Short-term goals & milestones
+- ✅ **Commit 2:** Quests - Short-term goals & milestones
 
 ### 🚧 Phase 2: Power Up & Gamble (Levels 20-40) [CURRENT]
 *Focus: Easy-to-understand power boosts without complex math.*

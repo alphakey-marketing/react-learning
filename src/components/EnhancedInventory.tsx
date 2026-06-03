@@ -7,487 +7,685 @@ interface EnhancedInventoryProps {
   equipped: EquippedItems;
   onEquip: (item: Equipment) => void;
   onUnequip?: (slotKey: keyof EquippedItems) => void;
+  hpPotions?: number;
+  mpPotions?: number;
+  onUseHpPotion?: () => void;
+  onUseMpPotion?: () => void;
 }
 
+type CategoryFilter = "all" | "equipment" | "consumables" | "quest";
 type SortOption = "type" | "rarity" | "power" | "name";
 
-export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: EnhancedInventoryProps) {
+const EQUIPMENT_TYPES = ["weapon", "armor", "head", "garment", "footgear", "accessory"];
+
+const CATEGORY_TABS: { id: CategoryFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "equipment", label: "Equipment" },
+  { id: "consumables", label: "Consumables" },
+  { id: "quest", label: "Quest" },
+];
+
+// Synthetic IDs that will never collide with real loot IDs
+const HP_POTION_ID = -1;
+const MP_POTION_ID = -2;
+
+function buildPotionItems(hpPotions: number, mpPotions: number): Equipment[] {
+  const items: Equipment[] = [];
+  if (hpPotions > 0) {
+    items.push({
+      id: HP_POTION_ID,
+      name: `HP Potion ×${hpPotions}`,
+      type: "consumable",
+      rarity: "common",
+      hpRestore: 1,
+      quantity: hpPotions,
+    });
+  }
+  if (mpPotions > 0) {
+    items.push({
+      id: MP_POTION_ID,
+      name: `MP Potion ×${mpPotions}`,
+      type: "consumable",
+      rarity: "common",
+      mpRestore: 1,
+      quantity: mpPotions,
+    });
+  }
+  return items;
+}
+
+export function EnhancedInventory({
+  inventory,
+  equipped,
+  onEquip,
+  onUnequip,
+  hpPotions = 0,
+  mpPotions = 0,
+  onUseHpPotion,
+  onUseMpPotion,
+}: EnhancedInventoryProps) {
+  const [category, setCategory] = useState<CategoryFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("type");
   const [selectedItem, setSelectedItem] = useState<Equipment | null>(null);
   const [selectedEquippedSlot, setSelectedEquippedSlot] = useState<keyof EquippedItems | null>(null);
-  
-  // Sort inventory
-  const sortedInventory = [...inventory].sort((a, b) => {
+  const [showDetail, setShowDetail] = useState(false);
+
+  // Merge synthetic potion entries with real inventory
+  const potionItems = buildPotionItems(hpPotions, mpPotions);
+  const fullInventory = [...potionItems, ...inventory];
+
+  const filteredInventory = fullInventory.filter(item => {
+    if (category === "all") return true;
+    if (category === "equipment") return EQUIPMENT_TYPES.includes(item.type);
+    if (category === "consumables") return item.type === "consumable";
+    if (category === "quest") return item.type === "quest";
+    return false;
+  });
+
+  const sortedInventory = [...filteredInventory].sort((a, b) => {
     switch (sortBy) {
-      case "type":
-        return a.type.localeCompare(b.type);
-      case "rarity":
-        const rarityOrder = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
-        return (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0);
-      case "power":
-        return calculateGearScore(b) - calculateGearScore(a);
-      case "name":
-        return a.name.localeCompare(b.name);
-      default:
-        return 0;
+      case "type": return a.type.localeCompare(b.type);
+      case "rarity": {
+        const order = { common: 0, uncommon: 1, rare: 2, epic: 3, legendary: 4 };
+        return (order[b.rarity] || 0) - (order[a.rarity] || 0);
+      }
+      case "power": return calculateGearScore(b) - calculateGearScore(a);
+      case "name": return a.name.localeCompare(b.name);
+      default: return 0;
     }
   });
-  
-  // Equipment slots display
+
   const slots = [
     { key: "weapon" as keyof EquippedItems, label: "Weapon", icon: "⚔️" },
     { key: "armor" as keyof EquippedItems, label: "Armor", icon: "🛡️" },
     { key: "head" as keyof EquippedItems, label: "Head", icon: "🎩" },
     { key: "garment" as keyof EquippedItems, label: "Garment", icon: "🧥" },
     { key: "footgear" as keyof EquippedItems, label: "Footgear", icon: "👢" },
-    { key: "accessory1" as keyof EquippedItems, label: "Accessory 1", icon: "💍" },
-    { key: "accessory2" as keyof EquippedItems, label: "Accessory 2", icon: "💍" },
+    { key: "accessory1" as keyof EquippedItems, label: "Acc 1", icon: "💍" },
+    { key: "accessory2" as keyof EquippedItems, label: "Acc 2", icon: "💍" },
   ];
-  
-  const handleEquipClick = () => {
-    if (selectedItem) {
-      // If we selected a specific accessory slot to replace
-      if (selectedItem.type === "accessory" && selectedEquippedSlot) {
-        // We pass a special flag or just rely on the onEquip logic in useGameState
-        // (We will update useGameState to handle a targetSlot parameter)
-        onEquip({ ...selectedItem, targetSlot: selectedEquippedSlot } as any);
-      } else {
-        onEquip(selectedItem);
-      }
-      setSelectedItem(null);
-      setSelectedEquippedSlot(null);
-    }
-  };
-  
-  const handleUnequipClick = (slotKey: keyof EquippedItems, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onUnequip && equipped[slotKey]) {
-      onUnequip(slotKey);
-    }
-  };
-  
+
   const getCurrentlyEquipped = (item: Equipment): Equipment | null => {
     if (item.type === "accessory") {
-      // If a specific slot is targeted, return that one
-      if (selectedEquippedSlot) {
-        return equipped[selectedEquippedSlot] || null;
-      }
-      // Otherwise default to checking accessory1 first, then 2
+      if (selectedEquippedSlot) return equipped[selectedEquippedSlot] || null;
       return equipped.accessory1 || equipped.accessory2 || null;
     }
-    return equipped[item.type as keyof EquippedItems];
+    return equipped[item.type as keyof EquippedItems] || null;
   };
-  
+
+  const handleItemTap = (item: Equipment) => {
+    setSelectedItem(item);
+    setSelectedEquippedSlot(null);
+    setShowDetail(true);
+  };
+
+  const handleEquipClick = () => {
+    if (!selectedItem) return;
+    if (selectedItem.type === "accessory" && selectedEquippedSlot) {
+      onEquip({ ...selectedItem, targetSlot: selectedEquippedSlot } as any);
+    } else {
+      onEquip(selectedItem);
+    }
+    setSelectedItem(null);
+    setSelectedEquippedSlot(null);
+    setShowDetail(false);
+  };
+
+  // Handle "use" action for consumables
+  const handleUseConsumable = (item: Equipment) => {
+    if (item.id === HP_POTION_ID && onUseHpPotion) {
+      onUseHpPotion();
+    } else if (item.id === MP_POTION_ID && onUseMpPotion) {
+      onUseMpPotion();
+    }
+    setShowDetail(false);
+    setSelectedItem(null);
+  };
+
+  const isConsumable = (item: Equipment) => item.type === "consumable";
+
+  const isUpgrade = (item: Equipment) => {
+    if (isConsumable(item)) return false;
+    if (item.type === "accessory") {
+      const acc1Score = equipped.accessory1 ? calculateGearScore(equipped.accessory1) : 0;
+      const acc2Score = equipped.accessory2 ? calculateGearScore(equipped.accessory2) : 0;
+      return calculateGearScore(item) > acc1Score || calculateGearScore(item) > acc2Score;
+    }
+    const cur = equipped[item.type as keyof EquippedItems];
+    return calculateGearScore(item) > (cur ? calculateGearScore(cur) : 0);
+  };
+
   return (
-    <div style={{
-      background: "#2a2a2a",
-      padding: "12px",
-      borderRadius: "8px",
-      marginBottom: "15px",
-      border: "1px solid #444",
-    }}>
-      {/* Header */}
-      <h3 style={{
-        margin: "0 0 12px 0",
-        fontSize: "15px",
-        color: "#fbbf24",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}>
-        <span>🎒 Equipment & Inventory</span>
-        <span style={{ fontSize: "11px", color: "#9ca3af" }}>({inventory.length})</span>
-      </h3>
-      
-      {/* Equipment Slots - RO Style */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr)",
-        gap: "6px",
-        marginBottom: "12px",
-      }}>
-        {slots.map((slot) => {
+    <>
+      {/* Equipped slots summary — compact horizontal scroll */}
+      <div
+        style={{
+          display: "flex",
+          gap: "6px",
+          overflowX: "auto",
+          paddingBottom: "6px",
+          marginBottom: "8px",
+          WebkitOverflowScrolling: "touch",
+          touchAction: "pan-x",
+        }}
+      >
+        {slots.map(slot => {
           const item = equipped[slot.key];
-          const rarityColor = item ? getRarityColor(item.rarity) : "#444";
-          const gearScore = item ? calculateGearScore(item) : 0;
-          const displayIcon = item ? getEquipmentIcon(item) : slot.icon;
-          
+          const rarityColor = item ? getRarityColor(item.rarity) : "#334155";
           return (
             <div
               key={slot.key}
               style={{
-                background: "#1a1a1a",
-                padding: "8px",
-                borderRadius: "4px",
-                border: `1px solid ${item ? rarityColor : "#444"}`,
+                flexShrink: 0,
+                background: "#1e293b",
+                border: `1px solid ${rarityColor}`,
+                borderRadius: "8px",
+                padding: "5px 8px",
                 fontSize: "10px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-                position: "relative",
+                minWidth: "70px",
+                textAlign: "center",
               }}
             >
-              {/* Combat Power Badge - Top Left */}
-              {item && (
-                <span style={{ 
-                  position: "absolute",
-                  top: "4px",
-                  left: "4px",
-                  background: "#333", 
-                  padding: "2px 6px", 
-                  borderRadius: "4px", 
-                  color: "#fbbf24",
-                  fontSize: "10px",
-                  fontWeight: "bold",
-                  border: "1px solid #444",
-                  zIndex: 1,
-                }}>
-                  ⭐ {gearScore}
-                </span>
-              )}
-              
-              {/* Unequip Button - Top Right */}
-              {item && onUnequip && (
-                <button
-                  onClick={(e) => handleUnequipClick(slot.key, e)}
-                  style={{
-                    position: "absolute",
-                    top: "4px",
-                    right: "4px",
-                    width: "20px",
-                    height: "20px",
-                    background: "transparent",
-                    border: "1px solid #dc2626",
-                    borderRadius: "4px",
-                    color: "#dc2626",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.2s",
-                    lineHeight: "1",
-                    padding: "0",
-                    zIndex: 2,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "#dc2626";
-                    e.currentTarget.style.color = "white";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "#dc2626";
-                  }}
-                  title={`Unequip ${item.name}`}
-                >
-                  ×
-                </button>
-              )}
-              
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "20px" }}>
-                <span style={{ color: "#9ca3af", fontSize: "10px", fontWeight: "bold" }}>
-                  {displayIcon} {slot.label}
-                </span>
+              <div style={{ fontSize: "14px", marginBottom: "2px" }}>
+                {item ? getEquipmentIcon(item) : slot.icon}
               </div>
-              
-              {item ? (
-                <div style={{ color: rarityColor, fontWeight: "500", fontSize: "11px" }}>
+              <div style={{ color: "#64748b", fontSize: "9px" }}>{slot.label}</div>
+              {item && (
+                <div
+                  style={{
+                    color: getRarityColor(item.rarity),
+                    fontSize: "9px",
+                    fontWeight: "bold",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {item.name}
-                  {item.refinement !== undefined && item.refinement > 0 && (
-                    <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
-                  )}
                 </div>
-              ) : (
-                <div style={{ color: "#666", fontStyle: "italic", fontSize: "11px" }}>Empty</div>
+              )}
+              {!item && (
+                <div style={{ color: "#475569", fontSize: "9px", fontStyle: "italic" }}>Empty</div>
               )}
             </div>
           );
         })}
       </div>
-      
-      {/* Inventory Controls */}
-      <div style={{
-        display: "flex",
-        gap: "4px",
-        marginBottom: "8px",
-        fontSize: "10px",
-      }}>
-        <span style={{ color: "#9ca3af", marginRight: "4px", alignSelf: "center" }}>Sort:</span>
-        {(["type", "rarity", "power", "name"] as SortOption[]).map((option) => (
+
+      {/* Section header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "8px",
+        }}
+      >
+        <h3 style={{ margin: 0, fontSize: "13px", color: "#fbbf24" }}>
+          🎒 Inventory
+        </h3>
+        <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+          {fullInventory.length} items
+        </span>
+      </div>
+
+      {/* Category filter tabs */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0",
+          marginBottom: "8px",
+          borderBottom: "1px solid #1e293b",
+        }}
+      >
+        {CATEGORY_TABS.map(tab => (
           <button
-            key={option}
-            onClick={() => setSortBy(option)}
+            key={tab.id}
+            onClick={() => setCategory(tab.id)}
             style={{
-              padding: "4px 8px",
-              background: sortBy === option ? "#3b82f6" : "#444",
-              color: "white",
+              flex: 1,
+              padding: "8px 4px",
+              background: "transparent",
+              color: category === tab.id ? "#fbbf24" : "#64748b",
               border: "none",
-              borderRadius: "4px",
+              borderBottom: category === tab.id ? "2px solid #fbbf24" : "2px solid transparent",
               cursor: "pointer",
-              textTransform: "capitalize",
-              fontSize: "10px",
-              fontWeight: sortBy === option ? "bold" : "normal",
+              fontSize: "12px",
+              fontWeight: category === tab.id ? "bold" : "normal",
+              touchAction: "manipulation",
+              transition: "color 0.15s",
             }}
           >
-            {option}
+            {tab.label}
           </button>
         ))}
       </div>
-      
-      {/* Inventory Grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "8px",
-        maxHeight: "220px",
-        overflowY: "auto",
-        padding: "6px",
-        background: "#1a1a1a",
-        borderRadius: "4px",
-      }}>
+
+      {/* Sort bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          marginBottom: "8px",
+        }}
+      >
+        <span style={{ fontSize: "9px", color: "#64748b" }}>Sort:</span>
+        {(["type", "rarity", "power", "name"] as SortOption[]).map(opt => (
+          <button
+            key={opt}
+            onClick={() => setSortBy(opt)}
+            style={{
+              padding: "3px 8px",
+              background: sortBy === opt ? "#1d4ed8" : "#1e293b",
+              color: sortBy === opt ? "white" : "#64748b",
+              border: "1px solid " + (sortBy === opt ? "#3b82f6" : "#334155"),
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "10px",
+              textTransform: "capitalize",
+              touchAction: "manipulation",
+            }}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+
+      {/* Item list */}
+      <div>
         {sortedInventory.length === 0 ? (
-          <div style={{ 
-            gridColumn: "1 / -1",
-            color: "#666", 
-            fontSize: "12px",
-            textAlign: "center",
-            padding: "20px",
-          }}>
-            No items in inventory
+          <div
+            style={{
+              color: "#475569",
+              textAlign: "center",
+              padding: "40px 20px",
+              fontSize: "14px",
+            }}
+          >
+            {category === "all" ? "No items in inventory" : `No ${category} items`}
           </div>
         ) : (
-          sortedInventory.map((item) => {
+          sortedInventory.map(item => {
             const icon = getEquipmentIcon(item);
             const rarityColor = getRarityColor(item.rarity);
             const gearScore = calculateGearScore(item);
-            
-            // For accessories, check if ANY equipped accessory is worse
-            let isUpgrade = false;
-            if (item.type === "accessory") {
-              const acc1Score = equipped.accessory1 ? calculateGearScore(equipped.accessory1) : 0;
-              const acc2Score = equipped.accessory2 ? calculateGearScore(equipped.accessory2) : 0;
-              isUpgrade = gearScore > acc1Score || gearScore > acc2Score;
-            } else {
-              const currentlyEquipped = equipped[item.type as keyof EquippedItems];
-              const equippedScore = currentlyEquipped ? calculateGearScore(currentlyEquipped) : 0;
-              isUpgrade = gearScore > equippedScore;
-            }
-            
-            const typeLabel = item.type === 'weapon' && item.weaponType ? item.weaponType : item.type;
+            const upgrade = isUpgrade(item);
+            const typeLabel = item.type === "weapon" && item.weaponType ? item.weaponType : item.type;
 
             return (
               <button
                 key={item.id}
-                onClick={() => setSelectedItem(item)}
+                onClick={() => handleItemTap(item)}
                 style={{
-                  padding: "10px 8px 14px 8px",
-                  background: "#2a2a2a",
-                  border: `2px solid ${rarityColor}`,
-                  borderRadius: "6px",
-                  cursor: "pointer",
                   display: "flex",
-                  flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "center",
-                  position: "relative",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                  gap: "2px"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.05)";
-                  e.currentTarget.style.boxShadow = `0 0 12px ${rarityColor}`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "none";
+                  gap: "12px",
+                  width: "100%",
+                  padding: "10px 12px",
+                  marginBottom: "6px",
+                  background: "#1e293b",
+                  border: `1px solid ${rarityColor}`,
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  touchAction: "manipulation",
+                  minHeight: "56px",
                 }}
               >
-                <span style={{ fontSize: "24px" }}>{icon}</span>
-                <span style={{ fontSize: "9px", color: "#888", textTransform: "capitalize", fontWeight: "normal" }}>
-                  {typeLabel}
-                </span>
-
-                {item.refinement !== undefined && item.refinement > 0 && (
-                  <span style={{
-                    position: "absolute",
-                    top: "2px",
-                    right: "4px",
-                    fontSize: "10px",
-                    color: "#fbbf24",
-                    fontWeight: "bold",
-                    textShadow: "0px 1px 2px rgba(0,0,0,0.8)"
-                  }}>
-                    +{item.refinement}
-                  </span>
-                )}
-                
-                {/* Upgrade indicator arrow */}
-                {isUpgrade && (
-                  <span style={{
-                    position: "absolute",
-                    top: "-6px",
-                    left: "-6px",
-                    fontSize: "14px",
-                    color: "#22c55e",
-                    fontWeight: "bold",
-                    textShadow: "0 0 4px black",
-                    background: "rgba(0,0,0,0.5)",
-                    borderRadius: "50%",
-                    width: "18px",
-                    height: "18px",
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    flexShrink: 0,
+                    background: "#0f172a",
+                    borderRadius: "8px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                  }}>
-                    ▲
-                  </span>
-                )}
-                
-                {/* Power Badge */}
-                <span style={{
-                  position: "absolute",
-                  bottom: "-6px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  fontSize: "10px",
-                  fontWeight: "bold",
-                  background: "#111",
-                  color: "#fbbf24",
-                  padding: "2px 6px",
-                  borderRadius: "4px",
-                  border: "1px solid #666",
-                  whiteSpace: "nowrap",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.5)"
-                }}>
-                  ⭐ {gearScore}
-                </span>
+                    fontSize: "18px",
+                    border: `1px solid ${rarityColor}`,
+                    position: "relative",
+                  }}
+                >
+                  {icon}
+                  {upgrade && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "-4px",
+                        right: "-4px",
+                        background: "#22c55e",
+                        borderRadius: "50%",
+                        width: "14px",
+                        height: "14px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "8px",
+                        color: "white",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ▲
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      color: rarityColor,
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {item.name}
+                    {item.refinement !== undefined && item.refinement > 0 && (
+                      <span style={{ color: "#fbbf24" }}> +{item.refinement}</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "10px", color: "#64748b", textTransform: "capitalize" }}>
+                    {typeLabel} · {item.rarity}
+                  </div>
+                </div>
+
+                {/* Show gear score for equipment, quantity for consumables */}
+                <div
+                  style={{
+                    flexShrink: 0,
+                    fontSize: "11px",
+                    fontWeight: "bold",
+                    color: isConsumable(item) ? "#34d399" : "#fbbf24",
+                    background: "#0f172a",
+                    borderRadius: "6px",
+                    padding: "3px 7px",
+                    border: "1px solid #334155",
+                  }}
+                >
+                  {isConsumable(item)
+                    ? `×${item.quantity ?? 0}`
+                    : `⭐ ${gearScore}`}
+                </div>
+
+                <span style={{ color: "#475569", fontSize: "14px" }}>›</span>
               </button>
             );
           })
         )}
       </div>
-      
-      {/* Accessory Slot Selection Modal with Combat Power Comparison */}
-      {selectedItem && selectedItem.type === "accessory" && !selectedEquippedSlot && equipped.accessory1 && equipped.accessory2 && (
-        <div style={{
-          position: "fixed",
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(0,0,0,0.8)",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: "#1a1a1a",
-            padding: "20px",
-            borderRadius: "8px",
-            border: "2px solid #fbbf24",
-            maxWidth: "500px",
-            width: "90%",
-            textAlign: "center"
-          }}>
-            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0" }}>💍 Replace Which Accessory?</h3>
-            <div style={{ fontSize: "12px", color: "#aaa", marginBottom: "15px" }}>
-              New: <span style={{ color: getRarityColor(selectedItem.rarity), fontWeight: "bold" }}>{selectedItem.name}</span> (⭐ {calculateGearScore(selectedItem)})
+
+      {/* Full-screen item detail view */}
+      {showDetail && selectedItem && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.92)",
+            zIndex: 1000,
+            display: "flex",
+            flexDirection: "column",
+            padding: "0",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "14px",
+              borderBottom: "1px solid #1e293b",
+              flexShrink: 0,
+            }}
+          >
+            <button
+              onClick={() => { setShowDetail(false); setSelectedItem(null); }}
+              style={{
+                minWidth: "44px",
+                minHeight: "44px",
+                background: "#1e293b",
+                border: "1px solid #334155",
+                borderRadius: "8px",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "18px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                touchAction: "manipulation",
+              }}
+            >
+              ‹
+            </button>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  color: getRarityColor(selectedItem.rarity),
+                  fontWeight: "bold",
+                  fontSize: "16px",
+                }}
+              >
+                {selectedItem.name}
+                {selectedItem.refinement !== undefined && selectedItem.refinement > 0 && (
+                  <span style={{ color: "#fbbf24" }}> +{selectedItem.refinement}</span>
+                )}
+              </div>
+              <div style={{ fontSize: "11px", color: "#64748b", textTransform: "capitalize" }}>
+                {selectedItem.type} · {selectedItem.rarity}
+                {!isConsumable(selectedItem) && ` · ⭐ ${calculateGearScore(selectedItem)}`}
+              </div>
             </div>
-            <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginBottom: "15px" }}>
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+            <div style={{ fontSize: "36px", textAlign: "center", marginBottom: "12px" }}>
+              {getEquipmentIcon(selectedItem)}
+            </div>
+
+            <div
+              style={{
+                background: "#1e293b",
+                borderRadius: "10px",
+                padding: "12px",
+                marginBottom: "16px",
+                border: `1px solid ${getRarityColor(selectedItem.rarity)}`,
+              }}
+            >
+              {/* Consumable detail */}
+              {isConsumable(selectedItem) && (
+                <>
+                  {selectedItem.hpRestore !== undefined && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>Restores</span>
+                      <span style={{ color: "#34d399", fontWeight: "bold" }}>HP</span>
+                    </div>
+                  )}
+                  {selectedItem.mpRestore !== undefined && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>Restores</span>
+                      <span style={{ color: "#60a5fa", fontWeight: "bold" }}>MP</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "13px" }}>
+                    <span style={{ color: "#94a3b8" }}>Quantity</span>
+                    <span style={{ color: "#fbbf24", fontWeight: "bold" }}>{selectedItem.quantity ?? 0}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Equipment stats */}
+              {!isConsumable(selectedItem) && (
+                <>
+                  {selectedItem.atk !== undefined && selectedItem.atk > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontSize: "11px" }}>
+                      <span style={{ color: "#94a3b8" }}>ATK</span>
+                      <span style={{ color: "#fb923c", fontWeight: "bold" }}>+{selectedItem.atk}</span>
+                    </div>
+                  )}
+                  {selectedItem.matk !== undefined && selectedItem.matk > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>MATK</span>
+                      <span style={{ color: "#a78bfa", fontWeight: "bold" }}>+{selectedItem.matk}</span>
+                    </div>
+                  )}
+                  {selectedItem.def !== undefined && selectedItem.def > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                      <span style={{ color: "#94a3b8" }}>DEF</span>
+                      <span style={{ color: "#60a5fa", fontWeight: "bold" }}>+{selectedItem.def}</span>
+                    </div>
+                  )}
+                  {(["str", "agi", "vit", "int", "dex", "luk"] as const).map(stat => {
+                    const val = selectedItem[stat];
+                    if (!val) return null;
+                    return (
+                      <div key={stat} style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px" }}>
+                        <span style={{ color: "#94a3b8", textTransform: "uppercase" }}>{stat}</span>
+                        <span style={{ color: "#22c55e", fontWeight: "bold" }}>+{val}</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: "14px",
+              display: "flex",
+              gap: "10px",
+              flexShrink: 0,
+              borderTop: "1px solid #1e293b",
+              paddingBottom: "calc(14px + env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            {isConsumable(selectedItem) ? (
               <button
-                onClick={() => setSelectedEquippedSlot("accessory1")}
+                onClick={() => handleUseConsumable(selectedItem)}
                 style={{
-                  padding: "15px",
-                  background: "#2a2a2a",
-                  border: "2px solid #555",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
                   flex: 1,
-                  position: "relative",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#fbbf24";
-                  e.currentTarget.style.transform = "scale(1.05)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#555";
-                  e.currentTarget.style.transform = "scale(1)";
+                  minHeight: "52px",
+                  background: "linear-gradient(135deg, #0369a1, #0284c7)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "14px",
+                  touchAction: "manipulation",
                 }}
               >
-                <div style={{ fontSize: "10px", color: "#888", marginBottom: "5px" }}>Slot 1</div>
-                <div style={{ color: getRarityColor(equipped.accessory1.rarity), fontWeight: "bold", fontSize: "13px", marginBottom: "8px" }}>
-                  {equipped.accessory1.name}
-                </div>
-                <div style={{
-                  background: calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory1) ? "#ef4444" : "#333",
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  fontSize: "11px",
-                  fontWeight: "bold",
-                  display: "inline-block"
-                }}>
-                  ⭐ {calculateGearScore(equipped.accessory1)}
-                </div>
-                {calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory1) && (
-                  <div style={{ fontSize: "10px", color: "#22c55e", marginTop: "5px" }}>
-                    ▲ +{calculateGearScore(selectedItem) - calculateGearScore(equipped.accessory1)} Power
-                  </div>
-                )}
+                {selectedItem.hpRestore !== undefined ? "🧪 Use HP Potion" : "💧 Use MP Potion"}
               </button>
+            ) : (
               <button
-                onClick={() => setSelectedEquippedSlot("accessory2")}
+                onClick={handleEquipClick}
                 style={{
-                  padding: "15px",
-                  background: "#2a2a2a",
-                  border: "2px solid #555",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
                   flex: 1,
-                  position: "relative",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#fbbf24";
-                  e.currentTarget.style.transform = "scale(1.05)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#555";
-                  e.currentTarget.style.transform = "scale(1)";
+                  minHeight: "52px",
+                  background: "linear-gradient(135deg, #059669, #047857)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  fontSize: "14px",
+                  touchAction: "manipulation",
                 }}
               >
-                <div style={{ fontSize: "10px", color: "#888", marginBottom: "5px" }}>Slot 2</div>
-                <div style={{ color: getRarityColor(equipped.accessory2.rarity), fontWeight: "bold", fontSize: "13px", marginBottom: "8px" }}>
-                  {equipped.accessory2.name}
-                </div>
-                <div style={{
-                  background: calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory2) ? "#ef4444" : "#333",
-                  padding: "4px 8px",
-                  borderRadius: "4px",
-                  fontSize: "11px",
-                  fontWeight: "bold",
-                  display: "inline-block"
-                }}>
-                  ⭐ {calculateGearScore(equipped.accessory2)}
-                </div>
-                {calculateGearScore(selectedItem) > calculateGearScore(equipped.accessory2) && (
-                  <div style={{ fontSize: "10px", color: "#22c55e", marginTop: "5px" }}>
-                    ▲ +{calculateGearScore(selectedItem) - calculateGearScore(equipped.accessory2)} Power
-                  </div>
-                )}
+                ⚔️ Equip
               </button>
+            )}
+            <button
+              onClick={() => { setShowDetail(false); setSelectedItem(null); }}
+              style={{
+                minWidth: "52px",
+                minHeight: "52px",
+                background: "#374151",
+                color: "#9ca3af",
+                border: "1px solid #374151",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontSize: "13px",
+                touchAction: "manipulation",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Accessory slot selection */}
+      {selectedItem && selectedItem.type === "accessory" && !selectedEquippedSlot && equipped.accessory1 && equipped.accessory2 && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 920,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#1e293b",
+              padding: "20px",
+              borderRadius: "12px",
+              border: "2px solid #fbbf24",
+              maxWidth: "360px",
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            <h3 style={{ color: "#fbbf24", margin: "0 0 10px 0", fontSize: "13px" }}>💍 Replace which slot?</h3>
+            <div style={{ display: "flex", gap: "10px", marginBottom: "14px" }}>
+              {(["accessory1", "accessory2"] as const).map((slotKey, idx) => {
+                const acc = equipped[slotKey]!;
+                const diff = calculateGearScore(selectedItem) - calculateGearScore(acc);
+                return (
+                  <button
+                    key={slotKey}
+                    onClick={() => setSelectedEquippedSlot(slotKey)}
+                    style={{
+                      flex: 1,
+                      minHeight: "80px",
+                      padding: "12px",
+                      background: "#0f172a",
+                      border: "2px solid #334155",
+                      borderRadius: "10px",
+                      color: "white",
+                      cursor: "pointer",
+                      touchAction: "manipulation",
+                    }}
+                  >
+                    <div style={{ fontSize: "9px", color: "#64748b", marginBottom: "3px" }}>Slot {idx + 1}</div>
+                    <div style={{ color: getRarityColor(acc.rarity), fontWeight: "bold", fontSize: "11px" }}>{acc.name}</div>
+                    <div style={{ color: diff > 0 ? "#22c55e" : "#ef4444", fontSize: "10px", marginTop: "4px" }}>
+                      {diff > 0 ? "▲" : "▼"} {Math.abs(diff)} power
+                    </div>
+                  </button>
+                );
+              })}
             </div>
             <button
-              onClick={() => setSelectedItem(null)}
+              onClick={() => { setSelectedItem(null); setShowDetail(false); }}
               style={{
-                padding: "8px 16px",
-                background: "#4b5563",
-                color: "white",
+                width: "100%",
+                minHeight: "44px",
+                padding: "10px",
+                background: "#374151",
+                color: "#9ca3af",
                 border: "none",
-                borderRadius: "4px",
+                borderRadius: "8px",
                 cursor: "pointer",
-                width: "100%"
+                touchAction: "manipulation",
               }}
             >
               Cancel
@@ -495,23 +693,24 @@ export function EnhancedInventory({ inventory, equipped, onEquip, onUnequip }: E
           </div>
         </div>
       )}
-      
+
       {/* Comparison Modal */}
       {selectedItem && (
-        (selectedItem.type !== "accessory" || 
-         !equipped.accessory1 || 
-         !equipped.accessory2 || 
-         selectedEquippedSlot) && (
-        <EquipmentComparisonModal
-          newItem={selectedItem}
-          currentItem={getCurrentlyEquipped(selectedItem)}
-          onEquip={handleEquipClick}
-          onCancel={() => {
-            setSelectedItem(null);
-            setSelectedEquippedSlot(null);
-          }}
-        />
-      ))}
-    </div>
+        (selectedItem.type !== "accessory" ||
+          !equipped.accessory1 ||
+          !equipped.accessory2 ||
+          selectedEquippedSlot) && showDetail === false && !isConsumable(selectedItem) && (
+          <EquipmentComparisonModal
+            newItem={selectedItem}
+            currentItem={getCurrentlyEquipped(selectedItem)}
+            onEquip={handleEquipClick}
+            onCancel={() => {
+              setSelectedItem(null);
+              setSelectedEquippedSlot(null);
+            }}
+          />
+        )
+      )}
+    </>
   );
 }

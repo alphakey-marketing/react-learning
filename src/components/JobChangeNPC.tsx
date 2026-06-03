@@ -6,6 +6,7 @@ interface JobChangeNPCProps {
   currentJobLevel: number;
   onJobChange: (newJob: JobClass) => void;
   onClose: () => void;
+  embedded?: boolean;
 }
 
 export function JobChangeNPC({
@@ -13,6 +14,7 @@ export function JobChangeNPC({
   currentJobLevel,
   onJobChange,
   onClose,
+  embedded = false,
 }: JobChangeNPCProps) {
   const availableJobs = getAvailableJobs(currentJob, currentJobLevel);
   const currentJobInfo = JOB_DATA[currentJob];

@@ -1,2 +1,15 @@
 main {
 }
+
+@media (max-width: 767px) {
+  /* Scale down root font so rem/em values shrink ~25% */
+  html {
+    font-size: 12px;
+  }
+
+  /* Tighten all button vertical padding — catches any hardcoded px buttons */
+  button {
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+  }
+}

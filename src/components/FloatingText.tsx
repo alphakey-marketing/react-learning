@@ -26,6 +26,7 @@ export function FloatingText({ items, onRemove }: FloatingTextProps) {
       height: '100%',
       pointerEvents: 'none',
       zIndex: 9999,
+      overflow: 'hidden',
     }}>
       {items.map((item) => (
         <FloatingTextItem key={item.id} item={item} onRemove={onRemove} />
@@ -46,14 +47,12 @@ function FloatingTextItem({ item, onRemove }: { item: FloatingTextData; onRemove
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
 
-      // Float up
       if (item.isLevelUp) {
-        setYOffset(-progress * 80); // Level up floats higher
+        setYOffset(-progress * 80);
       } else {
         setYOffset(-progress * 60);
       }
 
-      // Fade out in last 30%
       if (progress > 0.7) {
         setOpacity(1 - (progress - 0.7) / 0.3);
       }
@@ -68,24 +67,36 @@ function FloatingTextItem({ item, onRemove }: { item: FloatingTextData; onRemove
     requestAnimationFrame(animate);
   }, [item.id, item.isLevelUp, onRemove]);
 
+  // Level-up / material pop-ups: centred with translateX(-50%) so they
+  // never overflow left or right regardless of screen width.
+  // Damage numbers: also centred so they stay on-screen on mobile.
+  const centred = item.isLevelUp;
+
   return (
     <div
       style={{
         position: 'absolute',
         left: `${item.x}px`,
         top: `${item.y + yOffset}px`,
+        // Shift left by 50% of own width so the anchor point is the centre
+        transform: centred
+          ? `translateX(-50%) scale(1.4)`
+          : item.isCrit
+          ? 'translateX(-50%) scale(1.2)'
+          : 'translateX(-50%) scale(1)',
         color: item.color,
-        fontSize: `${item.fontSize || (item.isCrit ? 28 : 20)}px`,
+        fontSize: `${item.fontSize || (item.isCrit ? 26 : 18)}px`,
         fontWeight: item.isCrit || item.isLevelUp ? 900 : 700,
-        textShadow: item.isLevelUp 
-          ? '0 0 20px rgba(255, 215, 0, 0.8), 2px 2px 4px rgba(0,0,0,0.8)'
+        textShadow: item.isLevelUp
+          ? '0 0 20px rgba(255, 215, 0, 0.8), 2px 2px 4px rgba(0,0,0,0.9)'
           : item.isCrit
           ? '0 0 10px rgba(255, 0, 0, 0.8), 2px 2px 4px rgba(0,0,0,0.8)'
           : '2px 2px 4px rgba(0,0,0,0.8)',
         opacity,
-        transform: item.isCrit ? 'scale(1.2)' : item.isLevelUp ? 'scale(1.5)' : 'scale(1)',
-        transition: 'transform 0.1s',
-        whiteSpace: 'nowrap',
+        // Level-up text wraps on narrow screens; damage stays on one line
+        whiteSpace: item.isLevelUp ? 'normal' : 'nowrap',
+        textAlign: 'center',
+        maxWidth: item.isLevelUp ? `min(320px, 85vw)` : undefined,
         userSelect: 'none',
         animation: item.isLevelUp ? 'pulse 0.5s ease-in-out infinite' : 'none',
       }}

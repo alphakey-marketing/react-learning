@@ -31,7 +31,11 @@ import {
   shouldDropLoot,
   generateLoot,
   generateBossLoot,
+  checkQuestItemDrop,
 } from "../logic/loot";
+import { getCorruptionModifiers } from "../logic/corruption";
+import { QUEST_CHAINS, QuestEndingChoice, ENDING_CHOICES, isChainComplete, QUEST_CHAIN_ORDER } from "../data/questChains";
+import { QUEST_ITEMS } from "../data/quests";
 import {
   KILLS_FOR_BOSS,
   BOSS_HP_MULTIPLIER,
@@ -70,6 +74,67 @@ export interface ActiveSelfBuff {
   skillLevel: number;
 }
 
+// Helper: find the quest step that requires a given item ID.
+// Pure function — operates only on static QUEST_CHAINS data.
+function findQuestStepByItemId(itemId: string): {
+  chainId: string;
+  chainTitle: string;
+  stepId: string;
+  stepTitle: string;
+  completionText: string;
+  corruptionGain: number;
+} | null {
+  for (const chain of QUEST_CHAINS) {
+    for (const step of chain.steps) {
+      if (step.requiredItemId === itemId) {
+        return {
+          chainId: chain.id,
+          chainTitle: chain.title,
+          stepId: step.id,
+          stepTitle: step.title,
+          completionText: step.completionText,
+          corruptionGain: step.corruptionGain,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+// Helper: derive the set of already-obtained quest item IDs from completed step IDs AND held items.
+// Used to prevent re-dropping items whose steps are already done or whose item is already held.
+function getCollectedQuestItemIds(
+  completedStepIds: Record<string, boolean>,
+  heldQuestItems: Record<string, boolean>
+): string[] {
+  const itemIds: string[] = [];
+  for (const chain of QUEST_CHAINS) {
+    for (const step of chain.steps) {
+      if ((completedStepIds[step.id] || heldQuestItems[step.id]) && step.requiredItemId) {
+        itemIds.push(step.requiredItemId);
+      }
+    }
+  }
+  return itemIds;
+}
+
+// Helper: apply corruption-tier stat multipliers to a freshly spawned enemy.
+// Call only at spawn time — never on every tick.
+function applyCorruptionScaling(enemy: Enemy, corruptionLevel: number): Enemy {
+  const mods = getCorruptionModifiers(corruptionLevel);
+  if (mods.enemyHpMult === 1.0 && mods.enemyAtkMult === 1.0 && mods.enemyDefMult === 1.0) {
+    return enemy;
+  }
+  return {
+    ...enemy,
+    hp: Math.floor(enemy.hp * mods.enemyHpMult),
+    maxHp: Math.floor(enemy.maxHp * mods.enemyHpMult),
+    atk: Math.floor(enemy.atk * mods.enemyAtkMult),
+    softDef: Math.floor(enemy.softDef * mods.enemyDefMult),
+    hardDefPercent: Math.min(80, Math.floor(enemy.hardDefPercent * mods.enemyDefMult)),
+  };
+}
+
 export function useGameState(addLog: (text: string) => void, callbacks?: GameCallbacks) {
   const initialLevel = 1;
   const initialStats = { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 };
@@ -97,6 +162,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     autoAttackSkillId: "basic_attack",
     elunium: STARTING_RESOURCES.elunium,
     oridecon: STARTING_RESOURCES.oridecon,
+    corruptionLevel: 0,
+    acceptedStepIds: {},
+    heldQuestItems: {},
+    completedStepIds: {},
+    questEnding: null,
+    questChoicesMade: {},
   });
 
   const [enemy, setEnemy] = useState<Enemy>(() =>
@@ -105,7 +176,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   // BALANCE: Start with both weapons in inventory - player chooses their path
   const [inventory, setInventory] = useState<Equipment[]>([STARTING_WEAPON, NOVICE_WAND]);
-  
+
   // BALANCE: Start with no weapon equipped - player must choose
   const [equipped, setEquipped] = useState<EquippedItems>({
     weapon: null,
@@ -144,6 +215,18 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   
   const [autoAttackEnabled, setAutoAttackEnabled] = useState<boolean>(false);
 
+  // ── Quest modal state ─────────────────────────────────────────────────────
+  // Popup shown when a quest item is picked up in battle (directs player to Quest Log)
+  const [questItemPickup, setQuestItemPickup] = useState<{
+    chainTitle: string;
+    stepTitle: string;
+    itemName: string;
+    itemIcon: string;
+  } | null>(null);
+  const [showEndingChoice, setShowEndingChoice] = useState<boolean>(false);
+  // Tracks whether we have already auto-shown the ending modal this session
+  const endingChoiceShownRef = useRef<boolean>(false);
+
   const enemyAttackTimerRef = useRef<number | null>(null);
   const autoPotionTimerRef = useRef<number | null>(null);
   const debuffCleanupTimerRef = useRef<number | null>(null);
@@ -172,6 +255,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
   const equipStatsRef = useRef<ReturnType<typeof calculateEquipmentStats>>(calculateEquipmentStats(equipped));
   const killCountRef = useRef<number>(killCount);
   const isBossFightRef = useRef<boolean>(isBossFight);
+  const inventoryRef = useRef<Equipment[]>(inventory);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -197,7 +281,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     skillCooldownsRef.current = skillCooldowns;
     killCountRef.current = killCount;
     isBossFightRef.current = isBossFight;
-  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs, skillCooldowns, killCount, isBossFight]);
+    inventoryRef.current = inventory;
+  }, [callbacks, char, equipped, enemy, currentZoneId, hpPotions, mpPotions, autoHpPercent, autoMpPercent, autoAttackEnabled, activeSelfBuffs, activeDebuffs, skillCooldowns, killCount, isBossFight, inventory]);
 
   // PERF FIX: Only recalculate equipStats when equipment actually changes
   const equipStats = useMemo(() => {
@@ -592,6 +677,92 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     };
   }, []);
 
+  // ── Quest System ─────────────────────────────────────────────────────────
+
+  // Log a message when corruption crosses a new tier threshold
+  const prevCorruptionLevelRef = useRef<number>(char.corruptionLevel);
+  useEffect(() => {
+    const prev = prevCorruptionLevelRef.current;
+    const curr = char.corruptionLevel;
+    prevCorruptionLevelRef.current = curr;
+    const thresholds = [20, 40, 60, 80, 100];
+    for (const t of thresholds) {
+      if (prev < t && curr >= t) {
+        const tier = getCorruptionModifiers(curr).tierName;
+        addLog(`🩸 Corruption: ${tier} — enemies grow stronger. Drops grow stranger.`);
+        break;
+      }
+    }
+  }, [char.corruptionLevel]);
+
+  // Auto-show the ending choice modal when all quest chains are complete
+  useEffect(() => {
+    if (char.questEnding !== null || endingChoiceShownRef.current) return;
+    const allComplete = QUEST_CHAIN_ORDER.every(id => isChainComplete(id, char.completedStepIds));
+    if (allComplete) {
+      endingChoiceShownRef.current = true;
+      setShowEndingChoice(true);
+    }
+  }, [char.completedStepIds, char.questEnding]);
+
+  // Player chooses to seal the bloodline (ending A)
+  function sealBloodline() {
+    if (char.questEnding !== null) return;
+    setChar(prev => ({
+      ...prev,
+      questEnding: "seal",
+      corruptionLevel: Math.max(0, prev.corruptionLevel + ENDING_CHOICES.seal.corruptionChange),
+    }));
+    addLog(`🔒 You sealed the bloodline. The pass goes quiet.`);
+  }
+
+  // Player chooses to remain unbound (ending B)
+  function remainUnbound() {
+    if (char.questEnding !== null) return;
+    setChar(prev => ({
+      ...prev,
+      questEnding: "unbound",
+      corruptionLevel: Math.min(100, prev.corruptionLevel + ENDING_CHOICES.unbound.corruptionChange),
+    }));
+    addLog(`🌑 You walked through the pass. You are still writing.`);
+  }
+
+  // Accept a quest step — player has seen the intro dialogue and clicked Accept
+  function acceptQuestStep(stepId: string) {
+    setChar(prev => ({
+      ...prev,
+      acceptedStepIds: { ...prev.acceptedStepIds, [stepId]: true },
+    }));
+    const stepData = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepId);
+    addLog(`📜 Quest accepted: "${stepData?.title ?? stepId}". Start hunting!`);
+  }
+
+  // Submit a held quest item and apply the chosen dialogue's corruption effect
+  function submitQuestStep(
+    stepId: string,
+    choice: { label: string; text: string; corruptionDelta: number }
+  ) {
+    const stepData = QUEST_CHAINS.flatMap(c => c.steps).find(s => s.id === stepId);
+    setChar(prev => {
+      const heldQuestItems = { ...prev.heldQuestItems };
+      delete heldQuestItems[stepId];
+      const newCorruption = Math.max(0, Math.min(100, prev.corruptionLevel + choice.corruptionDelta));
+      return {
+        ...prev,
+        completedStepIds: { ...prev.completedStepIds, [stepId]: true },
+        heldQuestItems,
+        corruptionLevel: newCorruption,
+        questChoicesMade: { ...prev.questChoicesMade, [stepId]: choice },
+      };
+    });
+    addLog(`📜 Quest step complete: "${stepData?.title ?? stepId}".`);
+    if (choice.corruptionDelta > 0) {
+      addLog(`🩸 Corruption rises... (+${choice.corruptionDelta})`);
+    } else if (choice.corruptionDelta < 0) {
+      addLog(`✨ Corruption eases... (${choice.corruptionDelta})`);
+    }
+  }
+
   // STABILITY FIX: battleAction no longer depends on state that changes during execution
   // Instead it uses refs for real-time values
   const battleAction = useCallback((skillId?: string) => {
@@ -812,6 +983,8 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       
       let nextCharElunium = currentChar.elunium;
       let nextCharOridecon = currentChar.oridecon;
+      let nextCompletedStepIds = currentChar.completedStepIds;
+      let nextHeldQuestItems = currentChar.heldQuestItems;
       
       let didLevelUp = false;
 
@@ -863,6 +1036,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       let nextJobExp = currentChar.jobExp;
       let nextJobExpToNext = currentChar.jobExpToNext;
       let nextSkillPoints = currentChar.skillPoints;
+      let nextCorruptionLevel = currentChar.corruptionLevel;
 
       if (nextEnemyHp <= 0) {
         const enemyCount = currentEnemy.count || 1;
@@ -925,6 +1099,9 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
         setActiveDebuffs([]);
 
+        // Derive collected quest item IDs from completedStepIds AND heldQuestItems
+        const collectedQuestItemIds = getCollectedQuestItemIds(currentChar.completedStepIds, currentChar.heldQuestItems);
+
         if (currentIsBossFight) {
           addLog(`🎉 BOSS DEFEATED! Next area unlocked!`);
           setBossDefeated(true);
@@ -945,7 +1122,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             addLog(`🏆 You cleared all zones!`);
           }
 
-          const bossGear = generateBossLoot(nextCharLevel);
+          const bossGear = generateBossLoot(nextCharLevel, nextCorruptionLevel);
           setInventory((prev) => [...prev, bossGear]);
           addLog(`🎁 Boss Drop: ${bossGear.name}!`);
           callbacksRef.current?.onItemDrop?.(bossGear);
@@ -958,7 +1135,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           callbacksRef.current?.onMaterialDrop?.('elunium', numElu);
           callbacksRef.current?.onMaterialDrop?.('oridecon', numOri);
 
-          nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
+          // Quest item drop: only triggers if step is accepted by player; item is held (not auto-completed)
+          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, true, collectedQuestItemIds);
+          if (questDrop && questDrop.questItemId) {
+            const stepInfo = findQuestStepByItemId(questDrop.questItemId);
+            if (stepInfo && currentChar.acceptedStepIds[stepInfo.stepId]) {
+              nextHeldQuestItems = { ...nextHeldQuestItems, [stepInfo.stepId]: true };
+              addLog(`📜 Quest Item found: ${questDrop.name}! Visit the Quest Log to submit.`);
+              const questItem = QUEST_ITEMS.find(qi => qi.id === questDrop.questItemId);
+              setQuestItemPickup({
+                chainTitle: stepInfo.chainTitle,
+                stepTitle: stepInfo.stepTitle,
+                itemName: questDrop.name,
+                itemIcon: questItem?.icon ?? "📜",
+              });
+            }
+          }
+
+          // Boss kill corruption: +1.0 per boss
+          nextCorruptionLevel = Math.min(100, nextCorruptionLevel + 1.0);
+
+          nextEnemy = applyCorruptionScaling(
+            getRandomEnemyForZone(currentZone, nextCharLevel),
+            nextCorruptionLevel
+          );
           addLog(`👾 A wild ${nextEnemy.name} appeared!`);
         } else {
           const nextKillCount = currentKillCount + 1;
@@ -972,7 +1172,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
           if (isGroup) {
             for (let i = 0; i < enemyCount; i++) {
               if (shouldDropLoot()) {
-                const newGear = generateLoot(nextCharLevel);
+                const newGear = generateLoot(nextCharLevel, nextCorruptionLevel);
                 setInventory((prev) => [...prev, newGear]);
                 addLog(`🎁 Looted: ${newGear.name}!`);
                 callbacksRef.current?.onItemDrop?.(newGear);
@@ -980,7 +1180,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             }
           } else {
             if (shouldDropLoot()) {
-              const newGear = generateLoot(nextCharLevel);
+              const newGear = generateLoot(nextCharLevel, nextCorruptionLevel);
               setInventory((prev) => [...prev, newGear]);
               addLog(`🎁 Looted: ${newGear.name}!`);
               callbacksRef.current?.onItemDrop?.(newGear);
@@ -1000,7 +1200,30 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
             }
           }
 
-          nextEnemy = getRandomEnemyForZone(currentZone, nextCharLevel);
+          // Quest item drop: only triggers if step is accepted by player; item is held (not auto-completed)
+          const questDrop = checkQuestItemDrop(currentEnemy.name, currentZone, false, collectedQuestItemIds);
+          if (questDrop && questDrop.questItemId) {
+            const stepInfo = findQuestStepByItemId(questDrop.questItemId);
+            if (stepInfo && currentChar.acceptedStepIds[stepInfo.stepId]) {
+              nextHeldQuestItems = { ...nextHeldQuestItems, [stepInfo.stepId]: true };
+              addLog(`📜 Quest Item found: ${questDrop.name}! Visit the Quest Log to submit.`);
+              const questItem = QUEST_ITEMS.find(qi => qi.id === questDrop.questItemId);
+              setQuestItemPickup({
+                chainTitle: stepInfo.chainTitle,
+                stepTitle: stepInfo.stepTitle,
+                itemName: questDrop.name,
+                itemIcon: questItem?.icon ?? "📜",
+              });
+            }
+          }
+
+          // Normal kill corruption: +0.2 per kill
+          nextCorruptionLevel = Math.min(100, nextCorruptionLevel + 0.2 * enemyCount);
+
+          nextEnemy = applyCorruptionScaling(
+            getRandomEnemyForZone(currentZone, nextCharLevel),
+            nextCorruptionLevel
+          );
           const nextEnemyCount = nextEnemy.count || 1;
           if (nextEnemyCount > 1) {
             addLog(`👾 A group of ${nextEnemyCount}x ${nextEnemy.name} appeared!`);
@@ -1041,6 +1264,12 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
         autoAttackSkillId: currentChar.autoAttackSkillId,
         elunium: nextCharElunium,
         oridecon: nextCharOridecon,
+        corruptionLevel: nextCorruptionLevel,
+        acceptedStepIds: currentChar.acceptedStepIds,
+        heldQuestItems: nextHeldQuestItems,
+        completedStepIds: nextCompletedStepIds,
+        questEnding: currentChar.questEnding,
+        questChoicesMade: currentChar.questChoicesMade,
       });
 
       setEnemy(nextEnemy);
@@ -1265,7 +1494,7 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
       return;
     }
     setCurrentZoneId(zoneId);
-    setEnemy(getRandomEnemyForZone(zoneId, char.level));
+    setEnemy(applyCorruptionScaling(getRandomEnemyForZone(zoneId, char.level), char.corruptionLevel));
     setActiveDebuffs([]);
     setActiveSelfBuffs([]);
     setSkillCooldowns({});
@@ -1274,7 +1503,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
 
   function challengeBoss() {
     setIsBossFight(true);
-    const bossTemplate = getRandomEnemyForZone(currentZoneId, char.level);
+    const bossTemplate = applyCorruptionScaling(
+      getRandomEnemyForZone(currentZoneId, char.level),
+      char.corruptionLevel
+    );
     const bossEnemy: Enemy = {
       ...bossTemplate,
       name: `👹 Boss: ${bossTemplate.name}`,
@@ -1514,6 +1746,17 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     canAttack,
     attackCooldownPercent,
     autoAttackEnabled,
+    // Quest system — now stored inside char
+    completedStepIds: char.completedStepIds,
+    questEnding: char.questEnding,
+    acceptedStepIds: char.acceptedStepIds,
+    heldQuestItems: char.heldQuestItems,
+    questChoicesMade: char.questChoicesMade,
+    // Quest modals
+    questItemPickup,
+    clearQuestItemPickup: () => setQuestItemPickup(null),
+    showEndingChoice,
+    clearShowEndingChoice: () => setShowEndingChoice(false),
     setShowSkillWindow,
     setShowJobChangeNPC,
     setAutoHpPercent,
@@ -1537,6 +1780,10 @@ export function useGameState(addLog: (text: string) => void, callbacks?: GameCal
     openJobChangeNPC,
     handleRespawn,
     escapeToTown,
+    sealBloodline,
+    remainUnbound,
+    acceptQuestStep,
+    submitQuestStep,
     devAddBaseLevel,
     devAddJobLevel,
     devAddGold,
